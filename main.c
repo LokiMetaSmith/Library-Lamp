@@ -694,19 +694,3 @@ void app_main(void) {
     ESP_LOGI(TAG, "E-Book Librarian is running!");
     g_led_state = LED_STATE_IDLE; // Set initial state after setup is complete
 }
-```
-
-### How to Use the New Feature
-
-1.  **Hardware Connection:** Connect the `Data In` pin of your WS2812/NeoPixel strip to the GPIO pin defined in the code (`#define LED_STRIP_GPIO 4`). Also, connect the strip to a suitable power source (5V) and Ground.
-
-2.  **Project Configuration:** The `led_strip` component is part of the ESP-IDF, but you need to make sure your project knows about it.
-    * Open the `CMakeLists.txt` file in your `main` directory.
-    * Find the line that starts with `REQUIRES`.
-    * Add `led_strip` to the list of required components. It might look something like this:
-        ```cmake
-        idf_component_register(SRCS "main.c"
-                               INCLUDE_DIRS "."
-                               REQUIRES esp_http_server esp_wifi cJSON usb led_strip)
-        
-
