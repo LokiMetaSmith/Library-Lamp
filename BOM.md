@@ -1,67 +1,35 @@
-Bill of Materials (BOM) for E-Book Librarian
-This document lists the necessary hardware components to build the E-Book Librarian project. Prices are approximate and may vary.
+# Bill of Materials (BOM)
 
-1. Controller
-Component: ESP32-S3 Development Board
+This document lists the necessary hardware components to build the E-Book Librarian project.
 
-Quantity: 1
+### Core Components
 
-Description: A board with a native USB OTG port. The official ESP32-S3-USB-OTG board is recommended.
+* **ESP32-S3 Development Board with USB OTG**
+    * **Description:** The main microcontroller for the project. It is essential to choose a model that has a USB-C or Micro-USB port specifically for OTG/Host functionality.
+    * **Notes / Example Link:** The official [ESP32-S3-USB-OTG board](https://www.espressif.com/en/products/devkits/esp32-s3-usb-otg) is ideal, but other S3 boards with OTG support will work.
 
-Est. Price (USD): $10 - $15
+* **MicroSD Card Module**
+    * **Description:** A standard SPI-based MicroSD card reader to store the main e-book library.
+    * **Notes / Example Link:** [HiLetgo MicroSD Card Adapter](https://www.amazon.com/HiLetgo-Adater-Interface-Conversion-Arduino/dp/B07BJ2P6X6/). Most generic modules are compatible.
 
-Link: Espressif Store
+* **MicroSD Card**
+    * **Description:** The storage for your book library. An SDXC card (64GB or larger, formatted as exFAT) is recommended for larger collections.
+    * **Notes / Example Link:** Any reputable brand will work. A Class 10 card is sufficient.
 
-2. Storage
-Component: Micro SD Card Module
+* **WS2812B / NeoPixel RGB LED Strip**
+    * **Description:** An addressable RGB LED strip used for the visual status indicator.
+    * **Notes / Example Link:** A short strip with 8-16 LEDs is plenty. Can be found on [Amazon](https://www.amazon.com/s?k=ws2812b+strip) or Adafruit.
 
-Quantity: 1
+### Optional / Miscellaneous
 
-Description: A simple SPI-based SD card reader. The module specified is common and uses a level shifter for 3.3V logic.
+* **Breadboard and Jumper Wires**
+    * **Description:** For prototyping the connections before creating a permanent enclosure.
+    * **Notes / Example Link:** A standard electronics prototyping kit.
 
-Est. Price (USD): $2 - $5
+* **5V Power Supply**
+    * **Description:** A reliable power source that can provide at least 2A to power the ESP32-S3, SD card module, and the LED strip simultaneously.
+    * **Notes / Example Link:** A good quality USB wall adapter is usually sufficient.
 
-Link: Amazon
-
-Component: Micro SD Card
-
-Quantity: 1
-
-Description: Storage for the book library. 64GB or larger is recommended (ensure exFAT is enabled in the project).
-
-Est. Price (USD): $10 - $20
-
-3. Peripherals & Accessories
-Component: WS2812B LED Strip (NeoPixel)
-
-Quantity: 1
-
-Description: Addressable RGB LED strip for status indication. A small strip with 8 LEDs is sufficient.
-
-Est. Price (USD): $5 - $10
-
-Link: Adafruit
-
-Component: USB OTG Adapter
-
-Quantity: 1
-
-Description: To connect the e-reader's USB-A cable to the ESP32-S3's USB-C port (if necessary).
-
-Est. Price (USD): $5 - $8
-
-Component: 5V Power Supply
-
-Quantity: 1
-
-Description: A reliable USB power adapter (2A or more recommended) to power the ESP32-S3 and connected devices.
-
-Est. Price (USD): $5 - $10
-
-Component: Jumper Wires
-
-Quantity: 1 set
-
-Description: For connecting the SD card module and LED strip to the ESP32-S3.
-
-Est. Price (USD): $5
+* **USB OTG Adapter/Cable**
+    * **Description:** If your ESP32-S3 board has a USB-C port, you will need a USB-C to USB-A female adapter to plug in the e-reader's cable.
+    * **Notes / Example Link:** Widely available on sites like Amazon.
