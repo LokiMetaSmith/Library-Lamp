@@ -2,10 +2,65 @@
 This project creates a digital library that lives in a book. It sits on your shelf and when you interact with it, the world of literature opens up for you. 
 
 
-Notes:
-That's a very important and practical question.
+# 📖 E-Book Librarian
 
-**Yes, this approach absolutely allows for SD cards larger than 32GB, but it requires one small configuration change in the project.**
+The E-Book Librarian is a standalone hardware device designed to create a physical, shareable library of public domain e-books. It allows users to easily connect their e-readers (like Kindle, Kobo, or BOOX devices) via USB and transfer books to and from a local library stored on an SD card.
+
+The device hosts its own Wi-Fi network and provides a simple web interface, allowing anyone with a smartphone or computer to manage the library without needing any special software.
+
+## ✨ Core Features
+
+- **USB Host for E-Readers:** Automatically detects and mounts the storage of any USB Mass Storage compatible e-reader.
+- **Local Library Storage:** Uses a MicroSD card to hold a large collection of e-books.
+- **Simple Web Interface:** Provides an intuitive, browser-based UI for transferring files between the SD card and the connected e-reader.
+- **Wi-Fi Access Point:** Creates its own Wi-Fi network, making it fully portable and operational without an internet connection.
+- **Visual Status Indicator:** An onboard RGB LED strip shows the system's current state (idle, connected, transferring).
+
+## 🛠️ Hardware & Wiring
+
+All the necessary components to build this project are listed in the [Bill of Materials (BOM.md)](BOM.md).
+
+The wiring connections between the ESP32-S3, SD card module, and LED strip are detailed in the [WireViz Diagram Source (wiring.yml)](wiring.yml). You can render this file into a visual diagram using the [WireViz](https://github.com/wireviz/WireViz) tool.
+
+## 🚀 Setup and Compilation
+
+This project is built using the **Espressif IoT Development Framework (ESP-IDF)**. The recommended way to set up the build environment is with the [VS Code ESP-IDF Extension](https://github.com/espressif/vscode-esp-idf-extension), which handles the toolchain installation.
+
+### Steps:
+
+1.  **Clone the Repository:**
+    ```bash
+    git clone <your-repo-url>
+    cd <your-repo-folder>
+    ```
+
+2.  **Set up the ESP-IDF Environment:**
+    Follow the official [ESP-IDF Get Started Guide](https://docs.espressif.com/projects/esp-idf/en/latest/esp32s3/get-started/index.html) or use the VS Code extension to set up your toolchain.
+
+3.  **Configure the Project:**
+    Open a terminal in the project root and run the configuration tool:
+    ```bash
+    idf.py menuconfig
+    ```
+    You must enable support for large SD cards (exFAT):
+    - Navigate to `Component config` ---> `FAT Filesystem support`
+    - Check the box for `[*] Enable exFAT`
+    - Save and exit.
+
+4.  **Build, Flash, and Monitor:**
+    Connect your ESP32-S3 board and run the following command to build the project, upload it to the device, and view the serial output:
+    ```bash
+    idf.py build flash monitor
+    ```
+
+##  kullanım (AI for Usage)
+
+1.  **Power On:** Power the ESP32-S3 board using a reliable 5V power supply. The LED strip will light up with a pulsing blue light, indicating it's ready.
+2.  **Connect to Wi-Fi:** On your phone or computer, connect to the Wi-Fi network with the SSID `Ebook-Library-Box` and the password `sharebooks`.
+3.  **Open the Web Interface:** Open a web browser and navigate to `http://192.168.4.1`.
+4.  **Connect Your E-Reader:** Plug your e-reader into the ESP32-S3's USB OTG port. The LED strip will turn solid green, and the web interface will update to show the files on your device.
+5.  **Transfer Books:** Select a book from either the library or your e-reader and use the buttons to copy it to the other device. The LED will pulse white during the transfer.
+
 
 Here's the breakdown:
 
