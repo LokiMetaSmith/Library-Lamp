@@ -694,3 +694,4 @@ void app_main(void) {
     ESP_LOGI(TAG, "E-Book Librarian is running!");
     g_led_state = LED_STATE_IDLE; // Set initial state after setup is complete
 }
+
