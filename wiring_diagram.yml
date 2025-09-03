@@ -1,0 +1,65 @@
+# To render this diagram, use the WireViz tool:
+# pip install wireviz
+# wireviz wiring.yml
+
+# --- Define Connectors and Devices ---
+
+connectors:
+  esp32s3:
+    type: pin-header
+    # Refer to your specific ESP32-S3 board's pinout diagram
+    # These are common GPIOs and power pins
+    pins: [5V, GND, GPIO5, GPIO18, GPIO19, GPIO23, GPIO4]
+
+  sd_module:
+    type: pin-header
+    # Pins on the HiLetgo SD card module
+    pins: [VCC, GND, CS, SCK, MISO, MOSI]
+
+  led_strip:
+    type: pin-header
+    # Pins on a standard WS2812B/NeoPixel strip
+    pins: [GND, "Data In", "5V"]
+
+# --- Define Wires and Connections ---
+
+wires:
+  # --- Power Connections ---
+  - connect:
+      - esp32s3: [5V, GND]
+      - sd_module: [VCC, GND]
+    color: [RD, BK] # Red for 5V, Black for Ground
+    
+  - connect:
+      - esp32s3: [5V, GND]
+      - led_strip: ["5V", GND]
+    color: [RD, BK]
+    
+  # --- SD Card (SPI) Connections ---
+  # Based on pin definitions in main.c
+  - connect:
+      - esp32s3: [GPIO5] # Chip Select (CS)
+      - sd_module: [CS]
+    color: YL # Yellow
+    
+  - connect:
+      - esp32s3: [GPIO18] # Serial Clock (SCK)
+      - sd_module: [SCK]
+    color: BU # Blue
+
+  - connect:
+      - esp32s3: [GPIO19] # MISO (Master In Slave Out)
+      - sd_module: [MISO]
+    color: GN # Green
+
+  - connect:
+      - esp32s3: [GPIO23] # MOSI (Master Out Slave In)
+      - sd_module: [MOSI]
+    color: OG # Orange
+    
+  # --- LED Strip Connection ---
+  # Based on pin definition in main.c
+  - connect:
+      - esp32s3: [GPIO4] # Data Pin
+      - led_strip: ["Data In"]
+    color: WT # White
