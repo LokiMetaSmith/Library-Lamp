@@ -13,6 +13,9 @@
  * Host MSC (Mass Storage Class) driver. A web server provides an interface to
  * transfer files between the local SD card and the connected e-reader.
  *
+ * This version also includes support for a WS2812/NeoPixel LED strip to
+ * provide visual feedback on the device's status.
+ *
  * NOTE: This file contains the core application logic. To compile this, you will
  * need to set up a standard ESP-IDF project, which includes a CMakeLists.txt
  * file and component configurations (e.g., via `idf.py menuconfig`).
@@ -23,6 +26,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <dirent.h>
+#include <math.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_system.h"
@@ -41,6 +45,10 @@
 #include "usb/msc_host.h"
 #include "usb/vfs_msc.h"
 
+// --- LED Strip Dependencies ---
+#include "driver/rmt_tx.h"
+#include "led_strip.h"
+
 
 // --- CONFIGURATION ---
 // Wi-Fi Access Point settings
@@ -58,10 +66,27 @@
 // USB mount point
 #define MOUNT_POINT_USB "/usb"
 
+// LED Strip configuration
+#define LED_STRIP_GPIO              4
+#define LED_STRIP_LED_NUMBERS       8
+#define LED_STRIP_RMT_RES_HZ        (10 * 1000 * 1000) // 10MHz resolution
+
 // --- GLOBALS ---
 static const char *TAG = "EBOOK_LIBRARIAN";
 static bool ebook_reader_connected = false;
 static msc_host_device_handle_t device_handle = NULL;
+static led_strip_handle_t g_led_strip;
+
+// Enum and global variable for managing LED state
+typedef enum {
+    LED_STATE_INIT,
+    LED_STATE_IDLE,
+    LED_STATE_CONNECTED,
+    LED_STATE_TRANSFER,
+    LED_STATE_ERROR
+} led_state_t;
+
+volatile led_state_t g_led_state = LED_STATE_INIT;
 
 
 // --- WEB PAGE (HTML, CSS, JS) ---
@@ -255,17 +280,27 @@ static esp_err_t copy_file(const char *source_path, const char *dest_path) {
         return ESP_FAIL;
     }
 
-    char buffer[1024];
+    // Increase buffer size for faster copies
+    char *buffer = malloc(4096);
+    if (buffer == NULL) {
+        ESP_LOGE(TAG, "Failed to allocate memory for copy buffer");
+        fclose(source_file);
+        fclose(dest_file);
+        return ESP_FAIL;
+    }
+
     size_t bytes_read;
-    while ((bytes_read = fread(buffer, 1, sizeof(buffer), source_file)) > 0) {
+    while ((bytes_read = fread(buffer, 1, 4096, source_file)) > 0) {
         if (fwrite(buffer, 1, bytes_read, dest_file) != bytes_read) {
             ESP_LOGE(TAG, "Failed to write to destination file");
+            free(buffer);
             fclose(source_file);
             fclose(dest_file);
             return ESP_FAIL;
         }
     }
-
+    
+    free(buffer);
     fclose(source_file);
     fclose(dest_file);
     ESP_LOGI(TAG, "File copied successfully");
@@ -338,9 +373,11 @@ static esp_err_t list_files_handler(httpd_req_t *req) {
 }
 
 static esp_err_t transfer_file_handler(httpd_req_t *req) {
+    g_led_state = LED_STATE_TRANSFER; // Set LED state to transferring
     char content[256];
     int ret = httpd_req_recv(req, content, sizeof(content) -1);
     if (ret <= 0) {
+        g_led_state = ebook_reader_connected ? LED_STATE_CONNECTED : LED_STATE_IDLE;
         return ESP_FAIL;
     }
     content[ret] = '\0';
@@ -348,6 +385,7 @@ static esp_err_t transfer_file_handler(httpd_req_t *req) {
     cJSON *json = cJSON_Parse(content);
     if (!json) {
         httpd_resp_send_400(req);
+        g_led_state = ebook_reader_connected ? LED_STATE_CONNECTED : LED_STATE_IDLE;
         return ESP_FAIL;
     }
 
@@ -364,6 +402,9 @@ static esp_err_t transfer_file_handler(httpd_req_t *req) {
     esp_err_t res = copy_file(source_path, dest_path);
     
     cJSON_Delete(json);
+
+    // Set LED state back based on connection status
+    g_led_state = ebook_reader_connected ? LED_STATE_CONNECTED : LED_STATE_IDLE;
 
     cJSON *response_json = cJSON_CreateObject();
     cJSON_AddBoolToObject(response_json, "success", res == ESP_OK);
@@ -490,6 +531,7 @@ static void msc_event_cb(const msc_host_event_t *event, void *arg)
     if (event->event == MSC_DEVICE_CONNECTED) {
         ESP_LOGI(TAG, "MSC device connected");
         ebook_reader_connected = true;
+        g_led_state = LED_STATE_CONNECTED;
         ESP_ERROR_CHECK(msc_host_install_device(event->device, &device_handle));
         
         // Mount the filesystem
@@ -499,6 +541,7 @@ static void msc_event_cb(const msc_host_event_t *event, void *arg)
     } else if (event->event == MSC_DEVICE_DISCONNECTED) {
         ESP_LOGI(TAG, "MSC device disconnected");
         ebook_reader_connected = false;
+        g_led_state = LED_STATE_IDLE;
         // Unmount the filesystem
         vfs_msc_unmount(MOUNT_POINT_USB);
         ESP_LOGI(TAG, "MSC device unmounted");
@@ -509,7 +552,6 @@ static void msc_event_cb(const msc_host_event_t *event, void *arg)
 void usb_host_lib_task(void *arg)
 {
     while (1) {
-        // Start handling system events
         uint32_t event_flags;
         usb_host_lib_handle_events(portMAX_DELAY, &event_flags);
         if (event_flags & USB_HOST_LIB_EVENT_FLAGS_NO_CLIENTS) {
@@ -542,6 +584,90 @@ void init_usb_host() {
     ESP_ERROR_CHECK(msc_host_install(&msc_config));
 }
 
+// --- LED STRIP ---
+static void led_status_task(void *pvParameters) {
+    uint8_t brightness = 0;
+    bool increasing = true;
+
+    while (1) {
+        switch (g_led_state) {
+            case LED_STATE_IDLE: // Pulsing Blue
+                if (increasing) {
+                    brightness += 2;
+                    if (brightness >= 100) increasing = false;
+                } else {
+                    brightness -= 2;
+                    if (brightness <= 0) increasing = true;
+                }
+                for (int i = 0; i < LED_STRIP_LED_NUMBERS; i++) {
+                    led_strip_set_pixel(g_led_strip, i, 0, 0, brightness);
+                }
+                led_strip_refresh(g_led_strip);
+                vTaskDelay(pdMS_TO_TICKS(20));
+                break;
+
+            case LED_STATE_CONNECTED: // Solid Green
+                for (int i = 0; i < LED_STRIP_LED_NUMBERS; i++) {
+                    led_strip_set_pixel(g_led_strip, i, 0, 128, 0); // Green
+                }
+                led_strip_refresh(g_led_strip);
+                vTaskDelay(pdMS_TO_TICKS(500)); // Sleep to prevent busy-looping
+                break;
+
+            case LED_STATE_TRANSFER: // Pulsing White
+                 if (increasing) {
+                    brightness += 5;
+                    if (brightness >= 150) increasing = false;
+                } else {
+                    brightness -= 5;
+                    if (brightness <= 0) increasing = true;
+                }
+                for (int i = 0; i < LED_STRIP_LED_NUMBERS; i++) {
+                    led_strip_set_pixel(g_led_strip, i, brightness, brightness, brightness);
+                }
+                led_strip_refresh(g_led_strip);
+                vTaskDelay(pdMS_TO_TICKS(15));
+                break;
+
+            case LED_STATE_ERROR: // Solid Red
+                for (int i = 0; i < LED_STRIP_LED_NUMBERS; i++) {
+                    led_strip_set_pixel(g_led_strip, i, 128, 0, 0); // Red
+                }
+                led_strip_refresh(g_led_strip);
+                vTaskDelay(pdMS_TO_TICKS(500));
+                break;
+            
+            default:
+                 vTaskDelay(pdMS_TO_TICKS(100));
+                 break;
+        }
+    }
+}
+
+void init_led_strip(void) {
+    ESP_LOGI(TAG, "Create RMT TX channel");
+    rmt_channel_handle_t led_chan = NULL;
+    rmt_tx_channel_config_t tx_chan_config = {
+        .clk_src = RMT_CLK_SRC_DEFAULT,
+        .gpio_num = LED_STRIP_GPIO,
+        .mem_block_symbols = 64, // Increase if needed
+        .resolution_hz = LED_STRIP_RMT_RES_HZ,
+        .trans_queue_depth = 4,
+    };
+    ESP_ERROR_CHECK(rmt_new_tx_channel(&tx_chan_config, &led_chan));
+
+    ESP_LOGI(TAG, "Install WS2812 driver");
+    led_strip_encoder_config_t encoder_config = {
+        .resolution = LED_STRIP_RMT_RES_HZ,
+    };
+    ESP_ERROR_CHECK(led_strip_new_rmt_encoder(&encoder_config, &g_led_strip));
+    
+    ESP_LOGI(TAG, "Enable RMT TX channel");
+    ESP_ERROR_CHECK(rmt_enable(led_chan));
+    
+    led_strip_clear(g_led_strip);
+}
+
 
 // --- MAIN APPLICATION ENTRY POINT ---
 void app_main(void) {
@@ -556,10 +682,31 @@ void app_main(void) {
     // Initialize subsystems
     init_sd_card();
     init_wifi_ap();
+    init_led_strip();
     init_usb_host();
 
+    // Start background tasks
+    xTaskCreate(led_status_task, "led_status_task", 2048, NULL, 5, NULL);
+    
     // Start the web server
     start_webserver();
 
     ESP_LOGI(TAG, "E-Book Librarian is running!");
+    g_led_state = LED_STATE_IDLE; // Set initial state after setup is complete
 }
+```
+
+### How to Use the New Feature
+
+1.  **Hardware Connection:** Connect the `Data In` pin of your WS2812/NeoPixel strip to the GPIO pin defined in the code (`#define LED_STRIP_GPIO 4`). Also, connect the strip to a suitable power source (5V) and Ground.
+
+2.  **Project Configuration:** The `led_strip` component is part of the ESP-IDF, but you need to make sure your project knows about it.
+    * Open the `CMakeLists.txt` file in your `main` directory.
+    * Find the line that starts with `REQUIRES`.
+    * Add `led_strip` to the list of required components. It might look something like this:
+        ```cmake
+        idf_component_register(SRCS "main.c"
+                               INCLUDE_DIRS "."
+                               REQUIRES esp_http_server esp_wifi cJSON usb led_strip)
+        
+
