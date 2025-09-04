@@ -15,12 +15,11 @@ idf_component_register(SRCS "${COMPONENT_SRCS}"
                                 nvs_flash
                                 esp_wifi
                                 esp_event
-                                esp_log
                                 esp_system
                                 freertos
 
                                 # Filesystem components
-                                esp_vfs_fat
+                                fatfs
                                 sdmmc
                                 spiffs
 
@@ -31,10 +30,9 @@ idf_component_register(SRCS "${COMPONENT_SRCS}"
                                 usb
 
                                 # Peripherals
-                                led_strip
+                                esp_driver_rmt
 
                                 # Utility components
-                                cJSON
                        )
 
 # Generate the SPIFFS image from the web_assets directory

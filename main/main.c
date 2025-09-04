@@ -94,19 +94,47 @@ typedef enum {
 
 volatile led_state_t g_led_state = LED_STATE_INIT;
 
+// --- Transfer Progress Tracking ---
+typedef struct {
+    char filename[256];
+    size_t bytes_transferred;
+    size_t total_bytes;
+    bool active;
+    bool success;
+    char error_msg[128];
+} transfer_progress_t;
+
+static transfer_progress_t g_transfer_progress = {
+    .active = false,
+};
+volatile bool g_cancel_transfer = false;
+
+
 // --- HELPER FUNCTIONS ---
 // Helper to copy file between two filesystems
-static esp_err_t copy_file(const char *source_path, const char *dest_path) {
+static esp_err_t copy_file(const char *source_path, const char *dest_path, transfer_progress_t *progress) {
     ESP_LOGI(TAG, "Copying from %s to %s", source_path, dest_path);
     FILE *source_file = fopen(source_path, "rb");
     if (!source_file) {
         ESP_LOGE(TAG, "Failed to open source file: %s", source_path);
+        if (progress) snprintf(progress->error_msg, sizeof(progress->error_msg), "Failed to open source file.");
         return ESP_FAIL;
     }
+
+    // Get file size for progress tracking
+    struct stat st;
+    if (stat(source_path, &st) == 0) {
+        if(progress) progress->total_bytes = st.st_size;
+    } else {
+        if(progress) progress->total_bytes = 0;
+    }
+    if(progress) progress->bytes_transferred = 0;
+
 
     FILE *dest_file = fopen(dest_path, "wb");
     if (!dest_file) {
         ESP_LOGE(TAG, "Failed to open destination file: %s", dest_path);
+        if (progress) snprintf(progress->error_msg, sizeof(progress->error_msg), "Failed to open destination file.");
         fclose(source_file);
         return ESP_FAIL;
     }
@@ -115,6 +143,7 @@ static esp_err_t copy_file(const char *source_path, const char *dest_path) {
     char *buffer = malloc(4096);
     if (buffer == NULL) {
         ESP_LOGE(TAG, "Failed to allocate memory for copy buffer");
+        if (progress) snprintf(progress->error_msg, sizeof(progress->error_msg), "Memory allocation failed.");
         fclose(source_file);
         fclose(dest_file);
         return ESP_FAIL;
@@ -122,12 +151,26 @@ static esp_err_t copy_file(const char *source_path, const char *dest_path) {
 
     size_t bytes_read;
     while ((bytes_read = fread(buffer, 1, 4096, source_file)) > 0) {
+        if (g_cancel_transfer) {
+            ESP_LOGW(TAG, "Transfer cancelled by user.");
+            snprintf(progress->error_msg, sizeof(progress->error_msg), "Transfer cancelled.");
+            free(buffer);
+            fclose(source_file);
+            fclose(dest_file);
+            // Optionally delete the partially copied file
+            remove(dest_path);
+            return ESP_FAIL;
+        }
         if (fwrite(buffer, 1, bytes_read, dest_file) != bytes_read) {
             ESP_LOGE(TAG, "Failed to write to destination file");
+            if (progress) snprintf(progress->error_msg, sizeof(progress->error_msg), "Write error on destination.");
             free(buffer);
             fclose(source_file);
             fclose(dest_file);
             return ESP_FAIL;
+        }
+        if (progress) {
+            progress->bytes_transferred += bytes_read;
         }
     }
     
@@ -135,6 +178,7 @@ static esp_err_t copy_file(const char *source_path, const char *dest_path) {
     fclose(source_file);
     fclose(dest_file);
     ESP_LOGI(TAG, "File copied successfully");
+    if (progress) progress->success = true;
     return ESP_OK;
 }
 
@@ -193,9 +237,18 @@ static esp_err_t static_file_handler(httpd_req_t *req) {
 
 static esp_err_t status_handler(httpd_req_t *req) {
     httpd_resp_set_type(req, "application/json");
-    char resp_str[64];
-    snprintf(resp_str, sizeof(resp_str), "{\"reader_connected\": %s}", ebook_reader_connected ? "true" : "false");
-    httpd_resp_send(req, resp_str, strlen(resp_str));
+    cJSON *root = cJSON_CreateObject();
+    cJSON_AddBoolToObject(root, "reader_connected", ebook_reader_connected);
+    cJSON_AddBoolToObject(root, "transfer_active", g_transfer_progress.active);
+    if (g_transfer_progress.active) {
+        cJSON_AddStringToObject(root, "filename", g_transfer_progress.filename);
+        cJSON_AddNumberToObject(root, "bytes_transferred", g_transfer_progress.bytes_transferred);
+        cJSON_AddNumberToObject(root, "total_bytes", g_transfer_progress.total_bytes);
+    }
+    char *json_str = cJSON_PrintUnformatted(root);
+    httpd_resp_send(req, json_str, strlen(json_str));
+    free(json_str);
+    cJSON_Delete(root);
     return ESP_OK;
 }
 
@@ -251,15 +304,21 @@ static esp_err_t list_files_handler(httpd_req_t *req) {
 }
 
 static esp_err_t transfer_file_handler(httpd_req_t *req) {
-    g_led_state = LED_STATE_TRANSFER; // Set LED state to transferring
+    if (g_transfer_progress.active) {
+        httpd_resp_send_err(req, HTTPD_429_TOO_MANY_REQUESTS, "A file transfer is already in progress.");
+        return ESP_FAIL;
+    }
+
+    g_led_state = LED_STATE_TRANSFER;
+
     char content[256];
-    int ret = httpd_req_recv(req, content, sizeof(content) -1);
+    int ret = httpd_req_recv(req, content, sizeof(content) - 1);
     if (ret <= 0) {
         g_led_state = ebook_reader_connected ? LED_STATE_CONNECTED : LED_STATE_IDLE;
         return ESP_FAIL;
     }
     content[ret] = '\0';
-    
+
     cJSON *json = cJSON_Parse(content);
     if (!json) {
         httpd_resp_send_400(req);
@@ -270,29 +329,80 @@ static esp_err_t transfer_file_handler(httpd_req_t *req) {
     const char *source = cJSON_GetObjectItem(json, "source")->valuestring;
     const char *destination = cJSON_GetObjectItem(json, "destination")->valuestring;
     const char *filename = cJSON_GetObjectItem(json, "filename")->valuestring;
-    
+
+    if (!source || !destination || !filename) {
+        cJSON_Delete(json);
+        httpd_resp_send_400(req);
+        g_led_state = ebook_reader_connected ? LED_STATE_CONNECTED : LED_STATE_IDLE;
+        return ESP_FAIL;
+    }
+
+    // Initialize progress tracking
+    g_transfer_progress.active = true;
+    g_cancel_transfer = false; // Reset cancel flag
+    strlcpy(g_transfer_progress.filename, filename, sizeof(g_transfer_progress.filename));
+    g_transfer_progress.bytes_transferred = 0;
+    g_transfer_progress.total_bytes = 0;
+    g_transfer_progress.success = false;
+    g_transfer_progress.error_msg[0] = '\0';
+
     char source_path[256];
     char dest_path[256];
 
     snprintf(source_path, sizeof(source_path), "%s/%s", (strcmp(source, "sd") == 0) ? MOUNT_POINT_SD : MOUNT_POINT_USB, filename);
     snprintf(dest_path, sizeof(dest_path), "%s/%s", (strcmp(destination, "sd") == 0) ? MOUNT_POINT_SD : MOUNT_POINT_USB, filename);
     
-    esp_err_t res = copy_file(source_path, dest_path);
+    esp_err_t res = copy_file(source_path, dest_path, &g_transfer_progress);
     
     cJSON_Delete(json);
 
     // Set LED state back based on connection status
     g_led_state = ebook_reader_connected ? LED_STATE_CONNECTED : LED_STATE_IDLE;
+    if (res != ESP_OK) {
+        g_led_state = LED_STATE_ERROR; // Indicate error on LED
+    }
+
 
     cJSON *response_json = cJSON_CreateObject();
     cJSON_AddBoolToObject(response_json, "success", res == ESP_OK);
-    cJSON_AddStringToObject(response_json, "message", res == ESP_OK ? "File transfer complete!" : "File transfer failed.");
+    cJSON_AddStringToObject(response_json, "message", res == ESP_OK ? "File transfer complete!" : g_transfer_progress.error_msg);
     
     char *json_str = cJSON_PrintUnformatted(response_json);
     httpd_resp_set_type(req, "application/json");
     httpd_resp_send(req, json_str, strlen(json_str));
     free(json_str);
     cJSON_Delete(response_json);
+
+    // Deactivate progress tracking after sending response
+    g_transfer_progress.active = false;
+
+    return ESP_OK;
+}
+
+static esp_err_t transfer_cancel_handler(httpd_req_t *req) {
+    ESP_LOGI(TAG, "Received request to cancel transfer");
+    g_cancel_transfer = true;
+    httpd_resp_send(req, "OK", HTTPD_200_OK);
+    return ESP_OK;
+}
+
+// Handler to report the current file transfer progress
+static esp_err_t transfer_progress_handler(httpd_req_t *req) {
+    if (!g_transfer_progress.active) {
+        httpd_resp_send_404(req);
+        return ESP_OK;
+    }
+
+    httpd_resp_set_type(req, "application/json");
+    cJSON *root = cJSON_CreateObject();
+    cJSON_AddStringToObject(root, "filename", g_transfer_progress.filename);
+    cJSON_AddNumberToObject(root, "bytes_transferred", g_transfer_progress.bytes_transferred);
+    cJSON_AddNumberToObject(root, "total_bytes", g_transfer_progress.total_bytes);
+
+    char *json_str = cJSON_PrintUnformatted(root);
+    httpd_resp_send(req, json_str, strlen(json_str));
+    free(json_str);
+    cJSON_Delete(root);
 
     return ESP_OK;
 }
@@ -315,6 +425,12 @@ static httpd_handle_t start_webserver(void) {
         
         httpd_uri_t transfer_uri = { "/transfer-file", HTTP_POST, transfer_file_handler, NULL };
         httpd_register_uri_handler(server, &transfer_uri);
+
+        httpd_uri_t progress_uri = { "/transfer-progress", HTTP_GET, transfer_progress_handler, NULL };
+        httpd_register_uri_handler(server, &progress_uri);
+
+        httpd_uri_t cancel_uri = { "/transfer-cancel", HTTP_POST, transfer_cancel_handler, NULL };
+        httpd_register_uri_handler(server, &cancel_uri);
 
         // Handler for all other URIs (serves static files)
         httpd_uri_t static_uri = { "/*", HTTP_GET, static_file_handler, NULL };

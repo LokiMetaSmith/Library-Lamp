@@ -15,3 +15,44 @@ li:last-child { border-bottom: none; }
 button { background-color: #1877f2; color: white; border: none; padding: 10px 15px; border-radius: 6px; cursor: pointer; font-size: 1em; transition: background-color 0.2s; }
 button:disabled { background-color: #a0c3f7; cursor: not-allowed; }
 .actions { margin-top: 20px; text-align: center; }
+
+.transfer-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.progress-container {
+    width: 120px;
+    height: 12px;
+    background-color: #e0e0e0;
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.progress-bar {
+    height: 100%;
+    background-color: #4a90e2;
+    border-radius: 6px;
+    transition: width 0.2s ease-in-out;
+}
+
+button.cancel-btn {
+    background-color: #e74c3c;
+}
+
+button.cancel-btn:hover {
+    background-color: #c0392b;
+}
+
+.app-footer {
+    background-color: #fce4e4;
+    color: #c0392b;
+    padding: 10px 25px;
+    text-align: center;
+    font-weight: bold;
+}
+
+.error-message {
+    margin: 0;
+}
