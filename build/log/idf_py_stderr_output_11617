@@ -1,9 +1,0 @@
-Command: cmake -G Ninja -DPYTHON_DEPS_CHECKED=1 -DPYTHON=/home/jules/.espressif/python_env/idf6.0_py3.12_env/bin/python -DESP_PLATFORM=1 -DIDF_TARGET=esp32s3 -DCCACHE_ENABLE=0 /app
-CMake Error at /home/jules/esp/esp-idf/tools/cmake/build.cmake:332 (message):
-  Failed to resolve component 'esp_log' required by component 'main': unknown
-  name.
-Call Stack (most recent call first):
-  /home/jules/esp/esp-idf/tools/cmake/build.cmake:375 (__build_resolve_and_add_req)
-  /home/jules/esp/esp-idf/tools/cmake/build.cmake:705 (__build_expand_requirements)
-  /home/jules/esp/esp-idf/tools/cmake/project.cmake:740 (idf_build_process)
-  CMakeLists.txt:7 (project)

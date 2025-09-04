@@ -7,24 +7,54 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="container">
-        <h1>📖 E-Book Librarian</h1>
-        <div id="status" class="status disconnected">Connecting... Please plug in your e-reader.</div>
-        <div class="panels">
-            <div class="panel">
-                <h2>Library Books (SD Card)</h2>
-                <ul id="sd-file-list"></ul>
+    <div id="app">
+        <header class="app-header">
+            <h1>E-Book Librarian</h1>
+            <div class="status-indicator" :class="statusClass"></div>
+        </header>
+        <main class="app-main">
+            <div class="library-section">
+                <h2>Local Library (SD Card)</h2>
+                <ul class="file-list">
+                    <li v-for="file in localFiles" :key="file.name">
+                        <span>{{ file.name }}</span>
+                        <div class="transfer-controls">
+                            <div class="progress-container" v-if="transfer.active && transfer.filename === file.name">
+                                <div class="progress-bar" :style="{ width: transfer.progress + '%' }"></div>
+                            </div>
+                            <button @click="transferToEReader(file.name)" :disabled="!isEReaderConnected || transfer.active">Transfer to E-Reader</button>
+                            <button v-if="transfer.active && transfer.filename === file.name" @click="cancelTransfer" class="cancel-btn">Cancel</button>
+                        </div>
+                    </li>
+                </ul>
             </div>
-            <div class="panel">
-                <h2>E-Reader Books (USB)</h2>
-                <ul id="usb-file-list"></ul>
+            <div class="ereader-section">
+                <h2>E-Reader</h2>
+                <div v-if="isEReaderConnected">
+                    <ul class="file-list">
+                        <li v-for="file in ereaderFiles" :key="file.name">
+                            <span>{{ file.name }}</span>
+                            <div class="transfer-controls">
+                                <div class="progress-container" v-if="transfer.active && transfer.filename === file.name">
+                                    <div class="progress-bar" :style="{ width: transfer.progress + '%' }"></div>
+                                </div>
+                                <button @click="transferToLibrary(file.name)" :disabled="transfer.active">Transfer to Library</button>
+                                <button v-if="transfer.active && transfer.filename === file.name" @click="cancelTransfer" class="cancel-btn">Cancel</button>
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+                <div v-else class="no-device">
+                    <p>No e-reader connected.</p>
+                </div>
             </div>
-        </div>
-        <div class="actions">
-            <button id="to-reader-btn" disabled>Copy to E-Reader &gt;&gt;</button>
-            <button id="to-library-btn" disabled>&lt;&lt; Copy to Library</button>
-        </div>
+        </main>
+        <footer class="app-footer" v-if="transfer.error">
+            <p class="error-message">{{ transfer.error }}</p>
+        </footer>
     </div>
+
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="script.js"></script>
 </body>
 </html>
