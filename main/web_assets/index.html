@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>E-Book Librarian</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>📖 E-Book Librarian</h1>
+        <div id="status" class="status disconnected">Connecting... Please plug in your e-reader.</div>
+        <div class="panels">
+            <div class="panel">
+                <h2>Library Books (SD Card)</h2>
+                <ul id="sd-file-list"></ul>
+            </div>
+            <div class="panel">
+                <h2>E-Reader Books (USB)</h2>
+                <ul id="usb-file-list"></ul>
+            </div>
+        </div>
+        <div class="actions">
+            <button id="to-reader-btn" disabled>Copy to E-Reader &gt;&gt;</button>
+            <button id="to-library-btn" disabled>&lt;&lt; Copy to Library</button>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>

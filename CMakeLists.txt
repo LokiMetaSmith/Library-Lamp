@@ -1,37 +1,7 @@
-# CMake build script for the main component of the E-Book Librarian project.
+# This is the top-level CMakeLists.txt file for the project.
 
-# List of source files for this component.
-set(COMPONENT_SRCS "main.c")
+cmake_minimum_required(VERSION 3.16)
 
-# List of directories to add to the include path.
-set(COMPONENT_ADD_INCLUDEDIRS ".")
+include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 
-# Register the component with the ESP-IDF build system.
-# This specifies the source files and the dependencies (other components) it requires.
-idf_component_register(SRCS "${COMPONENT_SRCS}"
-                       INCLUDE_DIRS "${COMPONENT_ADD_INCLUDEDIRS}"
-                       REQUIRES 
-                                # Core IDF components
-                                nvs_flash
-                                esp_wifi
-                                esp_event
-                                esp_log
-                                esp_system
-                                freertos
-
-                                # Filesystem components
-                                esp_vfs_fat
-                                sdmmc
-
-                                # Networking components
-                                esp_http_server
-                                
-                                # USB Host components
-                                usb
-
-                                # Peripherals
-                                led_strip
-
-                                # Utility components
-                                cJSON
-                       )
+project(ebook-librarian)

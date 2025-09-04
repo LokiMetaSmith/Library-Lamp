@@ -27,6 +27,7 @@
 #include <string.h>
 #include <dirent.h>
 #include <math.h>
+#include <sys/stat.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_system.h"
@@ -36,6 +37,7 @@
 #include "nvs_flash.h"
 #include "esp_http_server.h"
 #include "esp_vfs_fat.h"
+#include "esp_spiffs.h"
 #include "sdmmc_cmd.h"
 #include "cJSON.h"
 
@@ -66,6 +68,10 @@
 // USB mount point
 #define MOUNT_POINT_USB "/usb"
 
+// SPIFFS mount point for web assets
+#define MOUNT_POINT_SPIFFS "/spiffs"
+
+
 // LED Strip configuration
 #define LED_STRIP_GPIO              4
 #define LED_STRIP_LED_NUMBERS       8
@@ -87,181 +93,6 @@ typedef enum {
 } led_state_t;
 
 volatile led_state_t g_led_state = LED_STATE_INIT;
-
-
-// --- WEB PAGE (HTML, CSS, JS) ---
-// We embed the user interface directly into the code.
-const char index_html_start[] = R"rawliteral(
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>E-Book Librarian</title>
-    <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; margin: 0; background-color: #f0f2f5; color: #1c1e21; }
-        .container { max-width: 900px; margin: 20px auto; padding: 20px; background-color: #fff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        h1 { color: #1877f2; text-align: center; border-bottom: 1px solid #ddd; padding-bottom: 10px; }
-        .status { padding: 10px; background-color: #e7f3ff; border: 1px solid #b7d9f7; border-radius: 6px; margin-bottom: 20px; text-align: center; }
-        .status.connected { background-color: #e9f7ef; border-color: #b7e4c7; }
-        .status.disconnected { background-color: #fff1f0; border-color: #ffccc7; }
-        .panels { display: flex; flex-wrap: wrap; gap: 20px; }
-        .panel { flex: 1; min-width: 300px; background: #f9f9f9; padding: 15px; border-radius: 6px; border: 1px solid #e0e0e0; }
-        .panel h2 { margin-top: 0; font-size: 1.2em; }
-        ul { list-style-type: none; padding: 0; max-height: 400px; overflow-y: auto; }
-        li { padding: 8px 10px; border-bottom: 1px solid #eee; display: flex; align-items: center; justify-content: space-between; word-break: break-all; }
-        li:last-child { border-bottom: none; }
-        .file-name { cursor: pointer; }
-        .file-name.selected { font-weight: bold; color: #1877f2; }
-        button { background-color: #1877f2; color: white; border: none; padding: 10px 15px; border-radius: 6px; cursor: pointer; font-size: 1em; transition: background-color 0.2s; }
-        button:disabled { background-color: #a0c3f7; cursor: not-allowed; }
-        .actions { margin-top: 20px; text-align: center; }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h1>📖 E-Book Librarian</h1>
-        <div id="status" class="status disconnected">Connecting... Please plug in your e-reader.</div>
-        <div class="panels">
-            <div class="panel">
-                <h2>Library Books (SD Card)</h2>
-                <ul id="sd-file-list"></ul>
-            </div>
-            <div class="panel">
-                <h2>E-Reader Books (USB)</h2>
-                <ul id="usb-file-list"></ul>
-            </div>
-        </div>
-        <div class="actions">
-            <button id="to-reader-btn" disabled>Copy to E-Reader &gt;&gt;</button>
-            <button id="to-library-btn" disabled>&lt;&lt; Copy to Library</button>
-        </div>
-    </div>
-    <script>
-        let selectedSdFile = null;
-        let selectedUsbFile = null;
-
-        const sdList = document.getElementById('sd-file-list');
-        const usbList = document.getElementById('usb-file-list');
-        const toReaderBtn = document.getElementById('to-reader-btn');
-        const toLibraryBtn = document.getElementById('to-library-btn');
-        const statusDiv = document.getElementById('status');
-
-        function selectFile(listElement, fileName, type) {
-            Array.from(document.querySelectorAll('.file-name.selected')).forEach(el => el.classList.remove('selected'));
-            const clickedLi = event.target.closest('li');
-            if (clickedLi) {
-                clickedLi.firstElementChild.classList.add('selected');
-            }
-
-            if (type === 'sd') {
-                selectedSdFile = fileName;
-                selectedUsbFile = null;
-            } else {
-                selectedUsbFile = fileName;
-                selectedSdFile = null;
-            }
-            updateButtons();
-        }
-
-        function createListItem(fileName, type) {
-            const li = document.createElement('li');
-            const span = document.createElement('span');
-            span.className = 'file-name';
-            span.textContent = fileName;
-            li.appendChild(span);
-            const listElement = type === 'sd' ? sdList : usbList;
-            li.onclick = () => selectFile(listElement, fileName, type);
-            return li;
-        }
-
-        async function fetchFiles(type) {
-            try {
-                const response = await fetch(`/list-files?type=${type}`);
-                const files = await response.json();
-                const listElement = type === 'sd' ? sdList : usbList;
-                listElement.innerHTML = '';
-                if (files && files.length > 0) {
-                  files.forEach(file => {
-                    listElement.appendChild(createListItem(file.name, type));
-                  });
-                } else {
-                   listElement.innerHTML = '<li>No books found.</li>';
-                }
-            } catch (e) {
-                console.error(`Error fetching ${type} files:`, e);
-                const listElement = type === 'sd' ? sdList : usbList;
-                listElement.innerHTML = `<li>Error loading files. Check console.</li>`;
-            }
-        }
-        
-        async function transferFile(source, destination, fileName) {
-            statusDiv.textContent = `Copying ${fileName}... This may take a moment.`;
-            toReaderBtn.disabled = true;
-            toLibraryBtn.disabled = true;
-            try {
-                const response = await fetch('/transfer-file', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ source, destination, filename: fileName })
-                });
-                const result = await response.json();
-                statusDiv.textContent = result.message;
-            } catch (e) {
-                statusDiv.textContent = 'Error during transfer.';
-            }
-            // Refresh file lists after transfer
-            setTimeout(() => {
-              fetchFiles('sd');
-              fetchFiles('usb');
-              updateButtons();
-            }, 1500);
-        }
-
-        function updateButtons() {
-            toReaderBtn.disabled = !selectedSdFile;
-            toLibraryBtn.disabled = !selectedUsbFile;
-        }
-
-        function checkStatus() {
-            fetch('/status')
-                .then(response => response.json())
-                .then(data => {
-                    const isConnected = data.reader_connected;
-                    const wasConnected = statusDiv.classList.contains('connected');
-                    
-                    if (isConnected) {
-                        statusDiv.textContent = 'E-Reader Connected!';
-                        statusDiv.className = 'status connected';
-                        if (!wasConnected) { // Fetch files only on new connection
-                            fetchFiles('usb');
-                        }
-                    } else {
-                        statusDiv.textContent = 'E-Reader Disconnected. Please plug in your device.';
-                        statusDiv.className = 'status disconnected';
-                        usbList.innerHTML = '<li>Please connect e-reader.</li>';
-                    }
-                });
-        }
-
-        toReaderBtn.onclick = () => {
-            if (selectedSdFile) transferFile('sd', 'usb', selectedSdFile);
-        };
-
-        toLibraryBtn.onclick = () => {
-            if (selectedUsbFile) transferFile('usb', 'sd', selectedUsbFile);
-        };
-
-        window.onload = () => {
-            fetchFiles('sd');
-            setInterval(checkStatus, 3000);
-            checkStatus();
-        };
-    </script>
-</body>
-</html>
-)rawliteral";
-const char index_html_end[] = ""; // Dummy for sizeof calculation
 
 // --- HELPER FUNCTIONS ---
 // Helper to copy file between two filesystems
@@ -308,8 +139,55 @@ static esp_err_t copy_file(const char *source_path, const char *dest_path) {
 }
 
 // --- WEB SERVER HANDLERS ---
-static esp_err_t main_page_handler(httpd_req_t *req) {
-    httpd_resp_send(req, index_html_start, sizeof(index_html_start) - 1);
+// Generic handler for serving static files from SPIFFS
+static esp_err_t static_file_handler(httpd_req_t *req) {
+    char filepath[512];
+    snprintf(filepath, sizeof(filepath), "%s%s", MOUNT_POINT_SPIFFS, req->uri);
+
+    // Default to index.html if root is requested
+    if (strcmp(req->uri, "/") == 0) {
+        snprintf(filepath, sizeof(filepath), "%s/index.html", MOUNT_POINT_SPIFFS);
+    }
+
+    struct stat path_stat;
+    if (stat(filepath, &path_stat) == -1) {
+        ESP_LOGE(TAG, "File not found: %s", filepath);
+        httpd_resp_send_404(req);
+        return ESP_FAIL;
+    }
+
+    // Set content type based on file extension
+    const char *type = "text/plain";
+    if (strstr(filepath, ".html")) type = "text/html";
+    else if (strstr(filepath, ".css")) type = "text/css";
+    else if (strstr(filepath, ".js")) type = "application/javascript";
+    httpd_resp_set_type(req, type);
+
+    // Open and send file
+    FILE *fd = fopen(filepath, "r");
+    if (!fd) {
+        ESP_LOGE(TAG, "Failed to open file for reading: %s", filepath);
+        httpd_resp_send_500(req);
+        return ESP_FAIL;
+    }
+
+    char *chunk = malloc(1024);
+    size_t chunk_size;
+    do {
+        chunk_size = fread(chunk, 1, 1024, fd);
+        if (chunk_size > 0) {
+            if (httpd_resp_send_chunk(req, chunk, chunk_size) != ESP_OK) {
+                fclose(fd);
+                free(chunk);
+                ESP_LOGE(TAG, "File sending failed!");
+                return ESP_FAIL;
+            }
+        }
+    } while (chunk_size > 0);
+
+    httpd_resp_send_chunk(req, NULL, 0); // End response
+    fclose(fd);
+    free(chunk);
     return ESP_OK;
 }
 
@@ -428,9 +306,7 @@ static httpd_handle_t start_webserver(void) {
 
     ESP_LOGI(TAG, "Starting server on port: '%d'", config.server_port);
     if (httpd_start(&server, &config) == ESP_OK) {
-        httpd_uri_t main_uri = { "/", HTTP_GET, main_page_handler, NULL };
-        httpd_register_uri_handler(server, &main_uri);
-
+        // Handlers for dynamic content
         httpd_uri_t status_uri = { "/status", HTTP_GET, status_handler, NULL };
         httpd_register_uri_handler(server, &status_uri);
         
@@ -439,6 +315,10 @@ static httpd_handle_t start_webserver(void) {
         
         httpd_uri_t transfer_uri = { "/transfer-file", HTTP_POST, transfer_file_handler, NULL };
         httpd_register_uri_handler(server, &transfer_uri);
+
+        // Handler for all other URIs (serves static files)
+        httpd_uri_t static_uri = { "/*", HTTP_GET, static_file_handler, NULL };
+        httpd_register_uri_handler(server, &static_uri);
     }
     return server;
 }
@@ -483,6 +363,39 @@ void init_wifi_ap(void) {
     ESP_ERROR_CHECK(esp_wifi_start());
 
     ESP_LOGI(TAG, "WiFi AP initialized. SSID:%s password:%s", WIFI_SSID, WIFI_PASS);
+}
+
+// --- SPIFFS SETUP ---
+void init_spiffs(void) {
+    ESP_LOGI(TAG, "Initializing SPIFFS");
+
+    esp_vfs_spiffs_conf_t conf = {
+      .base_path = MOUNT_POINT_SPIFFS,
+      .partition_label = "storage",
+      .max_files = 5,
+      .format_if_mount_failed = true
+    };
+
+    esp_err_t ret = esp_vfs_spiffs_register(&conf);
+
+    if (ret != ESP_OK) {
+        if (ret == ESP_FAIL) {
+            ESP_LOGE(TAG, "Failed to mount or format filesystem");
+        } else if (ret == ESP_ERR_NOT_FOUND) {
+            ESP_LOGE(TAG, "Failed to find SPIFFS partition");
+        } else {
+            ESP_LOGE(TAG, "Failed to initialize SPIFFS (%s)", esp_err_to_name(ret));
+        }
+        return;
+    }
+
+    size_t total = 0, used = 0;
+    ret = esp_spiffs_info(conf.partition_label, &total, &used);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to get SPIFFS partition information (%s)", esp_err_to_name(ret));
+    } else {
+        ESP_LOGI(TAG, "Partition size: total: %d, used: %d", total, used);
+    }
 }
 
 // --- SD CARD SETUP ---
@@ -579,7 +492,7 @@ void init_usb_host() {
         .create_backround_task = true,
         .task_priority = 5,
         .stack_size = 4096,
-        .callback = msc_event_cb,
+        .callback = msc_event_.cb,
     };
     ESP_ERROR_CHECK(msc_host_install(&msc_config));
 }
@@ -680,6 +593,7 @@ void app_main(void) {
     ESP_ERROR_CHECK(ret);
 
     // Initialize subsystems
+    init_spiffs();
     init_sd_card();
     init_wifi_ap();
     init_led_strip();
@@ -694,4 +608,3 @@ void app_main(void) {
     ESP_LOGI(TAG, "E-Book Librarian is running!");
     g_led_state = LED_STATE_IDLE; // Set initial state after setup is complete
 }
-
