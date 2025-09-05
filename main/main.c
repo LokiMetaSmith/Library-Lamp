@@ -50,6 +50,7 @@
 // --- LED Strip Dependencies ---
 #include "driver/rmt_tx.h"
 #include "led_strip.h"
+#include "miniz.h"
 
 
 // --- CONFIGURATION ---
@@ -111,6 +112,59 @@ volatile bool g_cancel_transfer = false;
 
 
 // --- HELPER FUNCTIONS ---
+
+// Simple helper to extract content from an XML tag.
+// NOTE: This is a very basic parser and will not handle complex XML,
+// but it's sufficient for the simple structure of OPF files.
+static char* parse_xml_tag(const char* xml_buffer, const char* tag) {
+    char start_tag[64];
+    char end_tag[64];
+    snprintf(start_tag, sizeof(start_tag), "<%s", tag);
+    snprintf(end_tag, sizeof(end_tag), "</%s>", tag);
+
+    char *start_ptr = strstr(xml_buffer, start_tag);
+    if (!start_ptr) {
+        return NULL;
+    }
+
+    // Find the closing '>' of the start tag
+    start_ptr = strstr(start_ptr, ">");
+    if (!start_ptr) {
+        return NULL;
+    }
+    start_ptr++; // Move past '>'
+
+    char *end_ptr = strstr(start_ptr, end_tag);
+    if (!end_ptr) {
+        return NULL;
+    }
+
+    size_t len = end_ptr - start_ptr;
+    char *value = malloc(len + 1);
+    if (!value) {
+        return NULL;
+    }
+    memcpy(value, start_ptr, len);
+    value[len] = '\0';
+
+    // Basic XML unescaping for &amp;, &lt;, &gt;
+    char *p = value;
+    char *q = value;
+    while (*p) {
+        if (*p == '&') {
+            if (strncmp(p, "&amp;", 5) == 0) { *q++ = '&'; p += 5; }
+            else if (strncmp(p, "&lt;", 4) == 0) { *q++ = '<'; p += 4; }
+            else if (strncmp(p, "&gt;", 4) == 0) { *q++ = '>'; p += 4; }
+            else { *q++ = *p++; }
+        } else {
+            *q++ = *p++;
+        }
+    }
+    *q = '\0';
+
+    return value;
+}
+
 // Helper to copy file between two filesystems
 static esp_err_t copy_file(const char *source_path, const char *dest_path, transfer_progress_t *progress) {
     ESP_LOGI(TAG, "Copying from %s to %s", source_path, dest_path);
@@ -284,10 +338,56 @@ static esp_err_t list_files_handler(httpd_req_t *req) {
     struct dirent *dir;
     while ((dir = readdir(d)) != NULL) {
         if (dir->d_type == DT_REG) { // If it's a regular file
-            // Filter for common ebook formats
             if (strstr(dir->d_name, ".epub") || strstr(dir->d_name, ".mobi") || strstr(dir->d_name, ".pdf") || strstr(dir->d_name, ".txt")) {
                 cJSON *file_obj = cJSON_CreateObject();
                 cJSON_AddStringToObject(file_obj, "name", dir->d_name);
+
+                // For EPUBs, try to parse metadata
+                if (strstr(dir->d_name, ".epub")) {
+                    char full_path[512];
+                    snprintf(full_path, sizeof(full_path), "%s/%s", mount_path, dir->d_name);
+
+                    mz_zip_archive zip_archive;
+                    memset(&zip_archive, 0, sizeof(zip_archive));
+
+                    if (mz_zip_reader_init_file(&zip_archive, full_path, 0)) {
+                        char *opf_content = NULL;
+                        size_t opf_size = 0;
+
+                        // Try common OPF paths
+                        const char* opf_paths[] = {"OEBPS/content.opf", "content.opf", "OPS/content.opf"};
+                        for (int i = 0; i < sizeof(opf_paths)/sizeof(opf_paths[0]); i++) {
+                            int file_index = mz_zip_reader_locate_file(&zip_archive, opf_paths[i], NULL, 0);
+                            if (file_index >= 0) {
+                                opf_content = mz_zip_reader_extract_file_to_heap(&zip_archive, file_index, &opf_size, 0);
+                                break;
+                            }
+                        }
+
+                        if (opf_content) {
+                            char *title = parse_xml_tag(opf_content, "dc:title");
+                            char *author = parse_xml_tag(opf_content, "dc:creator");
+
+                            cJSON_AddStringToObject(file_obj, "title", title ? title : dir->d_name);
+                            cJSON_AddStringToObject(file_obj, "author", author ? author : "Unknown");
+
+                            if (title) free(title);
+                            if (author) free(author);
+                            free(opf_content);
+                        } else {
+                             cJSON_AddStringToObject(file_obj, "title", dir->d_name);
+                             cJSON_AddStringToObject(file_obj, "author", "Unknown");
+                        }
+                        mz_zip_reader_end(&zip_archive);
+                    } else {
+                        cJSON_AddStringToObject(file_obj, "title", dir->d_name);
+                        cJSON_AddStringToObject(file_obj, "author", "Unknown");
+                    }
+                } else {
+                    // For other file types, just use the filename
+                    cJSON_AddStringToObject(file_obj, "title", dir->d_name);
+                    cJSON_AddStringToObject(file_obj, "author", "");
+                }
                 cJSON_AddItemToArray(root, file_obj);
             }
         }
@@ -612,7 +712,7 @@ void init_usb_host() {
         .create_backround_task = true,
         .task_priority = 5,
         .stack_size = 4096,
-        .callback = msc_event_.cb,
+        .callback = msc_event_cb,
     };
     ESP_ERROR_CHECK(msc_host_install(&msc_config));
 }
@@ -624,19 +724,20 @@ static void led_status_task(void *pvParameters) {
 
     while (1) {
         switch (g_led_state) {
-            case LED_STATE_IDLE: // Pulsing Blue
+            case LED_STATE_IDLE: // Slow breathing white
                 if (increasing) {
-                    brightness += 2;
-                    if (brightness >= 100) increasing = false;
+                    brightness += 1;
+                    if (brightness >= 80) increasing = false;
                 } else {
-                    brightness -= 2;
-                    if (brightness <= 0) increasing = true;
+                    brightness -= 1;
+                    if (brightness <= 5) increasing = true;
                 }
                 for (int i = 0; i < LED_STRIP_LED_NUMBERS; i++) {
-                    led_strip_set_pixel(g_led_strip, i, 0, 0, brightness);
+                    // Set all LEDs to a white color with the current brightness
+                    led_strip_set_pixel(g_led_strip, i, brightness, brightness, brightness);
                 }
                 led_strip_refresh(g_led_strip);
-                vTaskDelay(pdMS_TO_TICKS(20));
+                vTaskDelay(pdMS_TO_TICKS(35));
                 break;
 
             case LED_STATE_CONNECTED: // Solid Green

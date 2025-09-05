@@ -4,12 +4,12 @@ This file tracks planned features and improvements for the E-Book Librarian proj
 
 ### High Priority
 
-* [ ] **Web UI Enhancements:**
-  * [ ] Implement a real-time progress bar for file transfers (likely requires WebSockets).
-  * [ ] Add a "cancel transfer" button.
+* [x] **Web UI Enhancements:**
+  * [x] Implement a real-time progress bar for file transfers (likely requires WebSockets).
+  * [x] Add a "cancel transfer" button.
   * [x] Improve the mobile/responsive layout of the web interface.
 * [x] **Robust Error Handling:**
-  * [ ] Display more specific error messages on the web UI (e.g., "Not enough space on device," "File already exists," "Transfer failed").
+  * [x] Display more specific error messages on the web UI (e.g., "Not enough space on device," "File already exists," "Transfer failed").
   * [x] Make the LED strip turn red on a critical error (e.g., SD card failed to mount).
 * [x] **Refactor Web Assets:**
   * [x] Move the embedded HTML, CSS, and JavaScript from `main.c` into separate files.
@@ -17,9 +17,9 @@ This file tracks planned features and improvements for the E-Book Librarian proj
 
 ### Medium Priority
 
-* [ ] **E-Book Metadata Parsing:**
-  * [ ] Integrate a lightweight library (like `libzip`) to read metadata from `.epub` files.
-  * [ ] Display the book's Title and Author in the file lists instead of just the filename.
+* [x] **E-Book Metadata Parsing:**
+  * [x] Integrate a lightweight library (like `libzip`) to read metadata from `.epub` files.
+  * [x] Display the book's Title and Author in the file lists instead of just the filename.
 * [ ] **Support for More File Types:**
   * [ ] Add file filters for comic book formats (`.cbr`, `.cbz`).
 * [ ] **Alternative Interface:**

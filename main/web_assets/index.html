@@ -17,7 +17,10 @@
                 <h2>Local Library (SD Card)</h2>
                 <ul class="file-list">
                     <li v-for="file in localFiles" :key="file.name">
-                        <span>{{ file.name }}</span>
+                        <div class="file-info">
+                            <span class="file-title">{{ file.title }}</span>
+                            <span class="file-author">{{ file.author }}</span>
+                        </div>
                         <div class="transfer-controls">
                             <div class="progress-container" v-if="transfer.active && transfer.filename === file.name">
                                 <div class="progress-bar" :style="{ width: transfer.progress + '%' }"></div>
@@ -33,7 +36,10 @@
                 <div v-if="isEReaderConnected">
                     <ul class="file-list">
                         <li v-for="file in ereaderFiles" :key="file.name">
-                            <span>{{ file.name }}</span>
+                            <div class="file-info">
+                                <span class="file-title">{{ file.title }}</span>
+                                <span class="file-author">{{ file.author }}</span>
+                            </div>
                             <div class="transfer-controls">
                                 <div class="progress-container" v-if="transfer.active && transfer.filename === file.name">
                                     <div class="progress-bar" :style="{ width: transfer.progress + '%' }"></div>
