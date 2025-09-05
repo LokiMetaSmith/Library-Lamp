@@ -8,9 +8,9 @@ This file tracks planned features and improvements for the E-Book Librarian proj
   * [ ] Implement a real-time progress bar for file transfers (likely requires WebSockets).
   * [ ] Add a "cancel transfer" button.
   * [x] Improve the mobile/responsive layout of the web interface.
-* [ ] **Robust Error Handling:**
+* [x] **Robust Error Handling:**
   * [ ] Display more specific error messages on the web UI (e.g., "Not enough space on device," "File already exists," "Transfer failed").
-  * [ ] Make the LED strip turn red on a critical error (e.g., SD card failed to mount).
+  * [x] Make the LED strip turn red on a critical error (e.g., SD card failed to mount).
 * [x] **Refactor Web Assets:**
   * [x] Move the embedded HTML, CSS, and JavaScript from `main.c` into separate files.
   * [x] Serve these static assets from a SPIFFS or FAT partition on the ESP32's flash.

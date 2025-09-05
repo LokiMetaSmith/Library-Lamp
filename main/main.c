@@ -502,6 +502,7 @@ void init_spiffs(void) {
         } else {
             ESP_LOGE(TAG, "Failed to initialize SPIFFS (%s)", esp_err_to_name(ret));
         }
+        g_led_state = LED_STATE_ERROR;
         return;
     }
 
@@ -509,6 +510,7 @@ void init_spiffs(void) {
     ret = esp_spiffs_info(conf.partition_label, &total, &used);
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "Failed to get SPIFFS partition information (%s)", esp_err_to_name(ret));
+        g_led_state = LED_STATE_ERROR;
     } else {
         ESP_LOGI(TAG, "Partition size: total: %d, used: %d", total, used);
     }
@@ -538,6 +540,7 @@ void init_sd_card(void) {
     ret = spi_bus_initialize(host.slot, &bus_cfg, SDSPI_DEFAULT_DMA);
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "Failed to initialize spi bus.");
+        g_led_state = LED_STATE_ERROR;
         return;
     }
 
@@ -549,6 +552,7 @@ void init_sd_card(void) {
 
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "Failed to mount SD card VFS");
+        g_led_state = LED_STATE_ERROR;
     } else {
         ESP_LOGI(TAG, "SD card mounted successfully at %s", mount_point);
     }
