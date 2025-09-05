@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>E-Book Librarian - Wi-Fi Setup</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; margin: 0; background-color: #f0f2f5; display: flex; justify-content: center; align-items: center; height: 100vh; }
+        .container { max-width: 400px; padding: 30px; background-color: #fff; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); text-align: center; }
+        h1 { color: #1877f2; margin-bottom: 20px; }
+        p { color: #555; margin-bottom: 30px; }
+        input[type="text"], input[type="password"] { width: 90%; padding: 12px; margin-bottom: 20px; border: 1px solid #ddd; border-radius: 6px; font-size: 1em; }
+        button { background-color: #1877f2; color: white; border: none; padding: 12px 20px; border-radius: 6px; cursor: pointer; font-size: 1.1em; width: 98%; transition: background-color 0.2s; }
+        button:hover { background-color: #166fe5; }
+        .status-message { margin-top: 20px; font-weight: bold; }
+        .success { color: #28a745; }
+        .error { color: #dc3545; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Wi-Fi Setup</h1>
+        <p>Connect your E-Book Librarian to your local Wi-Fi network.</p>
+        <form action="/save-credentials" method="POST">
+            <input type="text" id="ssid" name="ssid" placeholder="Wi-Fi Network Name (SSID)" required>
+            <input type="password" id="password" name="password" placeholder="Password">
+            <button type="submit">Connect</button>
+        </form>
+        <div id="status"></div>
+    </div>
+</body>
+</html>
