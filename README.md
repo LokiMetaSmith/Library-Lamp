@@ -82,3 +82,28 @@ Here's the breakdown:
 
 
 After you enable that option, save the configuration and rebuild your project (`idf.py build`). The same `main.c` code will now be able to mount and use SDXC cards formatted with exFAT without any changes.
+
+## 🏠 Enclosure
+
+A 3D-printable enclosure for this project can be found on Printables:
+- **Model:** [Lithophane Books (Harry Potter Book 3)](https://www.printables.com/model/914425-lithophane-books-harry-potter-book-3)
+- **Author:** [MeasureOnce](https://www.printables.com/@MeasureOnce)
+
+### Printing Instructions:
+- **Supports:** No
+- **Wall line count:** 6
+- **Nozzle:** 0.2-0.4mm
+- **Speed:** Slow
+- **Book Filament:** Filamentum Light Ivory (or similar)
+- **Page Filament:** Any white filament
+- **Light Source:** A small LED or flashlight that fits inside the case.
+
+## 🎨 Creating a Custom Enclosure
+
+If you want to create your own custom book cover, you can use the following workflow:
+
+1.  **Generate Lithophanes:** Use the open-source [LithoMaker](https://github.com/muldjord/lithomaker) tool to convert your images into 3D-printable lithophane STL files. Follow the instructions on the GitHub page for preparing your images and generating the models.
+
+2.  **Assemble the Enclosure:** Use a 3D modeling tool like [OpenSCAD](https://openscad.org/) to "stitch" the generated lithophane panels together into a book-shaped enclosure. This gives you full control over the final design.
+
+3.  **Print and Assemble:** Print the parts and assemble your custom E-Book Librarian!

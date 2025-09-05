@@ -33,3 +33,7 @@ This document lists the necessary hardware components to build the E-Book Librar
 * **USB OTG Adapter/Cable**
     * **Description:** If your ESP32-S3 board has a USB-C port, you will need a USB-C to USB-A female adapter to plug in the e-reader's cable.
     * **Notes / Example Link:** Widely available on sites like Amazon.
+
+* **3D Printed Enclosure**
+    * **Description:** A custom-designed, book-shaped enclosure to house the electronics.
+    * **Notes / Example Link:** The 3D model can be downloaded from [Printables](https://www.printables.com/model/914425-lithophane-books-harry-potter-book-3). You will need access to a 3D printer and filament.
