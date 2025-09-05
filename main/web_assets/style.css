@@ -10,6 +10,9 @@ h1 { color: #1877f2; text-align: center; border-bottom: 1px solid #ddd; padding-
 ul { list-style-type: none; padding: 0; max-height: 400px; overflow-y: auto; }
 li { padding: 8px 10px; border-bottom: 1px solid #eee; display: flex; align-items: center; justify-content: space-between; word-break: break-all; }
 li:last-child { border-bottom: none; }
+.file-info { flex-grow: 1; display: flex; flex-direction: column; }
+.file-title { font-weight: bold; }
+.file-author { font-style: italic; font-size: 0.9em; color: #555; }
 .file-name { cursor: pointer; }
 .file-name.selected { font-weight: bold; color: #1877f2; }
 button { background-color: #1877f2; color: white; border: none; padding: 10px 15px; border-radius: 6px; cursor: pointer; font-size: 1em; transition: background-color 0.2s; }
