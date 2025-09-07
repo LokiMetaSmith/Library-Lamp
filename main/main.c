@@ -442,7 +442,7 @@ static esp_err_t list_files_handler(httpd_req_t *req) {
     struct dirent *dir;
     while ((dir = readdir(d)) != NULL) {
         if (dir->d_type == DT_REG) { // If it's a regular file
-            if (strstr(dir->d_name, ".epub") || strstr(dir->d_name, ".mobi") || strstr(dir->d_name, ".pdf") || strstr(dir->d_name, ".txt")) {
+            if (strstr(dir->d_name, ".epub") || strstr(dir->d_name, ".mobi") || strstr(dir->d_name, ".pdf") || strstr(dir->d_name, ".txt") || strstr(dir->d_name, ".cbr") || strstr(dir->d_name, ".cbz")) {
                 cJSON *file_obj = cJSON_CreateObject();
                 cJSON_AddStringToObject(file_obj, "name", dir->d_name);
 
