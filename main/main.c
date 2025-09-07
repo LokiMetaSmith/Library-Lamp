@@ -57,6 +57,7 @@
 #include "driver/rmt_tx.h"
 #include "led_strip.h"
 #include "miniz.h"
+#include "sqlite3.h"
 
 // --- Bluetooth Dependencies ---
 #include "esp_bt.h"
@@ -1249,6 +1250,69 @@ void init_sd_card(void) {
     }
 }
 
+// --- Calibre DB Import ---
+void import_from_calibre_db(const char* usb_mount_path) {
+    char db_path[256];
+    snprintf(db_path, sizeof(db_path), "%s/metadata.db", usb_mount_path);
+
+    struct stat st;
+    if (stat(db_path, &st) != 0) {
+        ESP_LOGI(TAG, "Calibre metadata.db not found at %s. Skipping import.", db_path);
+        return;
+    }
+
+    ESP_LOGI(TAG, "Found Calibre database at %s. Attempting to import.", db_path);
+
+    sqlite3 *db;
+    int rc = sqlite3_open(db_path, &db);
+    if (rc) {
+        ESP_LOGE(TAG, "Can't open database: %s", sqlite3_errmsg(db));
+        return;
+    } else {
+        ESP_LOGI(TAG, "Opened database successfully");
+    }
+
+    sqlite3_stmt *res;
+    const char *sql = "SELECT b.title, a.name as author, b.path, d.name as filename, d.format "
+                      "FROM books b "
+                      "LEFT JOIN books_authors_link bal ON b.id = bal.book "
+                      "LEFT JOIN authors a ON bal.author = a.id "
+                      "LEFT JOIN data d ON b.id = d.book "
+                      "WHERE d.format IN ('EPUB', 'MOBI', 'PDF', 'TXT') "
+                      "ORDER BY b.title";
+
+    rc = sqlite3_prepare_v2(db, sql, -1, &res, 0);
+    if (rc != SQLITE_OK) {
+        ESP_LOGE(TAG, "Failed to execute statement: %s", sqlite3_errmsg(db));
+        sqlite3_close(db);
+        return;
+    }
+
+    ESP_LOGI(TAG, "--- Calibre Book Import ---");
+    while (sqlite3_step(res) == SQLITE_ROW) {
+        const unsigned char *title = sqlite3_column_text(res, 0);
+        const unsigned char *author = sqlite3_column_text(res, 1);
+        const unsigned char *path = sqlite3_column_text(res, 2);
+        const unsigned char *filename = sqlite3_column_text(res, 3);
+        const unsigned char *format = sqlite3_column_text(res, 4);
+
+        char full_path[512];
+        snprintf(full_path, sizeof(full_path), "%s/%s/%s", usb_mount_path, path, filename);
+
+        ESP_LOGI(TAG, "Title: %s, Author: %s, Format: %s, Path: %s",
+            title ? (char*)title : "N/A",
+            author ? (char*)author : "N/A",
+            format ? (char*)format : "N/A",
+            full_path
+        );
+    }
+    ESP_LOGI(TAG, "--- End of Import ---");
+
+    sqlite3_finalize(res);
+    sqlite3_close(db);
+}
+
+
 // --- USB HOST SETUP ---
 static void msc_event_cb(const msc_host_event_t *event, void *arg)
 {
@@ -1259,8 +1323,14 @@ static void msc_event_cb(const msc_host_event_t *event, void *arg)
         ESP_ERROR_CHECK(msc_host_install_device(event->device, &device_handle));
 
         // Mount the filesystem
-        ESP_ERROR_CHECK(vfs_msc_mount(MOUNT_POINT_USB, device_handle));
-        ESP_LOGI(TAG, "MSC device mounted at %s", MOUNT_POINT_USB);
+        if (vfs_msc_mount(MOUNT_POINT_USB, device_handle) == ESP_OK) {
+            ESP_LOGI(TAG, "MSC device mounted at %s", MOUNT_POINT_USB);
+            // Attempt to import from Calibre DB
+            import_from_calibre_db(MOUNT_POINT_USB);
+        } else {
+            ESP_LOGE(TAG, "Failed to mount MSC device");
+            g_led_state = LED_STATE_ERROR;
+        }
 
     } else if (event->event == MSC_DEVICE_DISCONNECTED) {
         ESP_LOGI(TAG, "MSC device disconnected");
