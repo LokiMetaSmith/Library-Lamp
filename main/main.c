@@ -53,7 +53,6 @@
 #include "usb/vfs_msc.h"
 
 // --- LED Strip Dependencies ---
-#include "driver/gpio.h"
 #include "driver/rmt_tx.h"
 #include "led_strip.h"
 #include "miniz.h"
@@ -97,10 +96,6 @@
 #define LED_STRIP_LED_NUMBERS       8
 #define LED_STRIP_RMT_RES_HZ        (10 * 1000 * 1000) // 10MHz resolution
 
-// Eject Button
-#define EJECT_BUTTON_GPIO           33
-
-
 // --- GLOBALS ---
 static const char *TAG = "EBOOK_LIBRARIAN";
 static bool ebook_reader_connected = false;
@@ -126,7 +121,6 @@ typedef enum {
     LED_STATE_TRANSFER,
     LED_STATE_ERROR,
     LED_STATE_SETUP, // New state for config mode
-    LED_STATE_EJECT, // For eject button feedback
 } led_state_t;
 
 volatile led_state_t g_led_state = LED_STATE_INIT;
@@ -1377,19 +1371,6 @@ static void led_status_task(void *pvParameters) {
                 vTaskDelay(pdMS_TO_TICKS(500));
                 break;
 
-            case LED_STATE_EJECT: // Quick Green Blink
-                for (int j=0; j<2; j++) {
-                    for (int i = 0; i < LED_STRIP_LED_NUMBERS; i++) {
-                        led_strip_set_pixel(g_led_strip, i, 0, 255, 0); // Green
-                    }
-                    led_strip_refresh(g_led_strip);
-                    vTaskDelay(pdMS_TO_TICKS(150));
-                    led_strip_clear(g_led_strip);
-                    vTaskDelay(pdMS_TO_TICKS(150));
-                }
-                g_led_state = LED_STATE_IDLE; // Revert to idle state
-                break;
-
             default:
                  vTaskDelay(pdMS_TO_TICKS(100));
                  break;
@@ -1419,46 +1400,6 @@ void init_led_strip(void) {
     ESP_ERROR_CHECK(rmt_enable(led_chan));
 
     led_strip_clear(g_led_strip);
-}
-
-
-// --- Eject Button Task ---
-void eject_button_task(void *pvParameters) {
-    gpio_config_t io_conf = {};
-    io_conf.intr_type = GPIO_INTR_DISABLE;
-    io_conf.mode = GPIO_MODE_INPUT;
-    io_conf.pin_bit_mask = (1ULL << EJECT_BUTTON_GPIO);
-    io_conf.pull_down_en = 0;
-    io_conf.pull_up_en = 1;
-    gpio_config(&io_conf);
-
-    ESP_LOGI(TAG, "Eject button task started on GPIO %d", EJECT_BUTTON_GPIO);
-
-    while (1) {
-        if (gpio_get_level(EJECT_BUTTON_GPIO) == 0) {
-            // Button is pressed (pulled to ground)
-            ESP_LOGI(TAG, "Eject button pressed!");
-
-            // Debounce delay
-            vTaskDelay(pdMS_TO_TICKS(50));
-            // Wait for button release
-            while(gpio_get_level(EJECT_BUTTON_GPIO) == 0) {
-                vTaskDelay(pdMS_TO_TICKS(50));
-            }
-            ESP_LOGI(TAG, "Eject button released.");
-
-            if (ebook_reader_connected) {
-                ESP_LOGI(TAG, "Unmounting USB drive...");
-                vfs_msc_unmount(MOUNT_POINT_USB);
-                // The msc_event_cb will set ebook_reader_connected to false
-                // and the LED state to IDLE. We will override it here for feedback.
-                g_led_state = LED_STATE_EJECT;
-            } else {
-                ESP_LOGW(TAG, "Eject button pressed, but no USB drive connected.");
-            }
-        }
-        vTaskDelay(pdMS_TO_TICKS(20)); // Poll every 20ms
-    }
 }
 
 
@@ -1498,7 +1439,4 @@ void app_main(void) {
         start_captive_portal_server();
         ESP_LOGI(TAG, "Captive portal is running. Connect to the Wi-Fi AP to configure.");
     }
-
-    // Start the eject button monitoring task
-    xTaskCreate(eject_button_task, "eject_button_task", 2048, NULL, 10, NULL);
 }
