@@ -23,7 +23,10 @@ This file tracks planned features and improvements for the E-Book Librarian proj
 * [ ] **Support for More File Types:**
   * [ ] Add file filters for comic book formats (`.cbr`, `.cbz`).
 * [ ] **Alternative Interface:**
-  * [ ] Implement a Bluetooth Low Energy (BLE) service to allow file transfers via a companion app as an alternative to Wi-Fi.
+  * [x] Implement a Bluetooth Low Energy (BLE) service to allow device provisioning.
+* [ ] **Calibre DB Auto-Import:**
+  * [ ] Automatically import all books from a USB drive containing a Calibre `metadata.db` file.
+  * [ ] **NOTE:** This is currently blocked by the inability to download the required SQLite library into the development environment.
 
 ### Low Priority
 
