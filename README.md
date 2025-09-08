@@ -97,29 +97,19 @@ Here's the breakdown:
 
 After you enable that option, save the configuration and rebuild your project (`idf.py build`). The same `main.c` code will now be able to mount and use SDXC cards formatted with exFAT without any changes.
 
-## 🏠 Enclosure
+## 🏠 3D-Printable Enclosure
 
-A 3D-printable enclosure for this project can be found on Printables:
-- **Model:** [Lithophane Books (Harry Potter Book 3)](https://www.printables.com/model/914425-lithophane-books-harry-potter-book-3)
-- **Author:** [MeasureOnce](https://www.printables.com/@MeasureOnce)
+This project includes a parametric 3D-printable enclosure that houses the electronics. The design is a simple, functional box with a press-fit lid.
 
-### Printing Instructions:
-- **Supports:** No
-- **Wall line count:** 6
-- **Nozzle:** 0.2-0.4mm
-- **Speed:** Slow
-- **Book Filament:** Filamentum Light Ivory (or similar)
-- **Page Filament:** Any white filament
-- **Light Source:** A small LED or flashlight that fits inside the case.
+### Generating the Enclosure Parts
 
-## 🎨 Creating a Custom Enclosure
+The file [`hardware/enclosure.scad`](hardware/enclosure.scad) is a parametric OpenSCAD script used to generate the two parts of the enclosure: the main case and the lid.
 
-If you want to create your own custom book cover, you can use the following workflow:
+1.  **Measure Your Components:** Before you begin, carefully measure the length, width, and height of your specific ESP32 board and MicroSD card module.
+2.  **Update the Script Parameters:** Open `hardware/enclosure.scad` in a text editor or in the OpenSCAD application. Update the variables in the "Component Dimensions" section with your measurements. You can also adjust parameters like `wall_thickness`.
+3.  **Export Each Part:** In the OpenSCAD script, comment out one of the modules (`main_case()` or `lid()`) in the "Assembly" section to isolate and render one part at a time. Use `File > Export > Export as STL` for each part.
 
-1.  **Use the Parametric Script:** As a starting point, this repository now includes a parametric OpenSCAD script in [`hardware/enclosure.scad`](hardware/enclosure.scad). You can modify the parameters in this file to adjust the size and layout of the enclosure to fit your specific components.
-
-2.  **Generate Lithophanes (Optional):** For a more decorative cover, you can use the open-source [LithoMaker](https://github.com/muldjord/lithomaker) tool to convert your images into 3D-printable lithophane STL files. Follow the instructions on the GitHub page for preparing your images and generating the models.
-
-3.  **Assemble the Enclosure:** Use a 3D modeling tool like [OpenSCAD](https://openscad.org/) to combine the base enclosure from the script with any decorative panels you have generated.
-
-4.  **Print and Assemble:** Print the parts and assemble your custom E-Book Librarian!
+### Assembly Instructions
+1.  Print the `main_case` and `lid` parts.
+2.  Place the electronics inside the main case. (Note: The current script does not include mounting posts, so the electronics will rest at the bottom of the case).
+3.  Press the lid firmly onto the case to close it.

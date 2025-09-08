@@ -229,8 +229,6 @@ void init_usb_device(void)
 {
     ESP_LOGI(TAG, "Initializing USB in Device Mode for Mass Storage...");
 
-    // Initialize the SD card first
-    init_sd_card();
     if (g_card == NULL) {
         ESP_LOGE(TAG, "SD card not initialized, cannot start USB MSC Device");
         g_led_state = LED_STATE_ERROR;
@@ -1618,6 +1616,9 @@ void app_main(void) {
     // Initialize BLE for configuration
     init_ble();
 
+    // Initialize SD card here, so it's available in both modes
+    init_sd_card();
+
     if (g_usb_device_mode) {
         // --- USB Device Mode ---
         // Initialize USB MSC device
@@ -1635,7 +1636,6 @@ void app_main(void) {
             // Normal operation
             ESP_LOGI(TAG, "Starting main application...");
             init_spiffs();
-            init_sd_card();
             init_usb_host();
             start_webserver();
             ESP_LOGI(TAG, "E-Book Librarian is running!");
