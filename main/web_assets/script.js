@@ -97,6 +97,19 @@ createApp({
                 console.error('Error cancelling transfer:', error);
                 this.transfer.error = 'Failed to send cancel request.';
             }
+        },
+        async enterSleepMode() {
+            if (confirm('Are you sure you want to put the device to sleep? You will need to press the RESET button on the board to wake it up.')) {
+                try {
+                    await fetch('/enter-sleep', { method: 'POST' });
+                    // If the request succeeds, the device will go to sleep and will stop responding.
+                    this.transfer.error = 'Device is going to sleep. Press RESET to wake.';
+                    this.isEReaderConnected = false; // Assume disconnection
+                } catch (error) {
+                    console.error('Error entering sleep mode:', error);
+                    this.transfer.error = 'Failed to send sleep command.';
+                }
+            }
         }
     },
     mounted() {

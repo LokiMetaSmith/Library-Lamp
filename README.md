@@ -15,6 +15,8 @@ The device hosts its own Wi-Fi network and provides a simple web interface, allo
 - **Simple Web Interface:** Provides an intuitive, browser-based UI for transferring files between the SD card and the connected e-reader.
 - **Wi-Fi Access Point:** Creates its own Wi-Fi network, making it fully portable and operational without an internet connection.
 - **Visual Status Indicator:** An onboard RGB LED strip shows the system's current state (idle, connected, transferring).
+- **Manual Sleep Mode:** A "shipping mode" can be activated from the web interface to put the device into deep sleep, conserving battery for long periods. A manual reset is required to wake the device.
+- **Physical Eject/Sleep Button:** A single button provides two functions: a short press safely ejects the connected USB device, and a long press puts the device into deep sleep.
 
 ## 🛠️ Hardware & Wiring
 
@@ -55,25 +57,15 @@ This project is built using the **Espressif IoT Development Framework (ESP-IDF)*
 
 ## 💻 Usage
 
-### Normal Mode (E-Reader Library)
-
 1.  **Power On:** Power the ESP32-S3 board using a reliable 5V power supply. The LED strip will light up with a pulsing blue light, indicating it's ready.
 2.  **Connect to Wi-Fi:** On your phone or computer, connect to the Wi-Fi network with the SSID `Ebook-Library-Box-Setup`. There is no password.
 3.  **Open the Web Interface:** Open a web browser and navigate to `http://192.168.4.1`. This will either show you a Wi-Fi setup page (on first boot) or the main library interface.
 4.  **Connect Your E-Reader:** Plug your e-reader into the ESP32-S3's USB OTG port. The LED strip will turn solid green, and the web interface will update to show the files on your device.
 5.  **Transfer Books:** Select a book from either the library or your e-reader and use the buttons to copy it to the other device. The LED will pulse white during the transfer.
-
-### PC Connection Mode (USB Drive)
-
-In addition to the normal e-reader library mode, the device can be started in a special "PC Connection Mode". In this mode, the device acts as a standard USB Mass Storage Device (like a flash drive), allowing you to easily manage the SD card's contents directly from your computer.
-
-**To start in PC Connection Mode:**
-1.  **Unplug the device.**
-2.  **Press and hold the `MENU` button** on the ESP32-S3-USB-OTG board.
-3.  **While holding the button, plug the device into your PC** using the `USB_DEV` port (the male USB-A connector).
-4.  The LED strip will turn solid green, and your computer should recognize the device as a new USB drive.
-5.  You can now drag and drop files to and from the SD card.
-6.  To return to the normal e-reader library mode, simply unplug the device and plug it back in without holding the `MENU` button.
+6.  **Enter Sleep Mode (Optional):** From the web interface, you can click the "Enter Sleep Mode" button. This will put the device into a very low power deep sleep state. **To wake the device, you must press the physical `RESET` button on the board.**
+7.  **Eject or Sleep (Optional):** You can use the physical button for two actions:
+    - **Short Press:** Safely unmounts the connected e-reader. The LED will flash green, indicating it's safe to unplug the USB cable.
+    - **Long Press (2-3 seconds):** Puts the device into deep sleep mode. You must press the `RESET` button to wake it.
 
 
 Here's the breakdown:
@@ -97,19 +89,27 @@ Here's the breakdown:
 
 After you enable that option, save the configuration and rebuild your project (`idf.py build`). The same `main.c` code will now be able to mount and use SDXC cards formatted with exFAT without any changes.
 
-## 🏠 3D-Printable Enclosure
+## 🏠 Enclosure
 
-This project includes a parametric 3D-printable enclosure that houses the electronics. The design is a simple, functional box with a press-fit lid.
+A 3D-printable enclosure for this project can be found on Printables:
+- **Model:** [Lithophane Books (Harry Potter Book 3)](https://www.printables.com/model/914425-lithophane-books-harry-potter-book-3)
+- **Author:** [MeasureOnce](https://www.printables.com/@MeasureOnce)
 
-### Generating the Enclosure Parts
+### Printing Instructions:
+- **Supports:** No
+- **Wall line count:** 6
+- **Nozzle:** 0.2-0.4mm
+- **Speed:** Slow
+- **Book Filament:** Filamentum Light Ivory (or similar)
+- **Page Filament:** Any white filament
+- **Light Source:** A small LED or flashlight that fits inside the case.
 
-The file [`hardware/enclosure.scad`](hardware/enclosure.scad) is a parametric OpenSCAD script used to generate the two parts of the enclosure: the main case and the lid.
+## 🎨 Creating a Custom Enclosure
 
-1.  **Measure Your Components:** Before you begin, carefully measure the length, width, and height of your specific ESP32 board and MicroSD card module.
-2.  **Update the Script Parameters:** Open `hardware/enclosure.scad` in a text editor or in the OpenSCAD application. Update the variables in the "Component Dimensions" section with your measurements. You can also adjust parameters like `wall_thickness`.
-3.  **Export Each Part:** In the OpenSCAD script, comment out one of the modules (`main_case()` or `lid()`) in the "Assembly" section to isolate and render one part at a time. Use `File > Export > Export as STL` for each part.
+If you want to create your own custom book cover, you can use the following workflow:
 
-### Assembly Instructions
-1.  Print the `main_case` and `lid` parts.
-2.  Place the electronics inside the main case. (Note: The current script does not include mounting posts, so the electronics will rest at the bottom of the case).
-3.  Press the lid firmly onto the case to close it.
+1.  **Generate Lithophanes:** Use the open-source [LithoMaker](https://github.com/muldjord/lithomaker) tool to convert your images into 3D-printable lithophane STL files. Follow the instructions on the GitHub page for preparing your images and generating the models.
+
+2.  **Assemble the Enclosure:** Use a 3D modeling tool like [OpenSCAD](https://openscad.org/) to "stitch" the generated lithophane panels together into a book-shaped enclosure. This gives you full control over the final design.
+
+3.  **Print and Assemble:** Print the parts and assemble your custom E-Book Librarian!

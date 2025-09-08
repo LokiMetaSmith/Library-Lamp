@@ -59,3 +59,22 @@ button.cancel-btn:hover {
 .error-message {
     margin: 0;
 }
+
+.footer-actions {
+    padding-top: 10px;
+    text-align: center;
+}
+
+.sleep-btn {
+    background-color: #c0392b;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9em;
+}
+
+.sleep-btn:hover {
+    background-color: #e74c3c;
+}

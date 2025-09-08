@@ -55,8 +55,11 @@
                 </div>
             </div>
         </main>
-        <footer class="app-footer" v-if="transfer.error">
-            <p class="error-message">{{ transfer.error }}</p>
+        <footer class="app-footer">
+            <p class="error-message" v-if="transfer.error">{{ transfer.error }}</p>
+            <div class="footer-actions">
+                <button @click="enterSleepMode" class="sleep-btn">Enter Sleep Mode</button>
+            </div>
         </footer>
     </div>
 

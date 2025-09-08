@@ -33,9 +33,6 @@ idf_component_register(SRCS "${COMPONENT_SRCS}"
                                 # USB Host components
                                 usb
 
-                                # USB Device components
-                                esp_tinyusb
-
                                 # Peripherals
                                 esp_driver_rmt
 
