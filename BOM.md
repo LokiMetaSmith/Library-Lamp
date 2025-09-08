@@ -17,8 +17,8 @@ This document lists the necessary hardware components to build the E-Book Librar
     * **Notes / Example Link:** Any reputable brand will work. A Class 10 card is sufficient.
 
 * **WS2812B / NeoPixel RGB LED Strip**
-    * **Description:** An addressable RGB LED strip (like WS2812B or NeoPixel) used for the visual status indicator.
-    * **Notes / Example Link:** These are often sold in 1-meter reels (commonly with 30 or 60 LEDs). You will need to cut a short segment for this project. The software is configured for 8 LEDs, so a piece with at least this many is required. Be sure to cut only on the designated copper pads. Can be found on [Amazon](https://www.amazon.com/s?k=ws2812b+strip) or Adafruit.
+    * **Description:** An addressable RGB LED strip used for the visual status indicator.
+    * **Notes / Example Link:** A short strip with 8-16 LEDs is plenty. Can be found on [Amazon](https://www.amazon.com/s?k=ws2812b+strip) or Adafruit.
 
 ### Optional / Miscellaneous
 
