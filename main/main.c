@@ -618,6 +618,20 @@ static esp_err_t sleep_handler(httpd_req_t *req) {
     // Short delay to ensure the HTTP response is sent before sleeping
     vTaskDelay(pdMS_TO_TICKS(100));
 
+    ESP_LOGI(TAG, "Unmounting filesystems before sleep...");
+    // Unmount SPIFFS. The label "storage" is defined in init_spiffs.
+    if (esp_vfs_spiffs_unregister("storage") == ESP_OK) {
+        ESP_LOGI(TAG, "SPIFFS unmounted successfully.");
+    } else {
+        ESP_LOGE(TAG, "Failed to unmount SPIFFS.");
+    }
+    // Unmount SD card
+    if (esp_vfs_fat_sdcard_unmount(MOUNT_POINT_SD, NULL) == ESP_OK) {
+         ESP_LOGI(TAG, "SD card unmounted successfully.");
+    } else {
+         ESP_LOGE(TAG, "Failed to unmount SD card.");
+    }
+
     // Turn off LEDs
     led_strip_clear(g_led_strip);
 
@@ -1532,6 +1546,21 @@ void eject_button_task(void *pvParameters) {
                 vTaskDelay(pdMS_TO_TICKS(50));
                 if (long_press_counter > 40) { // 40 * 50ms = 2 seconds
                     ESP_LOGI(TAG, "Long press detected. Entering deep sleep.");
+
+                    ESP_LOGI(TAG, "Unmounting filesystems before sleep...");
+                    // Unmount SPIFFS. The label "storage" is defined in init_spiffs.
+                    if (esp_vfs_spiffs_unregister("storage") == ESP_OK) {
+                        ESP_LOGI(TAG, "SPIFFS unmounted successfully.");
+                    } else {
+                        ESP_LOGE(TAG, "Failed to unmount SPIFFS.");
+                    }
+                    // Unmount SD card
+                    if (esp_vfs_fat_sdcard_unmount(MOUNT_POINT_SD, NULL) == ESP_OK) {
+                         ESP_LOGI(TAG, "SD card unmounted successfully.");
+                    } else {
+                         ESP_LOGE(TAG, "Failed to unmount SD card.");
+                    }
+
                     // Turn off LEDs before sleeping
                     led_strip_clear(g_led_strip);
                     esp_deep_sleep_start();
