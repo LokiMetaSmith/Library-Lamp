@@ -32,7 +32,7 @@ This file tracks planned features and improvements for the E-Book Librarian proj
 
 * [x] **Hardware & Enclosure:**
   * [x] Design a 3D-printable case for the project.
-  * [ ] Provide an example OpenSCAD script for custom enclosures.
+  * [x] Provide an example OpenSCAD script for custom enclosures.
   * [ ] Add a physical button to safely eject the USB device or shut down the system.
 * [ ] **Power Management:**
   * [ ] Implement light or deep sleep modes to save power when the device is idle.
