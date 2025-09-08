@@ -52,6 +52,10 @@
 #include "usb/msc_host.h"
 #include "usb/vfs_msc.h"
 
+// --- USB Device (TinyUSB) Dependencies ---
+#include "tinyusb.h"
+#include "tusb_msc_storage.h"
+
 // --- LED Strip Dependencies ---
 #include "driver/gpio.h"
 #include "driver/rmt_tx.h"
@@ -101,6 +105,9 @@
 // Eject Button
 #define EJECT_BUTTON_GPIO           33
 
+// Mode Select Button (MENU button on the board)
+#define MODE_SELECT_BUTTON_GPIO     14
+
 
 // --- GLOBALS ---
 static const char *TAG = "EBOOK_LIBRARIAN";
@@ -108,6 +115,8 @@ static bool ebook_reader_connected = false;
 static msc_host_device_handle_t device_handle = NULL;
 static led_strip_handle_t g_led_strip;
 static bool g_wifi_configured = false;
+static bool g_usb_device_mode = false; // true for Device Mode, false for Host Mode
+static sdmmc_card_t *g_card = NULL;    // Global handle for the SD card
 
 // Event group to signal Wi-Fi connection events
 static EventGroupHandle_t wifi_event_group;
@@ -213,6 +222,41 @@ esp_err_t load_wifi_credentials(char *ssid, size_t ssid_len, char *password, siz
 
     nvs_close(my_handle);
     return ESP_OK;
+}
+
+// --- USB DEVICE (MSC) SETUP ---
+void init_usb_device(void)
+{
+    ESP_LOGI(TAG, "Initializing USB in Device Mode for Mass Storage...");
+
+    // Initialize the SD card first
+    init_sd_card();
+    if (g_card == NULL) {
+        ESP_LOGE(TAG, "SD card not initialized, cannot start USB MSC Device");
+        g_led_state = LED_STATE_ERROR;
+        return;
+    }
+
+    // Configure TinyUSB
+    const tinyusb_config_t tusb_cfg = {
+        .device_descriptor = NULL,      // Use default
+        .string_descriptor = NULL,      // Use default
+        .external_phy = false,          // Use internal PHY
+        .configuration_descriptor = NULL, // Use default
+    };
+    ESP_ERROR_CHECK(tinyusb_driver_install(&tusb_cfg));
+
+    // Configure MSC with SD card as the backend
+    const tinyusb_msc_sdmmc_config_t config_sdmmc = {
+        .card = g_card
+    };
+    ESP_ERROR_CHECK(tinyusb_msc_storage_init_sdmmc(&config_sdmmc));
+
+    ESP_LOGI(TAG, "USB Mass Storage Device initialized");
+    // In this mode, the device will just sit here and be a USB drive.
+    // The main loop doesn't need to do anything else.
+    // We can use the LED to indicate it's in MSC mode.
+    g_led_state = LED_STATE_CONNECTED; // Use the "connected" color (green)
 }
 
 
@@ -1210,13 +1254,16 @@ void init_spiffs(void) {
 
 // --- SD CARD SETUP ---
 void init_sd_card(void) {
+    if (g_card) {
+        ESP_LOGI(TAG, "SD card already initialized.");
+        return;
+    }
     esp_err_t ret;
     esp_vfs_fat_sdmmc_mount_config_t mount_config = {
         .format_if_mount_failed = false,
         .max_files = 5,
         .allocation_unit_size = 16 * 1024
     };
-    sdmmc_card_t *card;
     const char mount_point[] = MOUNT_POINT_SD;
     ESP_LOGI(TAG, "Initializing SD card");
 
@@ -1240,7 +1287,9 @@ void init_sd_card(void) {
     slot_config.gpio_cs = PIN_NUM_CS;
     slot_config.host_id = host.slot;
 
-    ret = esp_vfs_fat_sdspi_mount(mount_point, &host, &slot_config, &mount_config, &card);
+    // Note: esp_vfs_fat_sdspi_mount allocates the sdmmc_card_t structure.
+    // It will be freed by the corresponding unmount function.
+    ret = esp_vfs_fat_sdspi_mount(mount_point, &host, &slot_config, &mount_config, &g_card);
 
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "Failed to mount SD card VFS");
@@ -1534,6 +1583,26 @@ void eject_button_task(void *pvParameters) {
 
 // --- MAIN APPLICATION ENTRY POINT ---
 void app_main(void) {
+    // --- USB Mode Selection ---
+    // Check if the MENU button is held down on boot to enter USB Device mode.
+    gpio_config_t mode_btn_config = {
+        .pin_bit_mask = (1ULL << MODE_SELECT_BUTTON_GPIO),
+        .mode = GPIO_MODE_INPUT,
+        .pull_up_en = GPIO_PULLUP_ENABLE,
+        .pull_down_en = GPIO_PULLDOWN_DISABLE,
+        .intr_type = GPIO_INTR_DISABLE,
+    };
+    gpio_config(&mode_btn_config);
+    // Add a small delay to allow the pull-up to stabilize and for debouncing
+    vTaskDelay(pdMS_TO_TICKS(50));
+    if (gpio_get_level(MODE_SELECT_BUTTON_GPIO) == 0) {
+        g_usb_device_mode = true;
+        ESP_LOGI(TAG, "Mode select button pressed. Entering USB Device Mode.");
+    } else {
+        g_usb_device_mode = false;
+        ESP_LOGI(TAG, "Starting in standard USB Host Mode.");
+    }
+
     // Initialize NVS
     esp_err_t ret = nvs_flash_init();
     if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
@@ -1549,26 +1618,38 @@ void app_main(void) {
     // Initialize BLE for configuration
     init_ble();
 
-    init_wifi();
-
-    if (g_wifi_configured) {
-        // Normal operation
-        ESP_LOGI(TAG, "Starting main application...");
-        init_spiffs();
-        init_sd_card();
-        init_usb_host();
-        start_webserver();
-        ESP_LOGI(TAG, "E-Book Librarian is running!");
-        g_led_state = LED_STATE_IDLE;
+    if (g_usb_device_mode) {
+        // --- USB Device Mode ---
+        // Initialize USB MSC device
+        init_usb_device();
+        // The device will now act as a USB Mass Storage device.
+        // We will loop here indefinitely. The USB stack runs in the background.
+        while (1) {
+            vTaskDelay(pdMS_TO_TICKS(1000));
+        }
     } else {
-        // Configuration mode
-        ESP_LOGI(TAG, "Starting configuration portal...");
-        g_led_state = LED_STATE_SETUP; // Set LED to setup mode
-        start_dns_server();
-        start_captive_portal_server();
-        ESP_LOGI(TAG, "Captive portal is running. Connect to the Wi-Fi AP to configure.");
-    }
+        // --- USB Host Mode (Normal Operation) ---
+        init_wifi();
 
-    // Start the eject button monitoring task
-    xTaskCreate(eject_button_task, "eject_button_task", 2048, NULL, 10, NULL);
+        if (g_wifi_configured) {
+            // Normal operation
+            ESP_LOGI(TAG, "Starting main application...");
+            init_spiffs();
+            init_sd_card();
+            init_usb_host();
+            start_webserver();
+            ESP_LOGI(TAG, "E-Book Librarian is running!");
+            g_led_state = LED_STATE_IDLE;
+        } else {
+            // Configuration mode
+            ESP_LOGI(TAG, "Starting configuration portal...");
+            g_led_state = LED_STATE_SETUP; // Set LED to setup mode
+            start_dns_server();
+            start_captive_portal_server();
+            ESP_LOGI(TAG, "Captive portal is running. Connect to the Wi-Fi AP to configure.");
+        }
+
+        // Start the eject button monitoring task
+        xTaskCreate(eject_button_task, "eject_button_task", 2048, NULL, 10, NULL);
+    }
 }

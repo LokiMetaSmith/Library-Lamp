@@ -20,8 +20,8 @@ This file tracks planned features and improvements for the E-Book Librarian proj
 * [x] **E-Book Metadata Parsing:**
   * [x] Integrate a lightweight library (like `libzip`) to read metadata from `.epub` files.
   * [x] Display the book's Title and Author in the file lists instead of just the filename.
-* [ ] **Support for More File Types:**
-  * [ ] Add file filters for comic book formats (`.cbr`, `.cbz`).
+* [x] **Support for More File Types:**
+  * [x] Add file filters for comic book formats (`.cbr`, `.cbz`).
 * [ ] **Alternative Interface:**
   * [x] Implement a Bluetooth Low Energy (BLE) service to allow device provisioning.
 * [ ] **Calibre DB Auto-Import:**

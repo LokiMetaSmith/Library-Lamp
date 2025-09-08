@@ -53,13 +53,27 @@ This project is built using the **Espressif IoT Development Framework (ESP-IDF)*
     idf.py build flash monitor
     ```
 
-##  kullanım (AI for Usage)
+## 💻 Usage
+
+### Normal Mode (E-Reader Library)
 
 1.  **Power On:** Power the ESP32-S3 board using a reliable 5V power supply. The LED strip will light up with a pulsing blue light, indicating it's ready.
-2.  **Connect to Wi-Fi:** On your phone or computer, connect to the Wi-Fi network with the SSID `Ebook-Library-Box` and the password `sharebooks`.
-3.  **Open the Web Interface:** Open a web browser and navigate to `http://192.168.4.1`.
+2.  **Connect to Wi-Fi:** On your phone or computer, connect to the Wi-Fi network with the SSID `Ebook-Library-Box-Setup`. There is no password.
+3.  **Open the Web Interface:** Open a web browser and navigate to `http://192.168.4.1`. This will either show you a Wi-Fi setup page (on first boot) or the main library interface.
 4.  **Connect Your E-Reader:** Plug your e-reader into the ESP32-S3's USB OTG port. The LED strip will turn solid green, and the web interface will update to show the files on your device.
 5.  **Transfer Books:** Select a book from either the library or your e-reader and use the buttons to copy it to the other device. The LED will pulse white during the transfer.
+
+### PC Connection Mode (USB Drive)
+
+In addition to the normal e-reader library mode, the device can be started in a special "PC Connection Mode". In this mode, the device acts as a standard USB Mass Storage Device (like a flash drive), allowing you to easily manage the SD card's contents directly from your computer.
+
+**To start in PC Connection Mode:**
+1.  **Unplug the device.**
+2.  **Press and hold the `MENU` button** on the ESP32-S3-USB-OTG board.
+3.  **While holding the button, plug the device into your PC** using the `USB_DEV` port (the male USB-A connector).
+4.  The LED strip will turn solid green, and your computer should recognize the device as a new USB drive.
+5.  You can now drag and drop files to and from the SD card.
+6.  To return to the normal e-reader library mode, simply unplug the device and plug it back in without holding the `MENU` button.
 
 
 Here's the breakdown:
