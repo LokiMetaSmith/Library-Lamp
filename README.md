@@ -16,6 +16,7 @@ The device hosts its own Wi-Fi network and provides a simple web interface, allo
 - **Wi-Fi Access Point:** Creates its own Wi-Fi network, making it fully portable and operational without an internet connection.
 - **Visual Status Indicator:** An onboard RGB LED strip shows the system's current state (idle, connected, transferring).
 - **Manual Sleep Mode:** A "shipping mode" can be activated from the web interface to put the device into deep sleep, conserving battery for long periods. A manual reset is required to wake the device.
+- **Physical Eject/Sleep Button:** A single button provides two functions: a short press safely ejects the connected USB device, and a long press puts the device into deep sleep.
 
 ## 🛠️ Hardware & Wiring
 
@@ -62,6 +63,9 @@ This project is built using the **Espressif IoT Development Framework (ESP-IDF)*
 4.  **Connect Your E-Reader:** Plug your e-reader into the ESP32-S3's USB OTG port. The LED strip will turn solid green, and the web interface will update to show the files on your device.
 5.  **Transfer Books:** Select a book from either the library or your e-reader and use the buttons to copy it to the other device. The LED will pulse white during the transfer.
 6.  **Enter Sleep Mode (Optional):** From the web interface, you can click the "Enter Sleep Mode" button. This will put the device into a very low power deep sleep state. **To wake the device, you must press the physical `RESET` button on the board.**
+7.  **Eject or Sleep (Optional):** You can use the physical button for two actions:
+    - **Short Press:** Safely unmounts the connected e-reader. The LED will flash green, indicating it's safe to unplug the USB cable.
+    - **Long Press (2-3 seconds):** Puts the device into deep sleep mode. You must press the `RESET` button to wake it.
 
 
 Here's the breakdown:

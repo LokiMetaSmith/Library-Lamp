@@ -1510,7 +1510,7 @@ void init_led_strip(void) {
 }
 
 
-// --- Eject Button Task ---
+// --- Eject/Sleep Button Task ---
 void eject_button_task(void *pvParameters) {
     gpio_config_t io_conf = {};
     io_conf.intr_type = GPIO_INTR_DISABLE;
@@ -1520,21 +1520,27 @@ void eject_button_task(void *pvParameters) {
     io_conf.pull_up_en = 1;
     gpio_config(&io_conf);
 
-    ESP_LOGI(TAG, "Eject button task started on GPIO %d", EJECT_BUTTON_GPIO);
+    ESP_LOGI(TAG, "Eject/Sleep button task started on GPIO %d", EJECT_BUTTON_GPIO);
 
     while (1) {
         if (gpio_get_level(EJECT_BUTTON_GPIO) == 0) {
-            // Button is pressed (pulled to ground)
-            ESP_LOGI(TAG, "Eject button pressed!");
-
-            // Debounce delay
-            vTaskDelay(pdMS_TO_TICKS(50));
-            // Wait for button release
-            while(gpio_get_level(EJECT_BUTTON_GPIO) == 0) {
+            // Button is pressed, start checking for long press
+            vTaskDelay(pdMS_TO_TICKS(50)); // Debounce
+            int long_press_counter = 0;
+            while (gpio_get_level(EJECT_BUTTON_GPIO) == 0) {
+                long_press_counter++;
                 vTaskDelay(pdMS_TO_TICKS(50));
+                if (long_press_counter > 40) { // 40 * 50ms = 2 seconds
+                    ESP_LOGI(TAG, "Long press detected. Entering deep sleep.");
+                    // Turn off LEDs before sleeping
+                    led_strip_clear(g_led_strip);
+                    esp_deep_sleep_start();
+                    // This function does not return
+                }
             }
-            ESP_LOGI(TAG, "Eject button released.");
 
+            // If we get here, it was a short press
+            ESP_LOGI(TAG, "Short press detected.");
             if (ebook_reader_connected) {
                 ESP_LOGI(TAG, "Unmounting USB drive...");
                 vfs_msc_unmount(MOUNT_POINT_USB);
