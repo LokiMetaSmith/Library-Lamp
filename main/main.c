@@ -115,8 +115,7 @@ const int WIFI_CONNECTED_BIT = BIT0;
 const int WIFI_FAIL_BIT = BIT1;
 
 // Embedded HTML for setup page
-extern const char setup_start[] asm("_binary_setup_html_start");
-extern const char setup_end[] asm("_binary_setup_html_end");
+#include "setup_html.h"
 
 
 // Enum and global variable for managing LED state
@@ -678,10 +677,9 @@ static httpd_handle_t start_webserver(void) {
 // --- WEB SERVER HANDLERS (CAPTIVE PORTAL) ---
 // Handler to serve the setup page
 static esp_err_t setup_get_handler(httpd_req_t *req) {
-    const uint32_t setup_len = setup_end - setup_start;
     ESP_LOGI(TAG, "Serving setup page");
     httpd_resp_set_type(req, "text/html");
-    httpd_resp_send(req, setup_start, setup_len);
+    httpd_resp_send(req, (const char*)main_web_assets_setup_html, main_web_assets_setup_html_len);
     return ESP_OK;
 }
 
