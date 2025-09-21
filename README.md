@@ -106,10 +106,22 @@ A 3D-printable enclosure for this project can be found on Printables:
 
 ## 🎨 Creating a Custom Enclosure
 
-If you want to create your own custom book cover, you can use the following workflow:
+If you want to create your own custom book cover, you have a few options:
+
+### Option 1: Use the OpenSCAD Template (Recommended)
+
+This repository includes an OpenSCAD script, [`enclosure_template.scad`](enclosure_template.scad), that serves as a starting point for your own designs.
+
+1.  **Install OpenSCAD:** Download and install it from [openscad.org](https://openscad.org/).
+2.  **Customize the Script:** Open `enclosure_template.scad` and modify the variables at the top of the file to match your desired dimensions. The script is heavily commented to guide you.
+3.  **Render and Export:** Preview the model (F5), then render the final design (F6) and export it as an STL file.
+
+### Option 2: Manual Workflow
+
+You can also use the following manual workflow:
 
 1.  **Generate Lithophanes:** Use the open-source [LithoMaker](https://github.com/muldjord/lithomaker) tool to convert your images into 3D-printable lithophane STL files. Follow the instructions on the GitHub page for preparing your images and generating the models.
 
-2.  **Assemble the Enclosure:** Use a 3D modeling tool like [OpenSCAD](https://openscad.org/) to "stitch" the generated lithophane panels together into a book-shaped enclosure. This gives you full control over the final design.
+2.  **Assemble the Enclosure:** Use a 3D modeling tool like [OpenSCAD](https://openscad.org/) or Tinkercad to "stitch" the generated lithophane panels together into a book-shaped enclosure. This gives you full control over the final design.
 
 3.  **Print and Assemble:** Print the parts and assemble your custom E-Book Librarian!
