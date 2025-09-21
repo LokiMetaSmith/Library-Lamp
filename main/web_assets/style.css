@@ -78,21 +78,3 @@ button.cancel-btn:hover {
 .sleep-btn:hover {
     background-color: #e74c3c;
 }
-
-.info-box {
-    background-color: #f0f4f8;
-    border-left: 4px solid #4a90e2;
-    padding: 15px;
-    margin: 20px;
-    border-radius: 4px;
-    font-size: 0.9em;
-    color: #333;
-}
-
-.info-box p {
-    margin: 0;
-}
-
-.info-box strong {
-    color: #4a90e2;
-}

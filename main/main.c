@@ -99,11 +99,13 @@
 #define LED_STRIP_RMT_RES_HZ        (10 * 1000 * 1000) // 10MHz resolution
 
 // Eject Button
-#define EJECT_BUTTON_GPIO           20
+#define EJECT_BUTTON_GPIO           33
 
 
 // --- GLOBALS ---
 static const char *TAG = "EBOOK_LIBRARIAN";
+static httpd_handle_t server = NULL;
+static int g_ws_fd = -1;
 static bool ebook_reader_connected = false;
 static msc_host_device_handle_t device_handle = NULL;
 static led_strip_handle_t g_led_strip;
@@ -213,53 +215,6 @@ esp_err_t load_wifi_credentials(char *ssid, size_t ssid_len, char *password, siz
 
     nvs_close(my_handle);
     return ESP_OK;
-}
-
-static bool book_exists_in_local_db(const char *title, const char *author) {
-    if (!local_db) return false;
-
-    sqlite3_stmt *res;
-    const char *sql = "SELECT id FROM books WHERE title = ? AND author = ?";
-    int rc = sqlite3_prepare_v2(local_db, sql, -1, &res, 0);
-    if (rc != SQLITE_OK) {
-        ESP_LOGE(TAG, "Failed to prepare statement: %s", sqlite3_errmsg(local_db));
-        return false;
-    }
-
-    sqlite3_bind_text(res, 1, title, -1, SQLITE_STATIC);
-    sqlite3_bind_text(res, 2, author, -1, SQLITE_STATIC);
-
-    bool exists = false;
-    if (sqlite3_step(res) == SQLITE_ROW) {
-        exists = true;
-    }
-
-    sqlite3_finalize(res);
-    return exists;
-}
-
-static void add_book_to_local_db(const char *title, const char *author, const char *path) {
-    if (!local_db) return;
-
-    sqlite3_stmt *res;
-    const char *sql = "INSERT INTO books (title, author, path) VALUES (?, ?, ?)";
-    int rc = sqlite3_prepare_v2(local_db, sql, -1, &res, 0);
-    if (rc != SQLITE_OK) {
-        ESP_LOGE(TAG, "Failed to prepare statement: %s", sqlite3_errmsg(local_db));
-        return;
-    }
-
-    sqlite3_bind_text(res, 1, title, -1, SQLITE_STATIC);
-    sqlite3_bind_text(res, 2, author, -1, SQLITE_STATIC);
-    sqlite3_bind_text(res, 3, path, -1, SQLITE_STATIC);
-
-    if (sqlite3_step(res) != SQLITE_DONE) {
-        ESP_LOGE(TAG, "Failed to insert book: %s", sqlite3_errmsg(local_db));
-    } else {
-        ESP_LOGI(TAG, "Added book to local DB: %s", title);
-    }
-
-    sqlite3_finalize(res);
 }
 
 
@@ -377,6 +332,12 @@ static esp_err_t copy_file(const char *source_path, const char *dest_path, trans
         }
         if (progress) {
             progress->bytes_transferred += bytes_read;
+            if (progress->total_bytes > 0) {
+                int percent_complete = (progress->bytes_transferred * 100) / progress->total_bytes;
+                char ws_msg[128];
+                snprintf(ws_msg, sizeof(ws_msg), "{\"type\": \"progress\", \"filename\": \"%s\", \"value\": %d}", progress->filename, percent_complete);
+                send_ws_message(ws_msg);
+            }
         }
     }
 
@@ -387,6 +348,81 @@ static esp_err_t copy_file(const char *source_path, const char *dest_path, trans
     if (progress) progress->success = true;
     return ESP_OK;
 }
+
+// --- WebSocket Functions ---
+static esp_err_t send_ws_message(const char *message) {
+    if (g_ws_fd < 0) {
+        return ESP_FAIL;
+    }
+
+    httpd_ws_frame_t ws_pkt;
+    memset(&ws_pkt, 0, sizeof(httpd_ws_frame_t));
+    ws_pkt.payload = (uint8_t*)message;
+    ws_pkt.len = strlen(message);
+    ws_pkt.type = HTTPD_WS_TYPE_TEXT;
+
+    esp_err_t ret = httpd_ws_send_frame_async(server, g_ws_fd, &ws_pkt);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "httpd_ws_send_frame_async failed with %d", ret);
+        g_ws_fd = -1;
+    }
+    return ret;
+}
+
+static esp_err_t ws_handler(httpd_req_t *req) {
+    if (req->method == HTTP_GET) {
+        ESP_LOGI(TAG, "Handshake done, the new connection was opened");
+        g_ws_fd = httpd_req_to_sockfd(req);
+        return ESP_OK;
+    }
+
+    httpd_ws_frame_t ws_pkt;
+    uint8_t *buf = NULL;
+    memset(&ws_pkt, 0, sizeof(httpd_ws_frame_t));
+    ws_pkt.type = HTTPD_WS_TYPE_TEXT;
+
+    esp_err_t ret = httpd_ws_recv_frame(req, &ws_pkt, 0);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "httpd_ws_recv_frame failed to get frame len with %d", ret);
+        g_ws_fd = -1;
+        return ret;
+    }
+
+    if (ws_pkt.len > 0) {
+        buf = calloc(1, ws_pkt.len + 1);
+        if (buf == NULL) {
+            ESP_LOGE(TAG, "Failed to calloc memory for WebSocket frame");
+            return ESP_ERR_NO_MEM;
+        }
+        ws_pkt.payload = buf;
+        ret = httpd_ws_recv_frame(req, &ws_pkt, ws_pkt.len);
+        if (ret != ESP_OK) {
+            ESP_LOGE(TAG, "httpd_ws_recv_frame failed with %d", ret);
+            free(buf);
+            g_ws_fd = -1;
+            return ret;
+        }
+
+        cJSON *root = cJSON_Parse((const char*)ws_pkt.payload);
+        if (root) {
+            cJSON *type = cJSON_GetObjectItem(root, "type");
+            if (type && cJSON_IsString(type) && (strcmp(type->valuestring, "cancel") == 0)) {
+                ESP_LOGI(TAG, "Received cancel request via WebSocket");
+                g_cancel_transfer = true;
+            }
+            cJSON_Delete(root);
+        }
+        free(buf);
+    }
+
+    if (ws_pkt.type == HTTPD_WS_TYPE_CLOSE) {
+        ESP_LOGI(TAG, "WebSocket client sent close frame");
+        g_ws_fd = -1;
+    }
+
+    return ESP_OK;
+}
+
 
 // --- WEB SERVER HANDLERS (MAIN APP) ---
 static esp_err_t static_file_handler(httpd_req_t *req) {
@@ -470,104 +506,80 @@ static esp_err_t list_files_handler(httpd_req_t *req) {
         return ESP_FAIL;
     }
 
+    const char *mount_path = (strcmp(param, "sd") == 0) ? MOUNT_POINT_SD : MOUNT_POINT_USB;
+
+    if (strcmp(param, "usb") == 0 && !ebook_reader_connected) {
+         httpd_resp_set_type(req, "application/json");
+         httpd_resp_send(req, "[]", 2);
+         return ESP_OK;
+    }
+
+    DIR *d = opendir(mount_path);
+    if (!d) {
+        ESP_LOGE(TAG, "Failed to open directory: %s", mount_path);
+        httpd_resp_send_500(req);
+        return ESP_FAIL;
+    }
+
     cJSON *root = cJSON_CreateArray();
+    struct dirent *dir;
+    while ((dir = readdir(d)) != NULL) {
+        if (dir->d_type == DT_REG) { // If it's a regular file
+            if (strstr(dir->d_name, ".epub") || strstr(dir->d_name, ".mobi") || strstr(dir->d_name, ".pdf") || strstr(dir->d_name, ".txt")) {
+                cJSON *file_obj = cJSON_CreateObject();
+                cJSON_AddStringToObject(file_obj, "name", dir->d_name);
 
-    if (strcmp(param, "sd") == 0) {
-        // List files from the local database
-        if (local_db) {
-            sqlite3_stmt *res;
-            const char *sql = "SELECT title, author, path FROM books ORDER BY title";
-            int rc = sqlite3_prepare_v2(local_db, sql, -1, &res, 0);
-            if (rc == SQLITE_OK) {
-                while (sqlite3_step(res) == SQLITE_ROW) {
-                    const char *title = (const char*)sqlite3_column_text(res, 0);
-                    const char *author = (const char*)sqlite3_column_text(res, 1);
-                    const char *path = (const char*)sqlite3_column_text(res, 2);
+                // For EPUBs, try to parse metadata
+                if (strstr(dir->d_name, ".epub")) {
+                    char full_path[512];
+                    snprintf(full_path, sizeof(full_path), "%s/%s", mount_path, dir->d_name);
 
-                    // Extract filename from path
-                    const char *filename = strrchr(path, '/');
-                    if (filename) {
-                        filename++; // Move past the '/'
-                    } else {
-                        filename = path;
-                    }
+                    mz_zip_archive zip_archive;
+                    memset(&zip_archive, 0, sizeof(zip_archive));
 
-                    cJSON *file_obj = cJSON_CreateObject();
-                    cJSON_AddStringToObject(file_obj, "name", filename);
-                    cJSON_AddStringToObject(file_obj, "title", title);
-                    cJSON_AddStringToObject(file_obj, "author", author);
-                    cJSON_AddItemToArray(root, file_obj);
-                }
-                sqlite3_finalize(res);
-            } else {
-                ESP_LOGE(TAG, "Failed to prepare statement for local DB: %s", sqlite3_errmsg(local_db));
-            }
-        }
-    } else if (strcmp(param, "usb") == 0) {
-        // List files from USB, using the original filesystem and metadata parsing logic
-        if (!ebook_reader_connected) {
-             httpd_resp_send(req, "[]", 2); // Send empty array if not connected
-        } else {
-            const char *mount_path = MOUNT_POINT_USB;
-            DIR *d = opendir(mount_path);
-            if (d) {
-                struct dirent *dir;
-                while ((dir = readdir(d)) != NULL) {
-                    if (dir->d_type == DT_REG) {
-                        if (strstr(dir->d_name, ".epub") || strstr(dir->d_name, ".mobi") || strstr(dir->d_name, ".pdf") || strstr(dir->d_name, ".txt")) {
-                            cJSON *file_obj = cJSON_CreateObject();
-                            cJSON_AddStringToObject(file_obj, "name", dir->d_name);
+                    if (mz_zip_reader_init_file(&zip_archive, full_path, 0)) {
+                        char *opf_content = NULL;
+                        size_t opf_size = 0;
 
-                            if (strstr(dir->d_name, ".epub")) {
-                                char full_path[512];
-                                snprintf(full_path, sizeof(full_path), "%s/%s", mount_path, dir->d_name);
-
-                                mz_zip_archive zip_archive;
-                                memset(&zip_archive, 0, sizeof(zip_archive));
-
-                                if (mz_zip_reader_init_file(&zip_archive, full_path, 0)) {
-                                    char *opf_content = NULL;
-                                    size_t opf_size = 0;
-                                    const char* opf_paths[] = {"OEBPS/content.opf", "content.opf", "OPS/content.opf"};
-                                    for (int i = 0; i < sizeof(opf_paths)/sizeof(opf_paths[0]); i++) {
-                                        int file_index = mz_zip_reader_locate_file(&zip_archive, opf_paths[i], NULL, 0);
-                                        if (file_index >= 0) {
-                                            opf_content = mz_zip_reader_extract_file_to_heap(&zip_archive, file_index, &opf_size, 0);
-                                            break;
-                                        }
-                                    }
-
-                                    if (opf_content) {
-                                        char *title = parse_xml_tag(opf_content, "dc:title");
-                                        char *author = parse_xml_tag(opf_content, "dc:creator");
-                                        cJSON_AddStringToObject(file_obj, "title", title ? title : dir->d_name);
-                                        cJSON_AddStringToObject(file_obj, "author", author ? author : "Unknown");
-                                        if (title) free(title);
-                                        if (author) free(author);
-                                        free(opf_content);
-                                    } else {
-                                         cJSON_AddStringToObject(file_obj, "title", dir->d_name);
-                                         cJSON_AddStringToObject(file_obj, "author", "Unknown");
-                                    }
-                                    mz_zip_reader_end(&zip_archive);
-                                } else {
-                                    cJSON_AddStringToObject(file_obj, "title", dir->d_name);
-                                    cJSON_AddStringToObject(file_obj, "author", "Unknown");
-                                }
-                            } else {
-                                cJSON_AddStringToObject(file_obj, "title", dir->d_name);
-                                cJSON_AddStringToObject(file_obj, "author", "");
+                        // Try common OPF paths
+                        const char* opf_paths[] = {"OEBPS/content.opf", "content.opf", "OPS/content.opf"};
+                        for (int i = 0; i < sizeof(opf_paths)/sizeof(opf_paths[0]); i++) {
+                            int file_index = mz_zip_reader_locate_file(&zip_archive, opf_paths[i], NULL, 0);
+                            if (file_index >= 0) {
+                                opf_content = mz_zip_reader_extract_file_to_heap(&zip_archive, file_index, &opf_size, 0);
+                                break;
                             }
-                            cJSON_AddItemToArray(root, file_obj);
                         }
+
+                        if (opf_content) {
+                            char *title = parse_xml_tag(opf_content, "dc:title");
+                            char *author = parse_xml_tag(opf_content, "dc:creator");
+
+                            cJSON_AddStringToObject(file_obj, "title", title ? title : dir->d_name);
+                            cJSON_AddStringToObject(file_obj, "author", author ? author : "Unknown");
+
+                            if (title) free(title);
+                            if (author) free(author);
+                            free(opf_content);
+                        } else {
+                             cJSON_AddStringToObject(file_obj, "title", dir->d_name);
+                             cJSON_AddStringToObject(file_obj, "author", "Unknown");
+                        }
+                        mz_zip_reader_end(&zip_archive);
+                    } else {
+                        cJSON_AddStringToObject(file_obj, "title", dir->d_name);
+                        cJSON_AddStringToObject(file_obj, "author", "Unknown");
                     }
+                } else {
+                    // For other file types, just use the filename
+                    cJSON_AddStringToObject(file_obj, "title", dir->d_name);
+                    cJSON_AddStringToObject(file_obj, "author", "");
                 }
-                closedir(d);
-            } else {
-                ESP_LOGE(TAG, "Failed to open directory: %s", mount_path);
+                cJSON_AddItemToArray(root, file_obj);
             }
         }
     }
+    closedir(d);
 
     httpd_resp_set_type(req, "application/json");
     char *json_str = cJSON_PrintUnformatted(root);
@@ -638,49 +650,32 @@ static esp_err_t transfer_file_handler(httpd_req_t *req) {
     }
 
 
-    cJSON *response_json = cJSON_CreateObject();
-    cJSON_AddBoolToObject(response_json, "success", res == ESP_OK);
-    cJSON_AddStringToObject(response_json, "message", res == ESP_OK ? "File transfer complete!" : g_transfer_progress.error_msg);
-
-    char *json_str = cJSON_PrintUnformatted(response_json);
-    httpd_resp_set_type(req, "application/json");
-    httpd_resp_send(req, json_str, strlen(json_str));
-    free(json_str);
-    cJSON_Delete(response_json);
-
-    // Deactivate progress tracking after sending response
+    // Deactivate progress tracking
     g_transfer_progress.active = false;
 
-    return ESP_OK;
-}
-
-static esp_err_t transfer_cancel_handler(httpd_req_t *req) {
-    ESP_LOGI(TAG, "Received request to cancel transfer");
-    g_cancel_transfer = true;
-    httpd_resp_send(req, "OK", HTTPD_200_OK);
-    return ESP_OK;
-}
-
-// Handler to report the current file transfer progress
-static esp_err_t transfer_progress_handler(httpd_req_t *req) {
-    if (!g_transfer_progress.active) {
-        httpd_resp_send_404(req);
-        return ESP_OK;
+    // Send a final status message over WebSocket
+    char ws_msg[256];
+    if (res == ESP_OK) {
+        snprintf(ws_msg, sizeof(ws_msg), "{\"type\": \"complete\", \"filename\": \"%s\", \"success\": true}", g_transfer_progress.filename);
+        send_ws_message(ws_msg);
+    } else {
+        cJSON *err_obj = cJSON_CreateObject();
+        cJSON_AddStringToObject(err_obj, "type", "complete");
+        cJSON_AddStringToObject(err_obj, "filename", g_transfer_progress.filename);
+        cJSON_AddBoolToObject(err_obj, "success", false);
+        cJSON_AddStringToObject(err_obj, "error", g_transfer_progress.error_msg);
+        char *json_str = cJSON_PrintUnformatted(err_obj);
+        send_ws_message(json_str);
+        free(json_str);
+        cJSON_Delete(err_obj);
     }
 
-    httpd_resp_set_type(req, "application/json");
-    cJSON *root = cJSON_CreateObject();
-    cJSON_AddStringToObject(root, "filename", g_transfer_progress.filename);
-    cJSON_AddNumberToObject(root, "bytes_transferred", g_transfer_progress.bytes_transferred);
-    cJSON_AddNumberToObject(root, "total_bytes", g_transfer_progress.total_bytes);
-
-    char *json_str = cJSON_PrintUnformatted(root);
-    httpd_resp_send(req, json_str, strlen(json_str));
-    free(json_str);
-    cJSON_Delete(root);
+    // Send a simple OK response to the initial HTTP request
+    httpd_resp_send(req, "OK", HTTPD_200_OK);
 
     return ESP_OK;
 }
+
 
 static esp_err_t sleep_handler(httpd_req_t *req) {
     ESP_LOGI(TAG, "Received request to enter deep sleep.");
@@ -714,9 +709,10 @@ static esp_err_t sleep_handler(httpd_req_t *req) {
 
 // --- WEB SERVER SETUP (MAIN APP) ---
 static httpd_handle_t start_webserver(void) {
-    httpd_handle_t server = NULL;
+    // server is now a global variable
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
     config.uri_match_fn = httpd_uri_match_wildcard;
+    config.task_priority = 5;
 
     ESP_LOGI(TAG, "Starting server on port: '%d'", config.server_port);
     if (httpd_start(&server, &config) == ESP_OK) {
@@ -730,14 +726,18 @@ static httpd_handle_t start_webserver(void) {
         httpd_uri_t transfer_uri = { "/transfer-file", HTTP_POST, transfer_file_handler, NULL };
         httpd_register_uri_handler(server, &transfer_uri);
 
-        httpd_uri_t progress_uri = { "/transfer-progress", HTTP_GET, transfer_progress_handler, NULL };
-        httpd_register_uri_handler(server, &progress_uri);
-
-        httpd_uri_t cancel_uri = { "/transfer-cancel", HTTP_POST, transfer_cancel_handler, NULL };
-        httpd_register_uri_handler(server, &cancel_uri);
-
         httpd_uri_t sleep_uri = { "/enter-sleep", HTTP_POST, sleep_handler, NULL };
         httpd_register_uri_handler(server, &sleep_uri);
+
+        // WebSocket handler
+        httpd_uri_t ws_uri = {
+            .uri        = "/ws",
+            .method     = HTTP_GET,
+            .handler    = ws_handler,
+            .user_ctx   = NULL,
+            .is_websocket = true
+        };
+        httpd_register_uri_handler(server, &ws_uri);
 
         // Handler for all other URIs (serves static files)
         httpd_uri_t static_uri = { "/*", HTTP_GET, static_file_handler, NULL };
@@ -1353,48 +1353,6 @@ void init_sd_card(void) {
     }
 }
 
-// --- Local DB Functions ---
-static sqlite3 *local_db = NULL;
-
-void init_local_database(void) {
-    // We only proceed if the SD card is mounted.
-    // A simple check is to see if the directory exists.
-    DIR* d = opendir(MOUNT_POINT_SD);
-    if (!d) {
-        ESP_LOGE(TAG, "SD card not mounted. Cannot initialize local database.");
-        return;
-    }
-    closedir(d);
-
-    char db_path[256];
-    snprintf(db_path, sizeof(db_path), "%s/library.db", MOUNT_POINT_SD);
-
-    int rc = sqlite3_open(db_path, &local_db);
-    if (rc) {
-        ESP_LOGE(TAG, "Can't open local database: %s", sqlite3_errmsg(local_db));
-        return;
-    } else {
-        ESP_LOGI(TAG, "Opened local database successfully at %s", db_path);
-    }
-
-    const char *sql = "CREATE TABLE IF NOT EXISTS books ("
-                      "id INTEGER PRIMARY KEY AUTOINCREMENT,"
-                      "title TEXT NOT NULL,"
-                      "author TEXT,"
-                      "path TEXT NOT NULL,"
-                      "UNIQUE(title, author));";
-
-    char *err_msg = 0;
-    rc = sqlite3_exec(local_db, sql, 0, 0, &err_msg);
-    if (rc != SQLITE_OK) {
-        ESP_LOGE(TAG, "Failed to create books table: %s", err_msg);
-        sqlite3_free(err_msg);
-    } else {
-        ESP_LOGI(TAG, "Table 'books' created or already exists.");
-    }
-}
-
-
 // --- Calibre DB Import ---
 void import_from_calibre_db(const char* usb_mount_path) {
     char db_path[256];
@@ -1411,14 +1369,14 @@ void import_from_calibre_db(const char* usb_mount_path) {
     sqlite3 *db;
     int rc = sqlite3_open(db_path, &db);
     if (rc) {
-        ESP_LOGE(TAG, "Can't open Calibre database: %s", sqlite3_errmsg(db));
+        ESP_LOGE(TAG, "Can't open database: %s", sqlite3_errmsg(db));
         return;
     } else {
-        ESP_LOGI(TAG, "Opened Calibre database successfully");
+        ESP_LOGI(TAG, "Opened database successfully");
     }
 
     sqlite3_stmt *res;
-    const char *sql = "SELECT b.title, a.name as author, b.path, d.name as filename "
+    const char *sql = "SELECT b.title, a.name as author, b.path, d.name as filename, d.format "
                       "FROM books b "
                       "LEFT JOIN books_authors_link bal ON b.id = bal.book "
                       "LEFT JOIN authors a ON bal.author = a.id "
@@ -1433,38 +1391,25 @@ void import_from_calibre_db(const char* usb_mount_path) {
         return;
     }
 
-    ESP_LOGI(TAG, "--- Starting Calibre Book Import ---");
+    ESP_LOGI(TAG, "--- Calibre Book Import ---");
     while (sqlite3_step(res) == SQLITE_ROW) {
-        const char *title = (const char*)sqlite3_column_text(res, 0);
-        const char *author = (const char*)sqlite3_column_text(res, 1);
-        const char *path = (const char*)sqlite3_column_text(res, 2);
-        const char *filename = (const char*)sqlite3_column_text(res, 3);
+        const unsigned char *title = sqlite3_column_text(res, 0);
+        const unsigned char *author = sqlite3_column_text(res, 1);
+        const unsigned char *path = sqlite3_column_text(res, 2);
+        const unsigned char *filename = sqlite3_column_text(res, 3);
+        const unsigned char *format = sqlite3_column_text(res, 4);
 
-        // Use "Unknown" for missing author, as it's used in UNIQUE constraint
-        const char *author_or_unknown = (author && author[0]) ? author : "Unknown";
+        char full_path[512];
+        snprintf(full_path, sizeof(full_path), "%s/%s/%s", usb_mount_path, path, filename);
 
-        if (book_exists_in_local_db(title, author_or_unknown)) {
-            ESP_LOGI(TAG, "Book '%s' by %s already exists. Skipping.", title, author_or_unknown);
-            continue;
-        }
-
-        char source_path[512];
-        snprintf(source_path, sizeof(source_path), "%s/%s/%s", usb_mount_path, path, filename);
-
-        char dest_path[512];
-        snprintf(dest_path, sizeof(dest_path), "%s/%s", MOUNT_POINT_SD, filename);
-
-        g_led_state = LED_STATE_TRANSFER;
-        if (copy_file(source_path, dest_path, NULL) == ESP_OK) {
-            add_book_to_local_db(title, author_or_unknown, dest_path);
-        } else {
-            ESP_LOGE(TAG, "Failed to copy book: %s", title);
-            g_led_state = LED_STATE_ERROR; // Show error on LED
-            vTaskDelay(pdMS_TO_TICKS(2000)); // Pause to show error color
-        }
-        g_led_state = LED_STATE_CONNECTED; // Revert to connected state after transfer attempt
+        ESP_LOGI(TAG, "Title: %s, Author: %s, Format: %s, Path: %s",
+            title ? (char*)title : "N/A",
+            author ? (char*)author : "N/A",
+            format ? (char*)format : "N/A",
+            full_path
+        );
     }
-    ESP_LOGI(TAG, "--- Finished Calibre Book Import ---");
+    ESP_LOGI(TAG, "--- End of Import ---");
 
     sqlite3_finalize(res);
     sqlite3_close(db);
@@ -1735,7 +1680,6 @@ void app_main(void) {
         ESP_LOGI(TAG, "Starting main application...");
         init_spiffs();
         init_sd_card();
-        init_local_database();
         init_usb_host();
         start_webserver();
         ESP_LOGI(TAG, "E-Book Librarian is running!");

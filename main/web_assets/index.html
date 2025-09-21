@@ -25,7 +25,7 @@
                             <div class="progress-container" v-if="transfer.active && transfer.filename === file.name">
                                 <div class="progress-bar" :style="{ width: transfer.progress + '%' }"></div>
                             </div>
-                            <button @click="transferToEReader(file.name)" :disabled="!isEReaderConnected || transfer.active">Transfer to E-Reader</button>
+                            <button @click="transferToEReader(file.name)" :disabled="!isEReaderConnected || isTransferDisabled">Transfer to E-Reader</button>
                             <button v-if="transfer.active && transfer.filename === file.name" @click="cancelTransfer" class="cancel-btn">Cancel</button>
                         </div>
                     </li>
@@ -44,7 +44,7 @@
                                 <div class="progress-container" v-if="transfer.active && transfer.filename === file.name">
                                     <div class="progress-bar" :style="{ width: transfer.progress + '%' }"></div>
                                 </div>
-                                <button @click="transferToLibrary(file.name)" :disabled="transfer.active">Transfer to Library</button>
+                                <button @click="transferToLibrary(file.name)" :disabled="isTransferDisabled">Transfer to Library</button>
                                 <button v-if="transfer.active && transfer.filename === file.name" @click="cancelTransfer" class="cancel-btn">Cancel</button>
                             </div>
                         </li>
@@ -53,9 +53,6 @@
                 <div v-else class="no-device">
                     <p>No e-reader connected.</p>
                 </div>
-            </div>
-            <div class="info-box">
-                <p><strong>Automatic Library Import:</strong> If your connected e-reader is managed by Calibre, this device will automatically find your library and import your books. The status light will pulse during the import.</p>
             </div>
         </main>
         <footer class="app-footer">
