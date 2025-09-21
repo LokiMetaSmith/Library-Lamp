@@ -55,6 +55,9 @@
 // --- LED Strip Dependencies ---
 #include "driver/gpio.h"
 #include "driver/rmt_tx.h"
+#include "esp_ota_ops.h"
+#include "esp_flash_partitions.h"
+#include "esp_partition.h"
 #include "led_strip.h"
 #include "miniz.h"
 #include "sqlite3.h"
@@ -104,8 +107,6 @@
 
 // --- GLOBALS ---
 static const char *TAG = "EBOOK_LIBRARIAN";
-static httpd_handle_t server = NULL;
-static int g_ws_fd = -1;
 static bool ebook_reader_connected = false;
 static msc_host_device_handle_t device_handle = NULL;
 static led_strip_handle_t g_led_strip;
@@ -332,12 +333,6 @@ static esp_err_t copy_file(const char *source_path, const char *dest_path, trans
         }
         if (progress) {
             progress->bytes_transferred += bytes_read;
-            if (progress->total_bytes > 0) {
-                int percent_complete = (progress->bytes_transferred * 100) / progress->total_bytes;
-                char ws_msg[128];
-                snprintf(ws_msg, sizeof(ws_msg), "{\"type\": \"progress\", \"filename\": \"%s\", \"value\": %d}", progress->filename, percent_complete);
-                send_ws_message(ws_msg);
-            }
         }
     }
 
@@ -349,76 +344,86 @@ static esp_err_t copy_file(const char *source_path, const char *dest_path, trans
     return ESP_OK;
 }
 
-// --- WebSocket Functions ---
-static esp_err_t send_ws_message(const char *message) {
-    if (g_ws_fd < 0) {
+#define OTA_BUF_SIZE 2048
+static esp_err_t ota_update_handler(httpd_req_t *req) {
+    char *ota_write_buf = (char *)malloc(OTA_BUF_SIZE);
+    if (!ota_write_buf) {
+        ESP_LOGE(TAG, "Failed to allocate memory for OTA buffer");
+        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "OTA buffer allocation failed");
+        return ESP_ERR_NO_MEM;
+    }
+
+    esp_ota_handle_t update_handle = 0;
+    const esp_partition_t *update_partition = NULL;
+
+    ESP_LOGI(TAG, "Starting OTA update...");
+
+    update_partition = esp_ota_get_next_update_partition(NULL);
+    if (update_partition == NULL) {
+        ESP_LOGE(TAG, "Failed to find OTA partition");
+        free(ota_write_buf);
+        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "No valid OTA partition found");
         return ESP_FAIL;
     }
+    ESP_LOGI(TAG, "Writing to partition subtype %d at offset 0x%x",
+             update_partition->subtype, update_partition->address);
 
-    httpd_ws_frame_t ws_pkt;
-    memset(&ws_pkt, 0, sizeof(httpd_ws_frame_t));
-    ws_pkt.payload = (uint8_t*)message;
-    ws_pkt.len = strlen(message);
-    ws_pkt.type = HTTPD_WS_TYPE_TEXT;
-
-    esp_err_t ret = httpd_ws_send_frame_async(server, g_ws_fd, &ws_pkt);
-    if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "httpd_ws_send_frame_async failed with %d", ret);
-        g_ws_fd = -1;
-    }
-    return ret;
-}
-
-static esp_err_t ws_handler(httpd_req_t *req) {
-    if (req->method == HTTP_GET) {
-        ESP_LOGI(TAG, "Handshake done, the new connection was opened");
-        g_ws_fd = httpd_req_to_sockfd(req);
-        return ESP_OK;
+    esp_err_t err = esp_ota_begin(update_partition, OTA_SIZE_UNKNOWN, &update_handle);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "esp_ota_begin failed (%s)", esp_err_to_name(err));
+        free(ota_write_buf);
+        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "OTA begin failed");
+        return err;
     }
 
-    httpd_ws_frame_t ws_pkt;
-    uint8_t *buf = NULL;
-    memset(&ws_pkt, 0, sizeof(httpd_ws_frame_t));
-    ws_pkt.type = HTTPD_WS_TYPE_TEXT;
+    int received_len;
+    int remaining = req->content_len;
 
-    esp_err_t ret = httpd_ws_recv_frame(req, &ws_pkt, 0);
-    if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "httpd_ws_recv_frame failed to get frame len with %d", ret);
-        g_ws_fd = -1;
-        return ret;
-    }
-
-    if (ws_pkt.len > 0) {
-        buf = calloc(1, ws_pkt.len + 1);
-        if (buf == NULL) {
-            ESP_LOGE(TAG, "Failed to calloc memory for WebSocket frame");
-            return ESP_ERR_NO_MEM;
-        }
-        ws_pkt.payload = buf;
-        ret = httpd_ws_recv_frame(req, &ws_pkt, ws_pkt.len);
-        if (ret != ESP_OK) {
-            ESP_LOGE(TAG, "httpd_ws_recv_frame failed with %d", ret);
-            free(buf);
-            g_ws_fd = -1;
-            return ret;
-        }
-
-        cJSON *root = cJSON_Parse((const char*)ws_pkt.payload);
-        if (root) {
-            cJSON *type = cJSON_GetObjectItem(root, "type");
-            if (type && cJSON_IsString(type) && (strcmp(type->valuestring, "cancel") == 0)) {
-                ESP_LOGI(TAG, "Received cancel request via WebSocket");
-                g_cancel_transfer = true;
+    while (remaining > 0) {
+        received_len = httpd_req_recv(req, ota_write_buf, fmin(remaining, OTA_BUF_SIZE));
+        if (received_len <= 0) {
+            if (received_len == HTTPD_SOCK_ERR_TIMEOUT) {
+                continue;
             }
-            cJSON_Delete(root);
+            ESP_LOGE(TAG, "Firmware upload failed");
+            esp_ota_abort(update_handle);
+            free(ota_write_buf);
+            httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Firmware upload failed");
+            return ESP_FAIL;
         }
-        free(buf);
+
+        err = esp_ota_write(update_handle, (const void *)ota_write_buf, received_len);
+        if (err != ESP_OK) {
+            ESP_LOGE(TAG, "esp_ota_write failed (%s)!", esp_err_to_name(err));
+            esp_ota_abort(update_handle);
+            free(ota_write_buf);
+            httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "OTA write failed");
+            return err;
+        }
+        remaining -= received_len;
     }
 
-    if (ws_pkt.type == HTTPD_WS_TYPE_CLOSE) {
-        ESP_LOGI(TAG, "WebSocket client sent close frame");
-        g_ws_fd = -1;
+    free(ota_write_buf);
+
+    err = esp_ota_end(update_handle);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "esp_ota_end failed (%s)!", esp_err_to_name(err));
+        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "OTA end failed");
+        return err;
     }
+
+    err = esp_ota_set_boot_partition(update_partition);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "esp_ota_set_boot_partition failed (%s)!", esp_err_to_name(err));
+        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Failed to set new boot partition");
+        return err;
+    }
+
+    ESP_LOGI(TAG, "OTA update successful! Rebooting...");
+    httpd_resp_send(req, "OTA Success, rebooting now...", HTTPD_200_OK);
+
+    vTaskDelay(pdMS_TO_TICKS(500));
+    esp_restart();
 
     return ESP_OK;
 }
@@ -650,32 +655,49 @@ static esp_err_t transfer_file_handler(httpd_req_t *req) {
     }
 
 
-    // Deactivate progress tracking
+    cJSON *response_json = cJSON_CreateObject();
+    cJSON_AddBoolToObject(response_json, "success", res == ESP_OK);
+    cJSON_AddStringToObject(response_json, "message", res == ESP_OK ? "File transfer complete!" : g_transfer_progress.error_msg);
+
+    char *json_str = cJSON_PrintUnformatted(response_json);
+    httpd_resp_set_type(req, "application/json");
+    httpd_resp_send(req, json_str, strlen(json_str));
+    free(json_str);
+    cJSON_Delete(response_json);
+
+    // Deactivate progress tracking after sending response
     g_transfer_progress.active = false;
-
-    // Send a final status message over WebSocket
-    char ws_msg[256];
-    if (res == ESP_OK) {
-        snprintf(ws_msg, sizeof(ws_msg), "{\"type\": \"complete\", \"filename\": \"%s\", \"success\": true}", g_transfer_progress.filename);
-        send_ws_message(ws_msg);
-    } else {
-        cJSON *err_obj = cJSON_CreateObject();
-        cJSON_AddStringToObject(err_obj, "type", "complete");
-        cJSON_AddStringToObject(err_obj, "filename", g_transfer_progress.filename);
-        cJSON_AddBoolToObject(err_obj, "success", false);
-        cJSON_AddStringToObject(err_obj, "error", g_transfer_progress.error_msg);
-        char *json_str = cJSON_PrintUnformatted(err_obj);
-        send_ws_message(json_str);
-        free(json_str);
-        cJSON_Delete(err_obj);
-    }
-
-    // Send a simple OK response to the initial HTTP request
-    httpd_resp_send(req, "OK", HTTPD_200_OK);
 
     return ESP_OK;
 }
 
+static esp_err_t transfer_cancel_handler(httpd_req_t *req) {
+    ESP_LOGI(TAG, "Received request to cancel transfer");
+    g_cancel_transfer = true;
+    httpd_resp_send(req, "OK", HTTPD_200_OK);
+    return ESP_OK;
+}
+
+// Handler to report the current file transfer progress
+static esp_err_t transfer_progress_handler(httpd_req_t *req) {
+    if (!g_transfer_progress.active) {
+        httpd_resp_send_404(req);
+        return ESP_OK;
+    }
+
+    httpd_resp_set_type(req, "application/json");
+    cJSON *root = cJSON_CreateObject();
+    cJSON_AddStringToObject(root, "filename", g_transfer_progress.filename);
+    cJSON_AddNumberToObject(root, "bytes_transferred", g_transfer_progress.bytes_transferred);
+    cJSON_AddNumberToObject(root, "total_bytes", g_transfer_progress.total_bytes);
+
+    char *json_str = cJSON_PrintUnformatted(root);
+    httpd_resp_send(req, json_str, strlen(json_str));
+    free(json_str);
+    cJSON_Delete(root);
+
+    return ESP_OK;
+}
 
 static esp_err_t sleep_handler(httpd_req_t *req) {
     ESP_LOGI(TAG, "Received request to enter deep sleep.");
@@ -709,10 +731,9 @@ static esp_err_t sleep_handler(httpd_req_t *req) {
 
 // --- WEB SERVER SETUP (MAIN APP) ---
 static httpd_handle_t start_webserver(void) {
-    // server is now a global variable
+    httpd_handle_t server = NULL;
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
     config.uri_match_fn = httpd_uri_match_wildcard;
-    config.task_priority = 5;
 
     ESP_LOGI(TAG, "Starting server on port: '%d'", config.server_port);
     if (httpd_start(&server, &config) == ESP_OK) {
@@ -726,18 +747,17 @@ static httpd_handle_t start_webserver(void) {
         httpd_uri_t transfer_uri = { "/transfer-file", HTTP_POST, transfer_file_handler, NULL };
         httpd_register_uri_handler(server, &transfer_uri);
 
+        httpd_uri_t progress_uri = { "/transfer-progress", HTTP_GET, transfer_progress_handler, NULL };
+        httpd_register_uri_handler(server, &progress_uri);
+
+        httpd_uri_t cancel_uri = { "/transfer-cancel", HTTP_POST, transfer_cancel_handler, NULL };
+        httpd_register_uri_handler(server, &cancel_uri);
+
         httpd_uri_t sleep_uri = { "/enter-sleep", HTTP_POST, sleep_handler, NULL };
         httpd_register_uri_handler(server, &sleep_uri);
 
-        // WebSocket handler
-        httpd_uri_t ws_uri = {
-            .uri        = "/ws",
-            .method     = HTTP_GET,
-            .handler    = ws_handler,
-            .user_ctx   = NULL,
-            .is_websocket = true
-        };
-        httpd_register_uri_handler(server, &ws_uri);
+        httpd_uri_t ota_uri = { "/ota-update", HTTP_POST, ota_update_handler, NULL };
+        httpd_register_uri_handler(server, &ota_uri);
 
         // Handler for all other URIs (serves static files)
         httpd_uri_t static_uri = { "/*", HTTP_GET, static_file_handler, NULL };

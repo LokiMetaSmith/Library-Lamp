@@ -78,3 +78,24 @@ button.cancel-btn:hover {
 .sleep-btn:hover {
     background-color: #e74c3c;
 }
+
+.ota-section {
+    border-top: 1px solid #ddd;
+    padding-top: 15px;
+    margin-top: 15px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.ota-section h4 {
+    margin: 0;
+    color: #555;
+}
+
+.ota-status {
+    font-style: italic;
+    color: #777;
+    font-size: 0.9em;
+}

@@ -6,72 +6,79 @@ createApp({
             localFiles: [],
             ereaderFiles: [],
             isEReaderConnected: false,
-            isWsConnected: false,
+            status: 'idle', // idle, connected, transferring
             transfer: {
                 active: false,
                 filename: '',
                 progress: 0,
                 error: ''
             },
-            socket: null,
-            statusPollingInterval: null,
+            ota: {
+                status: '',
+                uploading: false
+            },
+            pollingInterval: null,
         }
     },
     computed: {
         statusClass() {
-            if (this.transfer.active) return 'status-transferring';
+            if (this.transfer.active || this.ota.uploading) return 'status-transferring';
             if (this.isEReaderConnected) return 'status-connected';
             return 'status-idle';
-        },
-        isTransferDisabled() {
-            // Disable transfer if WS is not connected or another transfer is active
-            return !this.isWsConnected || this.transfer.active;
         }
     },
     methods: {
-        connectWebSocket() {
-            const wsProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
-            this.socket = new WebSocket(`${wsProtocol}//${location.host}/ws`);
+        async uploadFirmware() {
+            const fileInput = document.getElementById('ota_file');
+            const file = fileInput.files[0];
 
-            this.socket.onopen = () => {
-                console.log('WebSocket connection established');
-                this.isWsConnected = true;
-            };
+            if (!file) {
+                this.ota.status = 'Please select a firmware file first.';
+                return;
+            }
 
-            this.socket.onmessage = (event) => {
-                const data = JSON.parse(event.data);
-                if (data.type === 'progress' && data.filename === this.transfer.filename) {
-                    this.transfer.progress = data.value;
-                } else if (data.type === 'complete') {
-                    this.transfer.active = false;
-                    this.fetchFileLists(); // Refresh lists after transfer
-                    if (!data.success) {
-                        this.transfer.error = data.error || 'An unknown error occurred.';
-                    }
+            if (!confirm(`Are you sure you want to install "${file.name}"? The device will restart.`)) {
+                return;
+            }
+
+            this.ota.uploading = true;
+            this.ota.status = 'Uploading firmware... Do not navigate away.';
+
+            try {
+                const response = await fetch('/ota-update', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/octet-stream' },
+                    body: file
+                });
+
+                const responseText = await response.text();
+                if (response.ok) {
+                    this.ota.status = `Update successful! ${responseText}`;
+                } else {
+                    this.ota.status = `Error: ${responseText}`;
                 }
-            };
-
-            this.socket.onclose = () => {
-                console.log('WebSocket connection closed. Reconnecting in 2 seconds...');
-                this.isWsConnected = false;
-                setTimeout(() => this.connectWebSocket(), 2000);
-            };
-
-            this.socket.onerror = (error) => {
-                console.error('WebSocket error:', error);
-                this.isWsConnected = false;
-                this.socket.close();
-            };
+            } catch (error) {
+                console.error('OTA Error:', error);
+                this.ota.status = 'An error occurred during the update.';
+            } finally {
+                this.ota.uploading = false;
+            }
         },
-        async fetchStatus() {
+        async fetchData() {
             try {
                 const response = await fetch('/status');
                 const data = await response.json();
-                const wasConnected = this.isEReaderConnected;
                 this.isEReaderConnected = data.reader_connected;
-
-                if(wasConnected !== this.isEReaderConnected) {
-                    this.fetchFileLists();
+                if (data.transfer_active) {
+                    this.transfer.active = true;
+                    this.transfer.filename = data.filename;
+                    this.transfer.progress = data.total_bytes > 0 ? (data.bytes_transferred / data.total_bytes) * 100 : 0;
+                } else {
+                    if (this.transfer.active) {
+                        // Transfer just finished, refresh file lists
+                        this.fetchFileLists();
+                    }
+                    this.transfer.active = false;
                 }
             } catch (error) {
                 console.error('Error fetching status:', error);
@@ -89,23 +96,31 @@ createApp({
                 console.error('Error fetching file lists:', error);
             }
         },
-        performTransfer(source, destination, filename) {
-            if (this.isTransferDisabled) return;
+        async performTransfer(source, destination, filename) {
+            if (this.transfer.active) return;
 
             this.transfer.active = true;
             this.transfer.filename = filename;
             this.transfer.progress = 0;
             this.transfer.error = '';
 
-            fetch('/transfer-file', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ source, destination, filename })
-            }).catch(error => {
-                console.error('Transfer initiation error:', error);
-                this.transfer.error = 'Failed to start the transfer.';
+            try {
+                const response = await fetch('/transfer-file', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ source, destination, filename })
+                });
+                const result = await response.json();
+                if (!result.success) {
+                    this.transfer.error = result.message;
+                }
+            } catch (error) {
+                console.error('Transfer error:', error);
+                this.transfer.error = 'A network error occurred during the transfer.';
+            } finally {
                 this.transfer.active = false;
-            });
+                // The polling will handle the final state update and file list refresh
+            }
         },
         transferToEReader(filename) {
             this.performTransfer('sd', 'usb', filename);
@@ -113,16 +128,23 @@ createApp({
         transferToLibrary(filename) {
             this.performTransfer('usb', 'sd', filename);
         },
-        cancelTransfer() {
-            if (!this.transfer.active || !this.isWsConnected) return;
-            this.socket.send(JSON.stringify({ type: 'cancel' }));
+        async cancelTransfer() {
+            if (!this.transfer.active) return;
+            try {
+                await fetch('/transfer-cancel', { method: 'POST' });
+                // The backend will stop the transfer. The polling will update the state.
+            } catch (error) {
+                console.error('Error cancelling transfer:', error);
+                this.transfer.error = 'Failed to send cancel request.';
+            }
         },
         async enterSleepMode() {
             if (confirm('Are you sure you want to put the device to sleep? You will need to press the RESET button on the board to wake it up.')) {
                 try {
                     await fetch('/enter-sleep', { method: 'POST' });
+                    // If the request succeeds, the device will go to sleep and will stop responding.
                     this.transfer.error = 'Device is going to sleep. Press RESET to wake.';
-                    this.isEReaderConnected = false;
+                    this.isEReaderConnected = false; // Assume disconnection
                 } catch (error) {
                     console.error('Error entering sleep mode:', error);
                     this.transfer.error = 'Failed to send sleep command.';
@@ -131,15 +153,11 @@ createApp({
         }
     },
     mounted() {
-        this.fetchStatus();
+        this.fetchData();
         this.fetchFileLists();
-        this.connectWebSocket();
-        this.statusPollingInterval = setInterval(this.fetchStatus, 2000);
+        this.pollingInterval = setInterval(this.fetchData, 1000); // Poll for status updates
     },
     beforeUnmount() {
-        clearInterval(this.statusPollingInterval);
-        if (this.socket) {
-            this.socket.close();
-        }
+        clearInterval(this.pollingInterval);
     }
 }).mount('#app')

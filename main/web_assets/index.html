@@ -25,7 +25,7 @@
                             <div class="progress-container" v-if="transfer.active && transfer.filename === file.name">
                                 <div class="progress-bar" :style="{ width: transfer.progress + '%' }"></div>
                             </div>
-                            <button @click="transferToEReader(file.name)" :disabled="!isEReaderConnected || isTransferDisabled">Transfer to E-Reader</button>
+                            <button @click="transferToEReader(file.name)" :disabled="!isEReaderConnected || transfer.active">Transfer to E-Reader</button>
                             <button v-if="transfer.active && transfer.filename === file.name" @click="cancelTransfer" class="cancel-btn">Cancel</button>
                         </div>
                     </li>
@@ -44,7 +44,7 @@
                                 <div class="progress-container" v-if="transfer.active && transfer.filename === file.name">
                                     <div class="progress-bar" :style="{ width: transfer.progress + '%' }"></div>
                                 </div>
-                                <button @click="transferToLibrary(file.name)" :disabled="isTransferDisabled">Transfer to Library</button>
+                                <button @click="transferToLibrary(file.name)" :disabled="transfer.active">Transfer to Library</button>
                                 <button v-if="transfer.active && transfer.filename === file.name" @click="cancelTransfer" class="cancel-btn">Cancel</button>
                             </div>
                         </li>
@@ -58,6 +58,12 @@
         <footer class="app-footer">
             <p class="error-message" v-if="transfer.error">{{ transfer.error }}</p>
             <div class="footer-actions">
+                <div class="ota-section">
+                    <h4>Firmware Update</h4>
+                    <input type="file" id="ota_file" accept=".bin">
+                    <button @click="uploadFirmware" :disabled="transfer.active">Upload & Install</button>
+                    <p class="ota-status" v-if="ota.status">{{ ota.status }}</p>
+                </div>
                 <button @click="enterSleepMode" class="sleep-btn">Enter Sleep Mode</button>
             </div>
         </footer>
