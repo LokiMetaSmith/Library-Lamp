@@ -1,8 +1,0 @@
-[wokwi]
-version = 1
-elf = "build/library-lamp.elf"
-firmware = "build/library-lamp.bin"
-
-[[spiffs]]
-image = "main/web_assets"
-partition = "storage"

@@ -42,3 +42,9 @@
 
 # Build output
 /build/
+
+# PlatformIO
+.pio/
+
+# VSCode
+.vscode/
