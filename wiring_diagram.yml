@@ -1,65 +1,77 @@
 # To render this diagram, use the WireViz tool:
 # pip install wireviz
-# wireviz wiring.yml
+# wireviz wiring_diagram.yml
 
 # --- Define Connectors and Devices ---
 
 connectors:
-  esp32s3:
+  esp32s3_devkit:
     type: pin-header
-    # Refer to your specific ESP32-S3 board's pinout diagram
-    # These are common GPIOs and power pins
-    pins: [5V, GND, GPIO5, GPIO18, GPIO19, GPIO23, GPIO4]
+    # Pins on the ESP32-S3-DevKitC-1 board used in this project
+    pins: [3V3, 5V, GND, IO4, IO5, IO18, IO19, IO20, IO23]
+    pin_labels:
+      GND: [GND.1, GND.2, GND.3] # For connecting multiple grounds
 
   sd_module:
     type: pin-header
-    # Pins on the HiLetgo SD card module
-    pins: [VCC, GND, CS, SCK, MISO, MOSI]
+    # Pins on a standard SPI MicroSD card module
+    pins: [VCC, GND, CS, SCK, DI, DO]
+    pin_labels:
+      DI: MOSI
+      DO: MISO
 
   led_strip:
     type: pin-header
     # Pins on a standard WS2812B/NeoPixel strip
-    pins: [GND, "Data In", "5V"]
+    pins: [GND, "Data In", VCC]
+
+  button:
+    type: pushbutton
+    # A standard 2-pin tactile pushbutton
+    pins: [1, 2]
 
 # --- Define Wires and Connections ---
 
 wires:
   # --- Power Connections ---
   - connect:
-      - esp32s3: [5V, GND]
+      - esp32s3_devkit: [3V3, GND.1]
       - sd_module: [VCC, GND]
+    color: [RD, BK] # Red for 3.3V, Black for Ground
+    
+  - connect:
+      - esp32s3_devkit: [5V, GND.2]
+      - led_strip: [VCC, GND]
     color: [RD, BK] # Red for 5V, Black for Ground
-    
+
   - connect:
-      - esp32s3: [5V, GND]
-      - led_strip: ["5V", GND]
-    color: [RD, BK]
-    
+      - esp32s3_devkit: [IO20, GND.3]
+      - button: [1, 2]
+    color: [GN, BK] # Green for signal, Black for Ground
+
   # --- SD Card (SPI) Connections ---
-  # Based on pin definitions in main.c
   - connect:
-      - esp32s3: [GPIO5] # Chip Select (CS)
+      - esp32s3_devkit: [IO5]
       - sd_module: [CS]
     color: YL # Yellow
     
   - connect:
-      - esp32s3: [GPIO18] # Serial Clock (SCK)
+      - esp32s3_devkit: [IO18]
       - sd_module: [SCK]
     color: BU # Blue
 
   - connect:
-      - esp32s3: [GPIO19] # MISO (Master In Slave Out)
-      - sd_module: [MISO]
+      - esp32s3_devkit: [IO19]
+      - sd_module: [DO] # MISO
     color: GN # Green
 
   - connect:
-      - esp32s3: [GPIO23] # MOSI (Master Out Slave In)
-      - sd_module: [MOSI]
+      - esp32s3_devkit: [IO23]
+      - sd_module: [DI] # MOSI
     color: OG # Orange
     
   # --- LED Strip Connection ---
-  # Based on pin definition in main.c
   - connect:
-      - esp32s3: [GPIO4] # Data Pin
+      - esp32s3_devkit: [IO4]
       - led_strip: ["Data In"]
     color: WT # White

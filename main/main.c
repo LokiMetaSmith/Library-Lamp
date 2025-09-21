@@ -55,9 +55,6 @@
 // --- LED Strip Dependencies ---
 #include "driver/gpio.h"
 #include "driver/rmt_tx.h"
-#include "esp_ota_ops.h"
-#include "esp_flash_partitions.h"
-#include "esp_partition.h"
 #include "led_strip.h"
 #include "miniz.h"
 #include "sqlite3.h"
@@ -343,91 +340,6 @@ static esp_err_t copy_file(const char *source_path, const char *dest_path, trans
     if (progress) progress->success = true;
     return ESP_OK;
 }
-
-#define OTA_BUF_SIZE 2048
-static esp_err_t ota_update_handler(httpd_req_t *req) {
-    char *ota_write_buf = (char *)malloc(OTA_BUF_SIZE);
-    if (!ota_write_buf) {
-        ESP_LOGE(TAG, "Failed to allocate memory for OTA buffer");
-        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "OTA buffer allocation failed");
-        return ESP_ERR_NO_MEM;
-    }
-
-    esp_ota_handle_t update_handle = 0;
-    const esp_partition_t *update_partition = NULL;
-
-    ESP_LOGI(TAG, "Starting OTA update...");
-
-    update_partition = esp_ota_get_next_update_partition(NULL);
-    if (update_partition == NULL) {
-        ESP_LOGE(TAG, "Failed to find OTA partition");
-        free(ota_write_buf);
-        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "No valid OTA partition found");
-        return ESP_FAIL;
-    }
-    ESP_LOGI(TAG, "Writing to partition subtype %d at offset 0x%x",
-             update_partition->subtype, update_partition->address);
-
-    esp_err_t err = esp_ota_begin(update_partition, OTA_SIZE_UNKNOWN, &update_handle);
-    if (err != ESP_OK) {
-        ESP_LOGE(TAG, "esp_ota_begin failed (%s)", esp_err_to_name(err));
-        free(ota_write_buf);
-        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "OTA begin failed");
-        return err;
-    }
-
-    int received_len;
-    int remaining = req->content_len;
-
-    while (remaining > 0) {
-        received_len = httpd_req_recv(req, ota_write_buf, fmin(remaining, OTA_BUF_SIZE));
-        if (received_len <= 0) {
-            if (received_len == HTTPD_SOCK_ERR_TIMEOUT) {
-                continue;
-            }
-            ESP_LOGE(TAG, "Firmware upload failed");
-            esp_ota_abort(update_handle);
-            free(ota_write_buf);
-            httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Firmware upload failed");
-            return ESP_FAIL;
-        }
-
-        err = esp_ota_write(update_handle, (const void *)ota_write_buf, received_len);
-        if (err != ESP_OK) {
-            ESP_LOGE(TAG, "esp_ota_write failed (%s)!", esp_err_to_name(err));
-            esp_ota_abort(update_handle);
-            free(ota_write_buf);
-            httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "OTA write failed");
-            return err;
-        }
-        remaining -= received_len;
-    }
-
-    free(ota_write_buf);
-
-    err = esp_ota_end(update_handle);
-    if (err != ESP_OK) {
-        ESP_LOGE(TAG, "esp_ota_end failed (%s)!", esp_err_to_name(err));
-        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "OTA end failed");
-        return err;
-    }
-
-    err = esp_ota_set_boot_partition(update_partition);
-    if (err != ESP_OK) {
-        ESP_LOGE(TAG, "esp_ota_set_boot_partition failed (%s)!", esp_err_to_name(err));
-        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Failed to set new boot partition");
-        return err;
-    }
-
-    ESP_LOGI(TAG, "OTA update successful! Rebooting...");
-    httpd_resp_send(req, "OTA Success, rebooting now...", HTTPD_200_OK);
-
-    vTaskDelay(pdMS_TO_TICKS(500));
-    esp_restart();
-
-    return ESP_OK;
-}
-
 
 // --- WEB SERVER HANDLERS (MAIN APP) ---
 static esp_err_t static_file_handler(httpd_req_t *req) {
@@ -755,9 +667,6 @@ static httpd_handle_t start_webserver(void) {
 
         httpd_uri_t sleep_uri = { "/enter-sleep", HTTP_POST, sleep_handler, NULL };
         httpd_register_uri_handler(server, &sleep_uri);
-
-        httpd_uri_t ota_uri = { "/ota-update", HTTP_POST, ota_update_handler, NULL };
-        httpd_register_uri_handler(server, &ota_uri);
 
         // Handler for all other URIs (serves static files)
         httpd_uri_t static_uri = { "/*", HTTP_GET, static_file_handler, NULL };

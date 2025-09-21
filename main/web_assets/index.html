@@ -58,12 +58,6 @@
         <footer class="app-footer">
             <p class="error-message" v-if="transfer.error">{{ transfer.error }}</p>
             <div class="footer-actions">
-                <div class="ota-section">
-                    <h4>Firmware Update</h4>
-                    <input type="file" id="ota_file" accept=".bin">
-                    <button @click="uploadFirmware" :disabled="transfer.active">Upload & Install</button>
-                    <p class="ota-status" v-if="ota.status">{{ ota.status }}</p>
-                </div>
                 <button @click="enterSleepMode" class="sleep-btn">Enter Sleep Mode</button>
             </div>
         </footer>

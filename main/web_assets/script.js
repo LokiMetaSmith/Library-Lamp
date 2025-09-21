@@ -13,57 +13,17 @@ createApp({
                 progress: 0,
                 error: ''
             },
-            ota: {
-                status: '',
-                uploading: false
-            },
             pollingInterval: null,
         }
     },
     computed: {
         statusClass() {
-            if (this.transfer.active || this.ota.uploading) return 'status-transferring';
+            if (this.transfer.active) return 'status-transferring';
             if (this.isEReaderConnected) return 'status-connected';
             return 'status-idle';
         }
     },
     methods: {
-        async uploadFirmware() {
-            const fileInput = document.getElementById('ota_file');
-            const file = fileInput.files[0];
-
-            if (!file) {
-                this.ota.status = 'Please select a firmware file first.';
-                return;
-            }
-
-            if (!confirm(`Are you sure you want to install "${file.name}"? The device will restart.`)) {
-                return;
-            }
-
-            this.ota.uploading = true;
-            this.ota.status = 'Uploading firmware... Do not navigate away.';
-
-            try {
-                const response = await fetch('/ota-update', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/octet-stream' },
-                    body: file
-                });
-
-                const responseText = await response.text();
-                if (response.ok) {
-                    this.ota.status = `Update successful! ${responseText}`;
-                } else {
-                    this.ota.status = `Error: ${responseText}`;
-                }
-            } catch (error) {
-                console.error('OTA Error:', error);
-                this.ota.status = 'An error occurred during the update.';
-            } finally {
-                this.ota.uploading = false;
-            }
-        },
         async fetchData() {
             try {
                 const response = await fetch('/status');
