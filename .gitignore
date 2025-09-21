@@ -42,3 +42,6 @@
 
 # Build output
 /build/
+
+# PlatformIO
+.pio/
