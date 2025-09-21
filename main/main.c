@@ -215,6 +215,53 @@ esp_err_t load_wifi_credentials(char *ssid, size_t ssid_len, char *password, siz
     return ESP_OK;
 }
 
+static bool book_exists_in_local_db(const char *title, const char *author) {
+    if (!local_db) return false;
+
+    sqlite3_stmt *res;
+    const char *sql = "SELECT id FROM books WHERE title = ? AND author = ?";
+    int rc = sqlite3_prepare_v2(local_db, sql, -1, &res, 0);
+    if (rc != SQLITE_OK) {
+        ESP_LOGE(TAG, "Failed to prepare statement: %s", sqlite3_errmsg(local_db));
+        return false;
+    }
+
+    sqlite3_bind_text(res, 1, title, -1, SQLITE_STATIC);
+    sqlite3_bind_text(res, 2, author, -1, SQLITE_STATIC);
+
+    bool exists = false;
+    if (sqlite3_step(res) == SQLITE_ROW) {
+        exists = true;
+    }
+
+    sqlite3_finalize(res);
+    return exists;
+}
+
+static void add_book_to_local_db(const char *title, const char *author, const char *path) {
+    if (!local_db) return;
+
+    sqlite3_stmt *res;
+    const char *sql = "INSERT INTO books (title, author, path) VALUES (?, ?, ?)";
+    int rc = sqlite3_prepare_v2(local_db, sql, -1, &res, 0);
+    if (rc != SQLITE_OK) {
+        ESP_LOGE(TAG, "Failed to prepare statement: %s", sqlite3_errmsg(local_db));
+        return;
+    }
+
+    sqlite3_bind_text(res, 1, title, -1, SQLITE_STATIC);
+    sqlite3_bind_text(res, 2, author, -1, SQLITE_STATIC);
+    sqlite3_bind_text(res, 3, path, -1, SQLITE_STATIC);
+
+    if (sqlite3_step(res) != SQLITE_DONE) {
+        ESP_LOGE(TAG, "Failed to insert book: %s", sqlite3_errmsg(local_db));
+    } else {
+        ESP_LOGI(TAG, "Added book to local DB: %s", title);
+    }
+
+    sqlite3_finalize(res);
+}
+
 
 // --- HELPER FUNCTIONS ---
 
@@ -423,80 +470,104 @@ static esp_err_t list_files_handler(httpd_req_t *req) {
         return ESP_FAIL;
     }
 
-    const char *mount_path = (strcmp(param, "sd") == 0) ? MOUNT_POINT_SD : MOUNT_POINT_USB;
-
-    if (strcmp(param, "usb") == 0 && !ebook_reader_connected) {
-         httpd_resp_set_type(req, "application/json");
-         httpd_resp_send(req, "[]", 2);
-         return ESP_OK;
-    }
-
-    DIR *d = opendir(mount_path);
-    if (!d) {
-        ESP_LOGE(TAG, "Failed to open directory: %s", mount_path);
-        httpd_resp_send_500(req);
-        return ESP_FAIL;
-    }
-
     cJSON *root = cJSON_CreateArray();
-    struct dirent *dir;
-    while ((dir = readdir(d)) != NULL) {
-        if (dir->d_type == DT_REG) { // If it's a regular file
-            if (strstr(dir->d_name, ".epub") || strstr(dir->d_name, ".mobi") || strstr(dir->d_name, ".pdf") || strstr(dir->d_name, ".txt")) {
-                cJSON *file_obj = cJSON_CreateObject();
-                cJSON_AddStringToObject(file_obj, "name", dir->d_name);
 
-                // For EPUBs, try to parse metadata
-                if (strstr(dir->d_name, ".epub")) {
-                    char full_path[512];
-                    snprintf(full_path, sizeof(full_path), "%s/%s", mount_path, dir->d_name);
+    if (strcmp(param, "sd") == 0) {
+        // List files from the local database
+        if (local_db) {
+            sqlite3_stmt *res;
+            const char *sql = "SELECT title, author, path FROM books ORDER BY title";
+            int rc = sqlite3_prepare_v2(local_db, sql, -1, &res, 0);
+            if (rc == SQLITE_OK) {
+                while (sqlite3_step(res) == SQLITE_ROW) {
+                    const char *title = (const char*)sqlite3_column_text(res, 0);
+                    const char *author = (const char*)sqlite3_column_text(res, 1);
+                    const char *path = (const char*)sqlite3_column_text(res, 2);
 
-                    mz_zip_archive zip_archive;
-                    memset(&zip_archive, 0, sizeof(zip_archive));
-
-                    if (mz_zip_reader_init_file(&zip_archive, full_path, 0)) {
-                        char *opf_content = NULL;
-                        size_t opf_size = 0;
-
-                        // Try common OPF paths
-                        const char* opf_paths[] = {"OEBPS/content.opf", "content.opf", "OPS/content.opf"};
-                        for (int i = 0; i < sizeof(opf_paths)/sizeof(opf_paths[0]); i++) {
-                            int file_index = mz_zip_reader_locate_file(&zip_archive, opf_paths[i], NULL, 0);
-                            if (file_index >= 0) {
-                                opf_content = mz_zip_reader_extract_file_to_heap(&zip_archive, file_index, &opf_size, 0);
-                                break;
-                            }
-                        }
-
-                        if (opf_content) {
-                            char *title = parse_xml_tag(opf_content, "dc:title");
-                            char *author = parse_xml_tag(opf_content, "dc:creator");
-
-                            cJSON_AddStringToObject(file_obj, "title", title ? title : dir->d_name);
-                            cJSON_AddStringToObject(file_obj, "author", author ? author : "Unknown");
-
-                            if (title) free(title);
-                            if (author) free(author);
-                            free(opf_content);
-                        } else {
-                             cJSON_AddStringToObject(file_obj, "title", dir->d_name);
-                             cJSON_AddStringToObject(file_obj, "author", "Unknown");
-                        }
-                        mz_zip_reader_end(&zip_archive);
+                    // Extract filename from path
+                    const char *filename = strrchr(path, '/');
+                    if (filename) {
+                        filename++; // Move past the '/'
                     } else {
-                        cJSON_AddStringToObject(file_obj, "title", dir->d_name);
-                        cJSON_AddStringToObject(file_obj, "author", "Unknown");
+                        filename = path;
                     }
-                } else {
-                    // For other file types, just use the filename
-                    cJSON_AddStringToObject(file_obj, "title", dir->d_name);
-                    cJSON_AddStringToObject(file_obj, "author", "");
+
+                    cJSON *file_obj = cJSON_CreateObject();
+                    cJSON_AddStringToObject(file_obj, "name", filename);
+                    cJSON_AddStringToObject(file_obj, "title", title);
+                    cJSON_AddStringToObject(file_obj, "author", author);
+                    cJSON_AddItemToArray(root, file_obj);
                 }
-                cJSON_AddItemToArray(root, file_obj);
+                sqlite3_finalize(res);
+            } else {
+                ESP_LOGE(TAG, "Failed to prepare statement for local DB: %s", sqlite3_errmsg(local_db));
+            }
+        }
+    } else if (strcmp(param, "usb") == 0) {
+        // List files from USB, using the original filesystem and metadata parsing logic
+        if (!ebook_reader_connected) {
+             httpd_resp_send(req, "[]", 2); // Send empty array if not connected
+        } else {
+            const char *mount_path = MOUNT_POINT_USB;
+            DIR *d = opendir(mount_path);
+            if (d) {
+                struct dirent *dir;
+                while ((dir = readdir(d)) != NULL) {
+                    if (dir->d_type == DT_REG) {
+                        if (strstr(dir->d_name, ".epub") || strstr(dir->d_name, ".mobi") || strstr(dir->d_name, ".pdf") || strstr(dir->d_name, ".txt")) {
+                            cJSON *file_obj = cJSON_CreateObject();
+                            cJSON_AddStringToObject(file_obj, "name", dir->d_name);
+
+                            if (strstr(dir->d_name, ".epub")) {
+                                char full_path[512];
+                                snprintf(full_path, sizeof(full_path), "%s/%s", mount_path, dir->d_name);
+
+                                mz_zip_archive zip_archive;
+                                memset(&zip_archive, 0, sizeof(zip_archive));
+
+                                if (mz_zip_reader_init_file(&zip_archive, full_path, 0)) {
+                                    char *opf_content = NULL;
+                                    size_t opf_size = 0;
+                                    const char* opf_paths[] = {"OEBPS/content.opf", "content.opf", "OPS/content.opf"};
+                                    for (int i = 0; i < sizeof(opf_paths)/sizeof(opf_paths[0]); i++) {
+                                        int file_index = mz_zip_reader_locate_file(&zip_archive, opf_paths[i], NULL, 0);
+                                        if (file_index >= 0) {
+                                            opf_content = mz_zip_reader_extract_file_to_heap(&zip_archive, file_index, &opf_size, 0);
+                                            break;
+                                        }
+                                    }
+
+                                    if (opf_content) {
+                                        char *title = parse_xml_tag(opf_content, "dc:title");
+                                        char *author = parse_xml_tag(opf_content, "dc:creator");
+                                        cJSON_AddStringToObject(file_obj, "title", title ? title : dir->d_name);
+                                        cJSON_AddStringToObject(file_obj, "author", author ? author : "Unknown");
+                                        if (title) free(title);
+                                        if (author) free(author);
+                                        free(opf_content);
+                                    } else {
+                                         cJSON_AddStringToObject(file_obj, "title", dir->d_name);
+                                         cJSON_AddStringToObject(file_obj, "author", "Unknown");
+                                    }
+                                    mz_zip_reader_end(&zip_archive);
+                                } else {
+                                    cJSON_AddStringToObject(file_obj, "title", dir->d_name);
+                                    cJSON_AddStringToObject(file_obj, "author", "Unknown");
+                                }
+                            } else {
+                                cJSON_AddStringToObject(file_obj, "title", dir->d_name);
+                                cJSON_AddStringToObject(file_obj, "author", "");
+                            }
+                            cJSON_AddItemToArray(root, file_obj);
+                        }
+                    }
+                }
+                closedir(d);
+            } else {
+                ESP_LOGE(TAG, "Failed to open directory: %s", mount_path);
             }
         }
     }
-    closedir(d);
 
     httpd_resp_set_type(req, "application/json");
     char *json_str = cJSON_PrintUnformatted(root);
@@ -1282,6 +1353,48 @@ void init_sd_card(void) {
     }
 }
 
+// --- Local DB Functions ---
+static sqlite3 *local_db = NULL;
+
+void init_local_database(void) {
+    // We only proceed if the SD card is mounted.
+    // A simple check is to see if the directory exists.
+    DIR* d = opendir(MOUNT_POINT_SD);
+    if (!d) {
+        ESP_LOGE(TAG, "SD card not mounted. Cannot initialize local database.");
+        return;
+    }
+    closedir(d);
+
+    char db_path[256];
+    snprintf(db_path, sizeof(db_path), "%s/library.db", MOUNT_POINT_SD);
+
+    int rc = sqlite3_open(db_path, &local_db);
+    if (rc) {
+        ESP_LOGE(TAG, "Can't open local database: %s", sqlite3_errmsg(local_db));
+        return;
+    } else {
+        ESP_LOGI(TAG, "Opened local database successfully at %s", db_path);
+    }
+
+    const char *sql = "CREATE TABLE IF NOT EXISTS books ("
+                      "id INTEGER PRIMARY KEY AUTOINCREMENT,"
+                      "title TEXT NOT NULL,"
+                      "author TEXT,"
+                      "path TEXT NOT NULL,"
+                      "UNIQUE(title, author));";
+
+    char *err_msg = 0;
+    rc = sqlite3_exec(local_db, sql, 0, 0, &err_msg);
+    if (rc != SQLITE_OK) {
+        ESP_LOGE(TAG, "Failed to create books table: %s", err_msg);
+        sqlite3_free(err_msg);
+    } else {
+        ESP_LOGI(TAG, "Table 'books' created or already exists.");
+    }
+}
+
+
 // --- Calibre DB Import ---
 void import_from_calibre_db(const char* usb_mount_path) {
     char db_path[256];
@@ -1298,14 +1411,14 @@ void import_from_calibre_db(const char* usb_mount_path) {
     sqlite3 *db;
     int rc = sqlite3_open(db_path, &db);
     if (rc) {
-        ESP_LOGE(TAG, "Can't open database: %s", sqlite3_errmsg(db));
+        ESP_LOGE(TAG, "Can't open Calibre database: %s", sqlite3_errmsg(db));
         return;
     } else {
-        ESP_LOGI(TAG, "Opened database successfully");
+        ESP_LOGI(TAG, "Opened Calibre database successfully");
     }
 
     sqlite3_stmt *res;
-    const char *sql = "SELECT b.title, a.name as author, b.path, d.name as filename, d.format "
+    const char *sql = "SELECT b.title, a.name as author, b.path, d.name as filename "
                       "FROM books b "
                       "LEFT JOIN books_authors_link bal ON b.id = bal.book "
                       "LEFT JOIN authors a ON bal.author = a.id "
@@ -1320,25 +1433,38 @@ void import_from_calibre_db(const char* usb_mount_path) {
         return;
     }
 
-    ESP_LOGI(TAG, "--- Calibre Book Import ---");
+    ESP_LOGI(TAG, "--- Starting Calibre Book Import ---");
     while (sqlite3_step(res) == SQLITE_ROW) {
-        const unsigned char *title = sqlite3_column_text(res, 0);
-        const unsigned char *author = sqlite3_column_text(res, 1);
-        const unsigned char *path = sqlite3_column_text(res, 2);
-        const unsigned char *filename = sqlite3_column_text(res, 3);
-        const unsigned char *format = sqlite3_column_text(res, 4);
+        const char *title = (const char*)sqlite3_column_text(res, 0);
+        const char *author = (const char*)sqlite3_column_text(res, 1);
+        const char *path = (const char*)sqlite3_column_text(res, 2);
+        const char *filename = (const char*)sqlite3_column_text(res, 3);
 
-        char full_path[512];
-        snprintf(full_path, sizeof(full_path), "%s/%s/%s", usb_mount_path, path, filename);
+        // Use "Unknown" for missing author, as it's used in UNIQUE constraint
+        const char *author_or_unknown = (author && author[0]) ? author : "Unknown";
 
-        ESP_LOGI(TAG, "Title: %s, Author: %s, Format: %s, Path: %s",
-            title ? (char*)title : "N/A",
-            author ? (char*)author : "N/A",
-            format ? (char*)format : "N/A",
-            full_path
-        );
+        if (book_exists_in_local_db(title, author_or_unknown)) {
+            ESP_LOGI(TAG, "Book '%s' by %s already exists. Skipping.", title, author_or_unknown);
+            continue;
+        }
+
+        char source_path[512];
+        snprintf(source_path, sizeof(source_path), "%s/%s/%s", usb_mount_path, path, filename);
+
+        char dest_path[512];
+        snprintf(dest_path, sizeof(dest_path), "%s/%s", MOUNT_POINT_SD, filename);
+
+        g_led_state = LED_STATE_TRANSFER;
+        if (copy_file(source_path, dest_path, NULL) == ESP_OK) {
+            add_book_to_local_db(title, author_or_unknown, dest_path);
+        } else {
+            ESP_LOGE(TAG, "Failed to copy book: %s", title);
+            g_led_state = LED_STATE_ERROR; // Show error on LED
+            vTaskDelay(pdMS_TO_TICKS(2000)); // Pause to show error color
+        }
+        g_led_state = LED_STATE_CONNECTED; // Revert to connected state after transfer attempt
     }
-    ESP_LOGI(TAG, "--- End of Import ---");
+    ESP_LOGI(TAG, "--- Finished Calibre Book Import ---");
 
     sqlite3_finalize(res);
     sqlite3_close(db);
@@ -1609,6 +1735,7 @@ void app_main(void) {
         ESP_LOGI(TAG, "Starting main application...");
         init_spiffs();
         init_sd_card();
+        init_local_database();
         init_usb_host();
         start_webserver();
         ESP_LOGI(TAG, "E-Book Librarian is running!");
