@@ -106,22 +106,39 @@ A 3D-printable enclosure for this project can be found on Printables:
 
 ## 🎨 Creating a Custom Enclosure
 
-If you want to create your own custom book cover, you have a few options:
+To create a personalized 3D-printable enclosure with your own cover image, this repository includes a unified build script that automates most of the process.
 
-### Option 1: Use the OpenSCAD Template (Recommended)
+### Automated Build Script
 
-This repository includes an OpenSCAD script, [`enclosure_template.scad`](enclosure_template.scad), that serves as a starting point for your own designs.
+The `./build_enclosure.sh` script is the recommended way to generate all the necessary files for a custom enclosure. It uses OpenSCAD and Blender to construct the final models.
 
-1.  **Install OpenSCAD:** Download and install it from [openscad.org](https://openscad.org/).
-2.  **Customize the Script:** Open `enclosure_template.scad` and modify the variables at the top of the file to match your desired dimensions. The script is heavily commented to guide you.
-3.  **Render and Export:** Preview the model (F5), then render the final design (F6) and export it as an STL file.
+**Prerequisites:**
+- **OpenSCAD:** Install from [openscad.org](https://openscad.org/).
+- **Blender:** Install from [blender.org](https://www.blender.org/).
+- **LithoMaker:** Download from [github.com/muldjord/lithomaker](https://github.com/muldjord/lithomaker).
 
-### Option 2: Manual Workflow
+Ensure that `openscad` and `blender` are available in your system's PATH.
 
-You can also use the following manual workflow:
+**Workflow:**
+The script combines automated and manual steps to generate the final 3D models.
 
-1.  **Generate Lithophanes:** Use the open-source [LithoMaker](https://github.com/muldjord/lithomaker) tool to convert your images into 3D-printable lithophane STL files. Follow the instructions on the GitHub page for preparing your images and generating the models.
+1.  **Run the Script:**
+    Open a terminal and run the script, providing the path to your desired cover image:
+    ```bash
+    ./build_enclosure.sh -i /path/to/your/image.png
+    ```
 
-2.  **Assemble the Enclosure:** Use a 3D modeling tool like [OpenSCAD](https://openscad.org/) or Tinkercad to "stitch" the generated lithophane panels together into a book-shaped enclosure. This gives you full control over the final design.
+2.  **Manual Lithophane Generation (User Step):**
+    The script will pause and prompt you to create the initial flat lithophane. This is a required manual step because `lithomaker` is a GUI application.
+    - The script will provide you with precise instructions.
+    - You will use the `lithomaker` application to load your image and save the resulting STL file as `build_enclosure/flat_litho.stl`.
 
-3.  **Print and Assemble:** Print the parts and assemble your custom E-Book Librarian!
+3.  **Automated Processing:**
+    Once you press Enter to continue, the script will automatically:
+    - Bend the flat lithophane to create the book's spine using Blender.
+    - Generate the main enclosure components using OpenSCAD.
+    - Produce two final files in the `build_enclosure/` directory:
+        - `printable_parts.stl`: All components laid out flat for printing.
+        - `final_assembly.stl`: A complete, assembled view of the final product.
+
+This streamlined process simplifies the creation of custom enclosures while still giving you control over the initial lithophane design.
