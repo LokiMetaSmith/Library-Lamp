@@ -99,7 +99,7 @@
 #define LED_STRIP_RMT_RES_HZ        (10 * 1000 * 1000) // 10MHz resolution
 
 // Eject Button
-#define EJECT_BUTTON_GPIO           33
+#define EJECT_BUTTON_GPIO           20
 
 
 // --- GLOBALS ---
