@@ -28,8 +28,8 @@ This file tracks planned features and improvements for the E-Book Librarian proj
   * [x] Implement a USB Mass Storage device mode, allowing the device to act as a flash drive when plugged into a computer.
 * [x] **Alternative Interface:**
   * [x] Implement a Bluetooth Low Energy (BLE) service to allow device provisioning.
-* [ ] **Unified Enclosure Build Script:**
-  * [ ] Create a master script to orchestrate the lithophane generation, OpenSCAD modeling, and Blender mesh bending.
+* [x] **Unified Enclosure Build Script:**
+  * [x] Create a master script to orchestrate the lithophane generation, OpenSCAD modeling, and Blender mesh bending.
 
 ### Low Priority
 
