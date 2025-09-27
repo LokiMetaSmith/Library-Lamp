@@ -13,38 +13,34 @@ set(COMPONENT_ADD_INCLUDEDIRS ".")
 # Register the component with the ESP-IDF build system.
 # This specifies the source files and the dependencies (other components) it requires.
 idf_component_register(SRCS "${COMPONENT_SRCS}"
-                       INCLUDE_DIRS "${COMPONENT_ADD_INCLUDEDIRS}"
-                       REQUIRES
-                                # Core IDF components
-                                nvs_flash
-                                esp_wifi
-                                esp_event
-                                esp_system
-                                freertos
+                    INCLUDE_DIRS "${COMPONENT_ADD_INCLUDEDIRS}"
+                    REQUIRES
+                         # Core IDF components
+                         nvs_flash
+                         esp_wifi
+                         esp_event
+                         esp_system
+                         freertos
+                         esp_common  # Good practice to include for driver dependencies
 
-                                # Filesystem components
-                                fatfs
-                                sdmmc
-                                spiffs
+                         # Filesystem components
+                         fatfs
+                         sdmmc
+                         spiffs
 
-                                # Networking components
-                                esp_http_server
+                         # Networking components
+                         esp_http_server
 
-                                # USB Host components
-                                usb
-                                esp_driver_usb
-                                esp_driver_gpio
+                         # USB Host components
+                         usb
 
-                                # Peripherals
-                                esp_driver_rmt
-
-                                # Bluetooth components
-                                bt
-                                bluedroid
-
-                                # Utility components
-                       )
-
+                         # Peripherals
+                         # RMT and GPIO drivers are typically brought in by esp_common or other components
+                         esp_driver_gpio
+                         esp_driver_rmt
+                         # Bluetooth components
+                         bt
+)
 # Generate the SPIFFS image from the web_assets directory
 set(SPIFFS_IMAGE_DIR "${CMAKE_CURRENT_LIST_DIR}/web_assets")
 spiffs_create_partition_image(storage ${SPIFFS_IMAGE_DIR})

@@ -1,0 +1,3 @@
+[submodule "components/usb"]
+	path = components/usb
+	url = https://github.com/espressif/esp-usb.git

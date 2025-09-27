@@ -1,0 +1,5 @@
+# Enable Long Filenames, required for exFAT
+CONFIG_FATFS_LFN_HEAP=y
+
+# Enable exFAT support
+CONFIG_FATFS_EXFAT=y
