@@ -46,11 +46,9 @@
 // --- Local Dependencies ---
 #include "dns_server.h"
 
-// --- USB Host Dependencies (from the official ESP-IDF stack) ---
-#include "esp_usb.h"
-#include "usb/usb_host.h"
-#include "usb/msc_host.h"
-#include "usb/vfs_msc.h"
+// --- USB Host Dependencies (TinyUSB) ---
+#include "tinyusb.h"
+#include "tusb_msc_storage.h"
 
 // --- LED Strip Dependencies ---
 #include "driver/gpio.h"
@@ -105,7 +103,7 @@
 // --- GLOBALS ---
 static const char *TAG = "EBOOK_LIBRARIAN";
 static bool ebook_reader_connected = false;
-static msc_host_device_handle_t device_handle = NULL;
+// static msc_host_device_handle_t device_handle = NULL; // No longer needed for TinyUSB
 static led_strip_handle_t g_led_strip;
 static bool g_wifi_configured = false;
 
@@ -1343,69 +1341,51 @@ void import_from_calibre_db(const char* usb_mount_path) {
 }
 
 
-// --- USB HOST SETUP ---
-static void msc_event_cb(const msc_host_event_t *event, void *arg)
+// --- TINYUSB HOST SETUP ---
+static void tinyusb_host_task(void *param)
 {
-    if (event->event == MSC_DEVICE_CONNECTED) {
-        ESP_LOGI(TAG, "MSC device connected");
-        ebook_reader_connected = true;
-        g_led_state = LED_STATE_CONNECTED;
-        ESP_ERROR_CHECK(msc_host_install_device(event->device, &device_handle));
-
-        // Mount the filesystem
-        if (vfs_msc_mount(MOUNT_POINT_USB, device_handle) == ESP_OK) {
-            ESP_LOGI(TAG, "MSC device mounted at %s", MOUNT_POINT_USB);
-            // Attempt to import from Calibre DB
-            import_from_calibre_db(MOUNT_POINT_USB);
-        } else {
-            ESP_LOGE(TAG, "Failed to mount MSC device");
-            g_led_state = LED_STATE_ERROR;
-        }
-
-    } else if (event->event == MSC_DEVICE_DISCONNECTED) {
-        ESP_LOGI(TAG, "MSC device disconnected");
-        ebook_reader_connected = false;
-        g_led_state = LED_STATE_IDLE;
-        // Unmount the filesystem
-        vfs_msc_unmount(MOUNT_POINT_USB);
-        ESP_LOGI(TAG, "MSC device unmounted");
-        msc_host_uninstall_device(device_handle);
+    while (true) {
+        tuh_task();
+        vTaskDelay(pdMS_TO_TICKS(10));
     }
 }
 
-void usb_host_lib_task(void *arg)
+void tuh_msc_mount_cb(uint8_t dev_addr)
 {
-    while (1) {
-        uint32_t event_flags;
-        usb_host_lib_handle_events(portMAX_DELAY, &event_flags);
-        if (event_flags & USB_HOST_LIB_EVENT_FLAGS_NO_CLIENTS) {
-            ESP_ERROR_CHECK(usb_host_device_free_all());
-        }
-        if (event_flags & USB_HOST_LIB_EVENT_FLAGS_ALL_FREE) {
-             ESP_LOGI(TAG, "USB host free, terminating task");
-        }
+    ESP_LOGI(TAG, "MSC device connected");
+    ebook_reader_connected = true;
+    g_led_state = LED_STATE_CONNECTED;
+
+    // Mount the filesystem
+    if (tusb_msc_storage_mount(MOUNT_POINT_USB) == ESP_OK) {
+        ESP_LOGI(TAG, "MSC device mounted at %s", MOUNT_POINT_USB);
+        // Attempt to import from Calibre DB
+        import_from_calibre_db(MOUNT_POINT_USB);
+    } else {
+        ESP_LOGE(TAG, "Failed to mount MSC device");
+        g_led_state = LED_STATE_ERROR;
     }
-     vTaskDelete(NULL);
 }
 
-void init_usb_host() {
-    ESP_LOGI(TAG, "Installing USB Host Library");
-    const usb_host_config_t host_config = {
-        .intr_flags = ESP_INTR_FLAG_LEVEL1,
-    };
-    ESP_ERROR_CHECK(usb_host_install(&host_config));
+void tuh_msc_unmount_cb(uint8_t dev_addr)
+{
+    ESP_LOGI(TAG, "MSC device disconnected");
+    ebook_reader_connected = false;
+    g_led_state = LED_STATE_IDLE;
+    // Unmount the filesystem
+    tusb_msc_storage_unmount();
+    ESP_LOGI(TAG, "MSC device unmounted");
+}
 
-    // Create a task to handle USB library events
-    xTaskCreate(usb_host_lib_task, "usb_host", 4096, NULL, 10, NULL);
 
-    ESP_LOGI(TAG, "Installing MSC client");
-    const msc_host_driver_config_t msc_config = {
-        .create_backround_task = true,
-        .task_priority = 5,
-        .stack_size = 4096,
-        .callback = msc_event_cb,
+void init_tinyusb() {
+    ESP_LOGI(TAG, "Installing TinyUSB Host Library");
+    const tinyusb_config_t tusb_cfg = {
+        .external_phy = false // ESP32-S3 has built-in PHY
     };
-    ESP_ERROR_CHECK(msc_host_install(&msc_config));
+    ESP_ERROR_CHECK(tinyusb_driver_install(&tusb_cfg));
+    tusb_msc_storage_init();
+    xTaskCreate(tinyusb_host_task, "tinyusb_task", 4096, NULL, 5, NULL);
 }
 
 // --- LED STRIP ---
@@ -1569,10 +1549,10 @@ void eject_button_task(void *pvParameters) {
             // If we get here, it was a short press
             ESP_LOGI(TAG, "Short press detected.");
             if (ebook_reader_connected) {
-                ESP_LOGI(TAG, "Unmounting USB drive...");
-                vfs_msc_unmount(MOUNT_POINT_USB);
-                // The msc_event_cb will set ebook_reader_connected to false
-                // and the LED state to IDLE. We will override it here for feedback.
+                ESP_LOGI(TAG, "Eject pressed. Please physically disconnect the USB device.");
+                // With TinyUSB's event-driven model, a "soft eject" is not straightforward.
+                // The unmount callback is triggered by device disconnection.
+                // We will just provide feedback to the user.
                 g_led_state = LED_STATE_EJECT;
             } else {
                 ESP_LOGW(TAG, "Eject button pressed, but no USB drive connected.");
@@ -1607,7 +1587,7 @@ void app_main(void) {
         ESP_LOGI(TAG, "Starting main application...");
         init_spiffs();
         init_sd_card();
-        init_usb_host();
+        init_tinyusb();
         start_webserver();
         ESP_LOGI(TAG, "E-Book Librarian is running!");
         g_led_state = LED_STATE_IDLE;

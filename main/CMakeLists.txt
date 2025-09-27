@@ -30,8 +30,8 @@ idf_component_register(SRCS "${COMPONENT_SRCS}"
                                 # Networking components
                                 esp_http_server
 
-                                # USB Host components
-                                usb
+                                # TinyUSB Host components
+                                espressif__tinyusb
                                 esp_driver_usb
                                 esp_driver_gpio
 
