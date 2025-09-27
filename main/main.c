@@ -131,20 +131,13 @@ typedef enum {
 
 volatile led_state_t g_led_state = LED_STATE_INIT;
 
-// --- Transfer Progress Tracking ---
-typedef struct {
-    char filename[256];
-    size_t bytes_transferred;
-    size_t total_bytes;
-    bool active;
-    bool success;
-    char error_msg[128];
-} transfer_progress_t;
-
-static transfer_progress_t g_transfer_progress = {
-    .active = false,
-};
 volatile bool g_cancel_transfer = false;
+
+// --- WebSocket Globals ---
+// We only support one active client at a time
+static httpd_req_t *ws_req = NULL;
+static int ws_sockfd = -1;
+static SemaphoreHandle_t ws_mutex = NULL;
 
 
 // --- NVS Functions ---
@@ -214,6 +207,73 @@ esp_err_t load_wifi_credentials(char *ssid, size_t ssid_len, char *password, siz
     return ESP_OK;
 }
 
+// --- WebSocket Helper and Handler ---
+
+// Helper function to send a message to the WebSocket client
+static esp_err_t send_ws_message(const char *message) {
+    if (ws_sockfd == -1 || ws_req == NULL) {
+        ESP_LOGW(TAG, "WebSocket not connected, cannot send message.");
+        return ESP_FAIL;
+    }
+
+    esp_err_t ret = ESP_OK;
+    if (xSemaphoreTake(ws_mutex, pdMS_TO_TICKS(100)) == pdTRUE) {
+        httpd_ws_frame_t ws_pkt;
+        memset(&ws_pkt, 0, sizeof(httpd_ws_frame_t));
+        ws_pkt.payload = (uint8_t *)message;
+        ws_pkt.len = strlen(message);
+        ws_pkt.type = HTTPD_WS_TYPE_TEXT;
+
+        ret = httpd_ws_send_frame(ws_req, &ws_pkt);
+        if (ret != ESP_OK) {
+            ESP_LOGE(TAG, "httpd_ws_send_frame failed with %d", ret);
+        }
+        xSemaphoreGive(ws_mutex);
+    } else {
+        ESP_LOGE(TAG, "Failed to take WebSocket mutex");
+        ret = ESP_FAIL;
+    }
+    return ret;
+}
+
+static esp_err_t ws_handler(httpd_req_t *req) {
+    if (req->method == HTTP_GET) {
+        if (ws_req != NULL) {
+            ESP_LOGW(TAG, "WebSocket client already connected. Rejecting new connection.");
+            // This will implicitly send a 400 Bad Request
+            return ESP_FAIL;
+        }
+        ESP_LOGI(TAG, "Handshake done, new WebSocket connection");
+        ws_req = req;
+        ws_sockfd = httpd_req_to_sockfd(req);
+        return ESP_OK;
+    }
+
+    // This handler is now only for receiving messages.
+    // When a client disconnects, httpd_ws_recv_frame returns an error,
+    // which is the primary way we detect disconnection.
+    httpd_ws_frame_t ws_pkt;
+    memset(&ws_pkt, 0, sizeof(httpd_ws_frame_t));
+    ws_pkt.type = HTTPD_WS_TYPE_TEXT;
+
+    esp_err_t ret = httpd_ws_recv_frame(req, &ws_pkt, 0);
+    if (ret != ESP_OK) {
+        ESP_LOGI(TAG, "Client disconnected or error receiving frame (err=%d). Cleaning up.", ret);
+        if (ws_req == req) {
+            ws_req = NULL;
+            ws_sockfd = -1;
+        }
+        return ESP_FAIL; // Returning fail will close the socket
+    }
+
+    // We don't expect any messages, but if we get one, we just log it and ignore.
+    if (ws_pkt.len > 0) {
+        ESP_LOGI(TAG, "Received unhandled WebSocket message (len=%d)", ws_pkt.len);
+    }
+
+    return ESP_OK;
+}
+
 
 // --- HELPER FUNCTIONS ---
 
@@ -269,66 +329,73 @@ static char* parse_xml_tag(const char* xml_buffer, const char* tag) {
     return value;
 }
 
-// Helper to copy file between two filesystems
-static esp_err_t copy_file(const char *source_path, const char *dest_path, transfer_progress_t *progress) {
+// Helper to copy file between two filesystems, sending progress over WebSocket
+static esp_err_t copy_file_with_progress(const char *source_path, const char *dest_path) {
     ESP_LOGI(TAG, "Copying from %s to %s", source_path, dest_path);
     FILE *source_file = fopen(source_path, "rb");
     if (!source_file) {
         ESP_LOGE(TAG, "Failed to open source file: %s", source_path);
-        if (progress) snprintf(progress->error_msg, sizeof(progress->error_msg), "Failed to open source file.");
+        // Send error message over WebSocket
+        send_ws_message("{\"type\":\"error\", \"message\":\"Failed to open source file.\"}");
         return ESP_FAIL;
     }
 
-    // Get file size for progress tracking
     struct stat st;
-    if (stat(source_path, &st) == 0) {
-        if(progress) progress->total_bytes = st.st_size;
-    } else {
-        if(progress) progress->total_bytes = 0;
+    if (stat(source_path, &st) != 0) {
+        ESP_LOGE(TAG, "Failed to get source file size.");
+        send_ws_message("{\"type\":\"error\", \"message\":\"Failed to get file size.\"}");
+        fclose(source_file);
+        return ESP_FAIL;
     }
-    if(progress) progress->bytes_transferred = 0;
-
+    size_t total_bytes = st.st_size;
+    size_t bytes_transferred = 0;
 
     FILE *dest_file = fopen(dest_path, "wb");
     if (!dest_file) {
         ESP_LOGE(TAG, "Failed to open destination file: %s", dest_path);
-        if (progress) snprintf(progress->error_msg, sizeof(progress->error_msg), "Failed to open destination file.");
+        send_ws_message("{\"type\":\"error\", \"message\":\"Failed to open destination file.\"}");
         fclose(source_file);
         return ESP_FAIL;
     }
 
-    // Increase buffer size for faster copies
     char *buffer = malloc(4096);
     if (buffer == NULL) {
         ESP_LOGE(TAG, "Failed to allocate memory for copy buffer");
-        if (progress) snprintf(progress->error_msg, sizeof(progress->error_msg), "Memory allocation failed.");
+        send_ws_message("{\"type\":\"error\", \"message\":\"Memory allocation failed.\"}");
         fclose(source_file);
         fclose(dest_file);
         return ESP_FAIL;
     }
 
     size_t bytes_read;
+    int last_progress = -1; // To avoid sending too many messages
     while ((bytes_read = fread(buffer, 1, 4096, source_file)) > 0) {
         if (g_cancel_transfer) {
             ESP_LOGW(TAG, "Transfer cancelled by user.");
-            snprintf(progress->error_msg, sizeof(progress->error_msg), "Transfer cancelled.");
+            send_ws_message("{\"type\":\"complete\", \"success\":false, \"message\":\"Transfer cancelled.\"}");
             free(buffer);
             fclose(source_file);
             fclose(dest_file);
-            // Optionally delete the partially copied file
-            remove(dest_path);
+            remove(dest_path); // Clean up partial file
             return ESP_FAIL;
         }
         if (fwrite(buffer, 1, bytes_read, dest_file) != bytes_read) {
             ESP_LOGE(TAG, "Failed to write to destination file");
-            if (progress) snprintf(progress->error_msg, sizeof(progress->error_msg), "Write error on destination.");
+            send_ws_message("{\"type\":\"error\", \"message\":\"Write error on destination.\"}");
             free(buffer);
             fclose(source_file);
             fclose(dest_file);
             return ESP_FAIL;
         }
-        if (progress) {
-            progress->bytes_transferred += bytes_read;
+        bytes_transferred += bytes_read;
+
+        // Calculate progress and send update if it has changed by at least 1%
+        int progress = (int)((bytes_transferred * 100) / total_bytes);
+        if (progress > last_progress) {
+            char progress_msg[128];
+            snprintf(progress_msg, sizeof(progress_msg), "{\"type\":\"progress\", \"value\":%d}", progress);
+            send_ws_message(progress_msg);
+            last_progress = progress;
         }
     }
 
@@ -336,9 +403,46 @@ static esp_err_t copy_file(const char *source_path, const char *dest_path, trans
     fclose(source_file);
     fclose(dest_file);
     ESP_LOGI(TAG, "File copied successfully");
-    if (progress) progress->success = true;
     return ESP_OK;
 }
+
+// --- Background File Transfer Task ---
+typedef struct {
+    char source_path[256];
+    char dest_path[256];
+    char filename[256];
+} file_transfer_params_t;
+
+static void file_transfer_task(void *pvParameters) {
+    file_transfer_params_t *params = (file_transfer_params_t *)pvParameters;
+
+    ESP_LOGI(TAG, "Starting background transfer for %s", params->filename);
+    g_led_state = LED_STATE_TRANSFER;
+    g_cancel_transfer = false; // Reset cancellation flag
+
+    char start_msg[512];
+    snprintf(start_msg, sizeof(start_msg), "{\"type\":\"start\", \"filename\":\"%s\"}", params->filename);
+    send_ws_message(start_msg);
+
+    esp_err_t res = copy_file_with_progress(params->source_path, params->dest_path);
+
+    if (res == ESP_OK) {
+        send_ws_message("{\"type\":\"complete\", \"success\":true, \"message\":\"File transfer complete!\"}");
+    } else {
+        // Error message is sent from within copy_file_with_progress
+        ESP_LOGE(TAG, "File transfer failed for %s", params->filename);
+    }
+
+    g_led_state = ebook_reader_connected ? LED_STATE_CONNECTED : LED_STATE_IDLE;
+    if (res != ESP_OK && !g_cancel_transfer) {
+        g_led_state = LED_STATE_ERROR;
+    }
+
+    // Clean up
+    free(params);
+    vTaskDelete(NULL); // Delete self
+}
+
 
 // --- WEB SERVER HANDLERS (MAIN APP) ---
 static esp_err_t static_file_handler(httpd_req_t *req) {
@@ -396,12 +500,6 @@ static esp_err_t status_handler(httpd_req_t *req) {
     httpd_resp_set_type(req, "application/json");
     cJSON *root = cJSON_CreateObject();
     cJSON_AddBoolToObject(root, "reader_connected", ebook_reader_connected);
-    cJSON_AddBoolToObject(root, "transfer_active", g_transfer_progress.active);
-    if (g_transfer_progress.active) {
-        cJSON_AddStringToObject(root, "filename", g_transfer_progress.filename);
-        cJSON_AddNumberToObject(root, "bytes_transferred", g_transfer_progress.bytes_transferred);
-        cJSON_AddNumberToObject(root, "total_bytes", g_transfer_progress.total_bytes);
-    }
     char *json_str = cJSON_PrintUnformatted(root);
     httpd_resp_send(req, json_str, strlen(json_str));
     free(json_str);
@@ -507,17 +605,13 @@ static esp_err_t list_files_handler(httpd_req_t *req) {
 }
 
 static esp_err_t transfer_file_handler(httpd_req_t *req) {
-    if (g_transfer_progress.active) {
-        httpd_resp_send_err(req, HTTPD_429_TOO_MANY_REQUESTS, "A file transfer is already in progress.");
-        return ESP_FAIL;
-    }
-
-    g_led_state = LED_STATE_TRANSFER;
+    // Note: We're not checking for an active transfer here anymore,
+    // as the UI should prevent starting a new one.
+    // A more robust implementation might use a state machine or mutex.
 
     char content[256];
     int ret = httpd_req_recv(req, content, sizeof(content) - 1);
     if (ret <= 0) {
-        g_led_state = ebook_reader_connected ? LED_STATE_CONNECTED : LED_STATE_IDLE;
         return ESP_FAIL;
     }
     content[ret] = '\0';
@@ -525,7 +619,6 @@ static esp_err_t transfer_file_handler(httpd_req_t *req) {
     cJSON *json = cJSON_Parse(content);
     if (!json) {
         httpd_resp_send_400(req);
-        g_led_state = ebook_reader_connected ? LED_STATE_CONNECTED : LED_STATE_IDLE;
         return ESP_FAIL;
     }
 
@@ -536,48 +629,38 @@ static esp_err_t transfer_file_handler(httpd_req_t *req) {
     if (!source || !destination || !filename) {
         cJSON_Delete(json);
         httpd_resp_send_400(req);
-        g_led_state = ebook_reader_connected ? LED_STATE_CONNECTED : LED_STATE_IDLE;
         return ESP_FAIL;
     }
 
-    // Initialize progress tracking
-    g_transfer_progress.active = true;
-    g_cancel_transfer = false; // Reset cancel flag
-    strlcpy(g_transfer_progress.filename, filename, sizeof(g_transfer_progress.filename));
-    g_transfer_progress.bytes_transferred = 0;
-    g_transfer_progress.total_bytes = 0;
-    g_transfer_progress.success = false;
-    g_transfer_progress.error_msg[0] = '\0';
+    // Allocate memory for task parameters. This will be freed by the task itself.
+    file_transfer_params_t *params = malloc(sizeof(file_transfer_params_t));
+    if (params == NULL) {
+        cJSON_Delete(json);
+        httpd_resp_send_500(req);
+        return ESP_FAIL;
+    }
 
-    char source_path[256];
-    char dest_path[256];
-
-    snprintf(source_path, sizeof(source_path), "%s/%s", (strcmp(source, "sd") == 0) ? MOUNT_POINT_SD : MOUNT_POINT_USB, filename);
-    snprintf(dest_path, sizeof(dest_path), "%s/%s", (strcmp(destination, "sd") == 0) ? MOUNT_POINT_SD : MOUNT_POINT_USB, filename);
-
-    esp_err_t res = copy_file(source_path, dest_path, &g_transfer_progress);
+    // Populate parameters
+    snprintf(params->source_path, sizeof(params->source_path), "%s/%s", (strcmp(source, "sd") == 0) ? MOUNT_POINT_SD : MOUNT_POINT_USB, filename);
+    snprintf(params->dest_path, sizeof(params->dest_path), "%s/%s", (strcmp(destination, "sd") == 0) ? MOUNT_POINT_SD : MOUNT_POINT_USB, filename);
+    strlcpy(params->filename, filename, sizeof(params->filename));
 
     cJSON_Delete(json);
 
-    // Set LED state back based on connection status
-    g_led_state = ebook_reader_connected ? LED_STATE_CONNECTED : LED_STATE_IDLE;
-    if (res != ESP_OK) {
-        g_led_state = LED_STATE_ERROR; // Indicate error on LED
+    // Create the background task
+    BaseType_t task_created = xTaskCreate(file_transfer_task, "file_transfer_task", 4096, params, 5, NULL);
+
+    if (task_created != pdPASS) {
+        ESP_LOGE(TAG, "Failed to create file transfer task");
+        free(params);
+        httpd_resp_send_500(req);
+        return ESP_FAIL;
     }
 
-
-    cJSON *response_json = cJSON_CreateObject();
-    cJSON_AddBoolToObject(response_json, "success", res == ESP_OK);
-    cJSON_AddStringToObject(response_json, "message", res == ESP_OK ? "File transfer complete!" : g_transfer_progress.error_msg);
-
-    char *json_str = cJSON_PrintUnformatted(response_json);
+    // Immediately respond to the client
     httpd_resp_set_type(req, "application/json");
-    httpd_resp_send(req, json_str, strlen(json_str));
-    free(json_str);
-    cJSON_Delete(response_json);
-
-    // Deactivate progress tracking after sending response
-    g_transfer_progress.active = false;
+    const char *resp = "{\"success\":true, \"message\":\"File transfer initiated.\"}";
+    httpd_resp_send(req, resp, strlen(resp));
 
     return ESP_OK;
 }
@@ -586,27 +669,6 @@ static esp_err_t transfer_cancel_handler(httpd_req_t *req) {
     ESP_LOGI(TAG, "Received request to cancel transfer");
     g_cancel_transfer = true;
     httpd_resp_send(req, "OK", HTTPD_200_OK);
-    return ESP_OK;
-}
-
-// Handler to report the current file transfer progress
-static esp_err_t transfer_progress_handler(httpd_req_t *req) {
-    if (!g_transfer_progress.active) {
-        httpd_resp_send_404(req);
-        return ESP_OK;
-    }
-
-    httpd_resp_set_type(req, "application/json");
-    cJSON *root = cJSON_CreateObject();
-    cJSON_AddStringToObject(root, "filename", g_transfer_progress.filename);
-    cJSON_AddNumberToObject(root, "bytes_transferred", g_transfer_progress.bytes_transferred);
-    cJSON_AddNumberToObject(root, "total_bytes", g_transfer_progress.total_bytes);
-
-    char *json_str = cJSON_PrintUnformatted(root);
-    httpd_resp_send(req, json_str, strlen(json_str));
-    free(json_str);
-    cJSON_Delete(root);
-
     return ESP_OK;
 }
 
@@ -658,14 +720,21 @@ static httpd_handle_t start_webserver(void) {
         httpd_uri_t transfer_uri = { "/transfer-file", HTTP_POST, transfer_file_handler, NULL };
         httpd_register_uri_handler(server, &transfer_uri);
 
-        httpd_uri_t progress_uri = { "/transfer-progress", HTTP_GET, transfer_progress_handler, NULL };
-        httpd_register_uri_handler(server, &progress_uri);
-
         httpd_uri_t cancel_uri = { "/transfer-cancel", HTTP_POST, transfer_cancel_handler, NULL };
         httpd_register_uri_handler(server, &cancel_uri);
 
         httpd_uri_t sleep_uri = { "/enter-sleep", HTTP_POST, sleep_handler, NULL };
         httpd_register_uri_handler(server, &sleep_uri);
+
+        // Add WebSocket handler
+        httpd_uri_t ws_uri = {
+            .uri        = "/ws",
+            .method     = HTTP_GET,
+            .handler    = ws_handler,
+            .user_ctx   = NULL,
+            .is_websocket = true
+        };
+        httpd_register_uri_handler(server, &ws_uri);
 
         // Handler for all other URIs (serves static files)
         httpd_uri_t static_uri = { "/*", HTTP_GET, static_file_handler, NULL };
@@ -1592,6 +1661,9 @@ void app_main(void) {
       ret = nvs_flash_init();
     }
     ESP_ERROR_CHECK(ret);
+
+    // Create WebSocket Mutex
+    ws_mutex = xSemaphoreCreateMutex();
 
     // Initialize LED strip early so we can show status
     init_led_strip();

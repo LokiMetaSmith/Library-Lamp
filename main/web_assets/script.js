@@ -13,7 +13,7 @@ createApp({
                 progress: 0,
                 error: ''
             },
-            pollingInterval: null,
+            websocket: null,
         }
     },
     computed: {
@@ -24,24 +24,60 @@ createApp({
         }
     },
     methods: {
-        async fetchData() {
-            try {
-                const response = await fetch('/status');
-                const data = await response.json();
-                this.isEReaderConnected = data.reader_connected;
-                if (data.transfer_active) {
+        initWebSocket() {
+            const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsHost = window.location.host;
+            this.websocket = new WebSocket(`${wsProtocol}//${wsHost}/ws`);
+
+            this.websocket.onopen = () => {
+                console.log("WebSocket connection established");
+                // You could send a message to get initial state if needed
+                // this.websocket.send(JSON.stringify({ type: 'get_status' }));
+            };
+
+            this.websocket.onmessage = (event) => {
+                const message = JSON.parse(event.data);
+                console.log("WS Message received:", message);
+                this.handleWsMessage(message);
+            };
+
+            this.websocket.onclose = () => {
+                console.log("WebSocket connection closed. Attempting to reconnect...");
+                this.transfer.active = false; // Stop any active transfer UI
+                setTimeout(this.initWebSocket, 2000); // Reconnect after 2 seconds
+            };
+
+            this.websocket.onerror = (error) => {
+                console.error("WebSocket error:", error);
+                this.transfer.error = "WebSocket connection error.";
+                this.websocket.close();
+            };
+        },
+        handleWsMessage(message) {
+            switch (message.type) {
+                case 'start':
                     this.transfer.active = true;
-                    this.transfer.filename = data.filename;
-                    this.transfer.progress = data.total_bytes > 0 ? (data.bytes_transferred / data.total_bytes) * 100 : 0;
-                } else {
-                    if (this.transfer.active) {
-                        // Transfer just finished, refresh file lists
-                        this.fetchFileLists();
-                    }
+                    this.transfer.filename = message.filename;
+                    this.transfer.progress = 0;
+                    this.transfer.error = '';
+                    break;
+                case 'progress':
+                    this.transfer.progress = message.value;
+                    break;
+                case 'complete':
                     this.transfer.active = false;
-                }
-            } catch (error) {
-                console.error('Error fetching status:', error);
+                    if (!message.success) {
+                        this.transfer.error = message.message;
+                    }
+                    // Refresh file lists after any transfer attempt
+                    this.fetchFileLists();
+                    break;
+                case 'error':
+                     this.transfer.error = message.message;
+                     this.transfer.active = false;
+                     break;
+                 // You could add a 'status' message type to update isEReaderConnected
+                 // if you remove the REST endpoint entirely.
             }
         },
         async fetchFileLists() {
@@ -112,12 +148,25 @@ createApp({
             }
         }
     },
-    mounted() {
-        this.fetchData();
+    async mounted() {
+        // Fetch initial state via REST
+        try {
+            const response = await fetch('/status');
+            const data = await response.json();
+            this.isEReaderConnected = data.reader_connected;
+        } catch (error) {
+            console.error('Error fetching initial status:', error);
+            this.transfer.error = "Could not load initial device status.";
+        }
+
         this.fetchFileLists();
-        this.pollingInterval = setInterval(this.fetchData, 1000); // Poll for status updates
+
+        // Start WebSocket for real-time updates
+        this.initWebSocket();
     },
     beforeUnmount() {
-        clearInterval(this.pollingInterval);
+        if (this.websocket) {
+            this.websocket.close();
+        }
     }
 }).mount('#app')
