@@ -38,7 +38,6 @@ idf_component_register(SRCS "${COMPONENT_SRCS}"
 
                                 # Bluetooth components
                                 bt
-                                bluedroid
 
                                 # Utility components
                        )
