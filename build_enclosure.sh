@@ -72,19 +72,36 @@ fi
 
 # --- Main Functions ---
 
-# Placeholder function for generating the lithophane.
-# You will need to replace this with the actual command for your tool.
+# Guides the user to manually generate the flat lithophane.
 generate_flat_lithophane() {
-    echo "--- [Step 1/4] Generating Flat Lithophane (Placeholder) ---"
-    echo "This is a placeholder. Please replace this with your lithophane tool."
+    local output_stl_path="$1"
 
-    # Example using a hypothetical tool 'lithomaker-cli':
-    # lithomaker-cli --image "$1" --output "$2" --width $INTERIOR_DEPTH
+    echo "--- [Step 1/4] Manual Lithophane Generation ---"
+    echo ""
+    echo "This script requires you to manually generate the initial lithophane STL file"
+    echo "using the 'lithomaker' GUI tool, as it does not have a command-line interface."
+    echo ""
+    echo "Instructions:"
+    echo "1. Download and run lithomaker from: https://github.com/muldjord/lithomaker"
+    echo "2. Load your image: '$INPUT_IMAGE'"
+    echo "3. Configure the lithophane settings to your preference."
+    echo "4. Save the output STL file to the following exact path:"
+    echo "   -> $output_stl_path"
+    echo ""
+    echo "The script will now pause. Please complete the steps above."
+    echo ""
 
-    # For demonstration, we'll just create a dummy file.
-    openscad -o "$2" -D 'cube([120, 80, 2]);'
+    read -p "Press [Enter] to continue once the file has been saved..."
 
-    echo "Created dummy flat lithophane at $2"
+    if [ ! -f "$output_stl_path" ]; then
+        echo ""
+        echo "Error: The required lithophane file was not found at the expected location:"
+        echo "  -> $output_stl_path"
+        echo "Please run the script again and ensure you save the file correctly."
+        exit 1
+    fi
+
+    echo "File found. Continuing with the build process..."
     echo ""
 }
 
