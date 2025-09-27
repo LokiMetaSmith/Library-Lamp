@@ -7,4 +7,7 @@ set(PARTITION_TABLE_CSV "partitions.csv")
 
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 
-project(ebook-librarian)
+#idf_build_set_property(MINIMAL_BUILD ON)
+get_filename_component(ProjectId ${CMAKE_CURRENT_LIST_DIR} NAME)
+string(REPLACE " " "_" ProjectId ${ProjectId})
+project(${ProjectId})

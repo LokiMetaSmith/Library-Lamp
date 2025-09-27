@@ -1,4 +1,3 @@
-# CMake build script for the main component of the E-Book Librarian project.
 
 # List of source files for this component.
 set(COMPONENT_SRCS "main.c" "dns_server.c")
@@ -8,7 +7,7 @@ set(COMPONENT_ADD_INCLUDEDIRS ".")
 
 # Embed the setup page directly into the firmware binary.
 # This allows it to be served in AP mode before SPIFFS is mounted.
-# target_add_binary_data(app "web_assets/setup.html" TEXT)
+target_add_binary_data(app "web_assets/setup.html" TEXT)
 
 # Register the component with the ESP-IDF build system.
 # This specifies the source files and the dependencies (other components) it requires.
@@ -20,6 +19,7 @@ idf_component_register(SRCS "${COMPONENT_SRCS}"
                          esp_wifi
                          esp_event
                          esp_system
+			 esp_usb
                          freertos
                          esp_common  # Good practice to include for driver dependencies
 

@@ -24,6 +24,7 @@
 
 // --- Standard and ESP-IDF Dependencies ---
 #include <stdio.h>
+#include <stdbool.h>
 #include <string.h>
 #include <dirent.h>
 #include <math.h>
@@ -31,6 +32,10 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/event_groups.h"
+#include "freertos/queue.h"
+#include "errno.h"
+#include "esp_err.h"
+#include "esp_log.h"
 #include "esp_system.h"
 #include "esp_wifi.h"
 #include "esp_event.h"
@@ -101,6 +106,16 @@
 // Eject Button
 #define EJECT_BUTTON_GPIO           33
 
+#define HOST_LIB_TASK_PRIORITY    2
+#define CLASS_TASK_PRIORITY     3
+
+#ifdef CONFIG_USB_HOST_ENABLE_ENUM_FILTER_CALLBACK
+#define ENABLE_ENUM_FILTER_CALLBACK
+#endif // CONFIG_USB_HOST_ENABLE_ENUM_FILTER_CALLBACK
+
+extern void class_driver_task(void *arg);
+extern void class_driver_client_deregister(void);
+
 
 // --- GLOBALS ---
 static const char *TAG = "EBOOK_LIBRARIAN";
@@ -108,6 +123,38 @@ static bool ebook_reader_connected = false;
 static msc_host_device_handle_t device_handle = NULL;
 static led_strip_handle_t g_led_strip;
 static bool g_wifi_configured = false;
+QueueHandle_t app_event_queue = NULL;
+
+/**
+ * @brief APP event group
+ *
+ * Application logic can be different. There is a one among other ways to distinguish the
+ * event by application event group.
+ * In this example we have two event groups:
+ * APP_EVENT            - General event, which is APP_QUIT_PIN press event (Generally, it is IO0).
+ * APP_EVENT_HID_HOST   - HID Host Driver event, such as device connection/disconnection or input report.
+ */
+ 
+typedef enum {
+    APP_EVENT = 0,
+    APP_EVENT_HID_HOST
+} app_event_group_t;
+
+/**
+ * @brief APP event queue
+ *
+ * This event is used for delivering the HID Host event from callback to a task.
+ */
+typedef struct {
+    app_event_group_t event_group;
+    /* HID Host - Device related info */
+    struct {
+        hid_host_device_handle_t handle;
+        hid_host_driver_event_t event;
+        void *arg;
+    } hid_host_device;
+} app_event_queue_t;
+
 
 // Event group to signal Wi-Fi connection events
 static EventGroupHandle_t wifi_event_group;
@@ -1409,8 +1456,82 @@ void import_from_calibre_db(const char* usb_mount_path) {
 
     sqlite3_finalize(res);
     sqlite3_close(db);
-}
+}/**
+ * @brief Set configuration callback
+ *
+ * Set the USB device configuration during the enumeration process, must be enabled in the menuconfig
 
+ * @note bConfigurationValue starts at index 1
+ *
+ * @param[in] dev_desc device descriptor of the USB device currently being enumerated
+ * @param[out] bConfigurationValue configuration descriptor index, that will be user for enumeration
+ *
+ * @return bool
+ * - true:  USB device will be enumerated
+ * - false: USB device will not be enumerated
+ */
+#ifdef ENABLE_ENUM_FILTER_CALLBACK
+static bool set_config_cb(const usb_device_desc_t *dev_desc, uint8_t *bConfigurationValue)
+{
+    // If the USB device has more than one configuration, set the second configuration
+    if (dev_desc->bNumConfigurations > 1) {
+        *bConfigurationValue = 2;
+    } else {
+        *bConfigurationValue = 1;
+    }
+
+    // Return true to enumerate the USB device
+    return true;
+}
+#endif // ENABLE_ENUM_FILTER_CALLBACK
+/**
+ * @brief Start USB Host install and handle common USB host library events while app pin not low
+ *
+ * @param[in] arg  Not used
+ */
+static void usb_host_lib_task(void *arg)
+{
+    ESP_LOGI(TAG, "Installing USB Host Library");
+    usb_host_config_t host_config = {
+        .skip_phy_setup = false,
+        .intr_flags = ESP_INTR_FLAG_LOWMED,
+# ifdef ENABLE_ENUM_FILTER_CALLBACK
+        .enum_filter_cb = set_config_cb,
+# endif // ENABLE_ENUM_FILTER_CALLBACK
+        .peripheral_map = BIT0,
+    };
+    ESP_ERROR_CHECK(usb_host_install(&host_config));
+    ESP_LOGI(TAG, "USB Host installed with peripheral map 0x%x", host_config.peripheral_map);
+
+    //Signalize the app_main, the USB host library has been installed
+    xTaskNotifyGive(arg);
+
+    bool has_clients = true;
+    bool has_devices = false;
+    while (has_clients) {
+        uint32_t event_flags;
+        ESP_ERROR_CHECK(usb_host_lib_handle_events(portMAX_DELAY, &event_flags));
+        if (event_flags & USB_HOST_LIB_EVENT_FLAGS_NO_CLIENTS) {
+            ESP_LOGI(TAG, "Get FLAGS_NO_CLIENTS");
+            if (ESP_OK == usb_host_device_free_all()) {
+                ESP_LOGI(TAG, "All devices marked as free, no need to wait FLAGS_ALL_FREE event");
+                has_clients = false;
+            } else {
+                ESP_LOGI(TAG, "Wait for the FLAGS_ALL_FREE");
+                has_devices = true;
+            }
+        }
+        if (has_devices && event_flags & USB_HOST_LIB_EVENT_FLAGS_ALL_FREE) {
+            ESP_LOGI(TAG, "Get FLAGS_ALL_FREE");
+            has_clients = false;
+        }
+    }
+    ESP_LOGI(TAG, "No more clients and devices, uninstall USB Host library");
+
+    //Uninstall the USB Host Library
+    ESP_ERROR_CHECK(usb_host_uninstall());
+    vTaskSuspend(NULL);
+}
 
 // --- USB HOST SETUP ---
 static void msc_event_cb(const msc_host_event_t *event, void *arg)
@@ -1590,7 +1711,29 @@ void init_led_strip(void) {
     led_strip_clear(g_led_strip);
 }
 
+/**
+ * @brief BOOT button pressed callback
+ *
+ * Signal application to exit the Host lib task
+ *
+ * @param[in] arg Unused
+ */
+static void gpio_cb(void *arg)
+{
+    const app_event_queue_t evt_queue = {
+        .event_group = APP_EVENT,
+    };
 
+    BaseType_t xTaskWoken = pdFALSE;
+
+    if (app_event_queue) {
+        xQueueSendFromISR(app_event_queue, &evt_queue, &xTaskWoken);
+    }
+
+    if (xTaskWoken == pdTRUE) {
+        portYIELD_FROM_ISR();
+    }
+}
 // --- Eject/Sleep Button Task ---
 void eject_button_task(void *pvParameters) {
     gpio_config_t io_conf = {};
@@ -1654,6 +1797,19 @@ void eject_button_task(void *pvParameters) {
 
 // --- MAIN APPLICATION ENTRY POINT ---
 void app_main(void) {
+    ESP_LOGI(TAG, "USB host library lamp");
+
+    // Init BOOT button: Pressing the button simulates app request to exit
+    // It will uninstall the class driver and USB Host Lib
+    const gpio_config_t input_pin = {
+        .pin_bit_mask = BIT64(APP_QUIT_PIN),
+        .mode = GPIO_MODE_INPUT,
+        .pull_up_en = GPIO_PULLUP_ENABLE,
+        .intr_type = GPIO_INTR_NEGEDGE,
+    };
+    ESP_ERROR_CHECK(gpio_config(&input_pin));
+    ESP_ERROR_CHECK(gpio_install_isr_service(ESP_INTR_FLAG_LOWMED));
+    ESP_ERROR_CHECK(gpio_isr_handler_add(APP_QUIT_PIN, gpio_cb, NULL));
     // Initialize NVS
     esp_err_t ret = nvs_flash_init();
     if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
@@ -1662,6 +1818,36 @@ void app_main(void) {
     }
     ESP_ERROR_CHECK(ret);
 
+    app_event_queue = xQueueCreate(10, sizeof(app_event_queue_t));
+    app_event_queue_t evt_queue;
+
+    TaskHandle_t host_lib_task_hdl, class_driver_task_hdl;
+
+    // Create usb host lib task
+    BaseType_t task_created;
+    task_created = xTaskCreatePinnedToCore(usb_host_lib_task,
+                                           "usb_host",
+                                           4096,
+                                           xTaskGetCurrentTaskHandle(),
+                                           HOST_LIB_TASK_PRIORITY,
+                                           &host_lib_task_hdl,
+                                           0);
+    assert(task_created == pdTRUE);
+
+    // Wait until the USB host library is installed
+    ulTaskNotifyTake(false, 1000);
+
+    // Create class driver task
+    task_created = xTaskCreatePinnedToCore(class_driver_task,
+                                           "class",
+                                           5 * 1024,
+                                           NULL,
+                                           CLASS_TASK_PRIORITY,
+                                           &class_driver_task_hdl,
+                                           0);
+    assert(task_created == pdTRUE);
+    // Add a short delay to let the tasks run
+    vTaskDelay(10);
     // Create WebSocket Mutex
     ws_mutex = xSemaphoreCreateMutex();
 
