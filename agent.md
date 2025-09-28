@@ -1,71 +1,98 @@
-# AI Agent Development Instructions for E-Book Librarian
+# Agent Instructions
 
-## 1. Project Goal
+This file contains instructions for AI agents working with this codebase.
 
-Your primary objective is to continue the development of the **E-Book Librarian**, a standalone hardware device that allows users to share public domain e-books. The device uses an ESP32-S3 to read an e-reader's storage via USB Host, and a web server to transfer files between the e-reader and a local SD card library.
+## Project Overview
 
-## 2. Current State
+**Project Name:** Library-Lamp (E-Book Librarian)
 
-The project is currently a functional proof-of-concept. The core features have been implemented in a single `main.c` file.
+**High-Level Goal:** To create a standalone hardware device that serves as a physical, shareable library of public domain e-books. The device allows users to connect e-readers via USB and transfer books to and from a local library stored on an SD card, all managed through a simple web interface.
 
-- **Working Features:**
-  - Wi-Fi Access Point creation.
-  - Web server with a basic HTML interface for listing and transferring files.
-  - SD card mounting and file access.
-  - USB Host MSC driver for detecting and mounting an e-reader's storage.
-  - WS2812 LED strip for visual status updates.
+**Core Functionality:** The system hosts its own Wi-Fi access point and a web server, allowing any Wi-Fi enabled device (phone, computer) to manage the library without an internet connection.
 
-- **Project Files:**
-  - `main/main.c`: Contains all application logic and the embedded web UI.
-  - `main/CMakeLists.txt`: ESP-IDF build configuration for the main component.
-  - `BOM.md`: A complete Bill of Materials for the hardware.
-  - `wiring.yml`: A WireViz source file for the hardware wiring diagram.
-  - `README.md`: Project overview and setup instructions.
-  - `TODO.md`: A list of planned features.
+For more detailed information, please refer to the `README.md`.
 
-## 3. Technology Stack
+## Hardware Stack
 
-- **Hardware:** ESP32-S3 with USB OTG capability.
-- **Framework:** ESP-IDF (C programming language).
-- **Key Components:**
-  - **RTOS:** FreeRTOS
-  - **USB Host:** ESP-IDF USB Host Stack (specifically the Mass Storage Class driver).
-  - **Web Server:** `esp_http_server`.
-  - **LEDs:** `led_strip` component using the RMT peripheral.
-  - **Filesystem:** `esp_vfs_fat` (FatFs) for SD card and USB partitions.
-  - **JSON Parsing:** `cJSON`.
+A full list of components is available in `BOM.md`.
 
-## 4. Development Tasks
+*   **MCU:** ESP32-S3 Development Board with USB OTG (e.g., ESP32-S3-USB-OTG)
+*   **Storage:** MicroSD Card Module with a MicroSD card (exFAT formatted for >32GB).
+*   **Visuals:** WS2812B (NeoPixel) RGB LED Strip for status indication.
+*   **Interfacing:** USB OTG adapter/cable to connect to e-readers.
 
-Here are your next development tasks. Please complete them in order.
+## Software Architecture
 
-### Task 1: Refactor Web UI Assets
+*   **Framework:** ESP-IDF (via PlatformIO)
+*   **Language:** C
+*   **Key Libraries/Components:**
+    *   **esp_http_server:** For the web interface.
+    *   **esp_vfs_fat & USB Host MSC:** For managing the SD card and e-reader filesystems.
+    *   **led_strip:** For controlling the RGB LED strip.
+    *   **cJSON:** For handling JSON data in web requests.
+    *   **FreeRTOS:** For multitasking (e.g., running the web server and USB host stack concurrently).
 
-**Goal:** Decouple the web interface from the main application logic to improve maintainability.
+## Project Structure
 
-**Instructions:**
-1.  Create a new directory named `web_assets` inside the `main` directory.
-2.  Extract the HTML, CSS, and JavaScript from the `index_html_start` raw literal in `main.c` into three separate files: `web_assets/index.html`, `web_assets/style.css`, and `web_assets/script.js`.
-3.  Set up a SPIFFS filesystem partition for the project. Create a `spiffs.img` file containing the assets from the `web_assets` directory.
-4.  Modify the `CMakeLists.txt` file to automatically flash this SPIFFS partition to the device.
-5.  In `main.c`, remove the embedded HTML. Modify the `esp_http_server` setup to serve the static files (`index.html`, `style.css`, `script.js`) from the SPIFFS partition.
+*   `main/`: Contains the main application source code (`main.c`).
+*   `main/web_assets/`: (To be created) Will contain the HTML, CSS, and JS for the web UI.
+*   `platformio.ini`: PlatformIO project configuration file.
+*   `BOM.md`: Bill of Materials for the hardware.
+*   `README.md`: General project documentation.
+*   `agent.md`: This file.
 
-### Task 2: Implement File Transfer Progress with WebSockets
+## Environment Setup
 
-**Goal:** Provide real-time feedback to the user during file transfers.
+This project uses PlatformIO, which simplifies the ESP-IDF toolchain management.
 
-**Instructions:**
-1.  Add WebSocket support to the `esp_http_server`. Create a new WebSocket handler.
-2.  Modify the `copy_file` function in `main.c`. It should now accept a WebSocket client ID as an argument. Inside its `while` loop, calculate the percentage of the file that has been copied.
-3.  After writing each chunk, send a JSON message over the WebSocket connection containing the progress percentage (e.g., `{"type": "progress", "value": 55}`).
-4.  In the web UI's JavaScript, establish a WebSocket connection to the server. When the user initiates a file transfer, listen for these progress messages and update a progress bar on the page.
+1.  **Install PlatformIO:** Ensure you have PlatformIO Core installed or are using an IDE with the PlatformIO extension (like VS Code). The extension will handle the installation of the necessary toolchains and frameworks automatically.
+2.  **Project Dependencies:** PlatformIO will automatically download the `espressif32` platform and ESP-IDF version specified in `platformio.ini` the first time you build the project. No manual installation of ESP-IDF is required.
 
-### Task 3: Add E-Book Metadata Reading
+## Building and Flashing
 
-**Goal:** Display user-friendly book titles and authors instead of filenames.
+Use the following PlatformIO commands to build and upload the project to the ESP32-S3 board.
 
-**Instructions:**
-1.  Identify and integrate a lightweight, header-only C library for parsing `.zip` archives (since `.epub` files are essentially zip archives). `miniz` is a good candidate.
-2.  Create a new function, `get_epub_metadata(const char *filepath)`, that opens an `.epub` file, unzips `META-INF/container.xml` to find the path to the `.opf` file, and then unzips and parses the `.opf` file (which is XML) to extract the `<dc:title>` and `<dc:creator>` tags.
-3.  Modify the `/list-files` web handler. When it encounters a `.epub` file, it should call this new function and include the title and author in the JSON response to the client.
-4.  Update the web UI to display the title and author, falling back to the filename if metadata is not available.
+1.  **Build the project:**
+    ```bash
+    pio run
+    ```
+2.  **Upload the firmware:**
+    ```bash
+    pio run --target upload
+    ```
+3.  **Build, upload, and open the serial monitor:**
+    ```bash
+    pio run -t upload -t monitor
+    ```
+
+## Working with the Code
+
+### Development Tasks
+
+Your next development tasks are outlined below. Please complete them in order.
+
+**Task 1: Refactor Web UI Assets**
+
+*   **Goal:** Decouple the web interface from the main application logic.
+*   **Instructions:**
+    1.  Create a `main/web_assets` directory.
+    2.  Extract the HTML, CSS, and JavaScript from the `index_html_start` raw literal in `main.c` into `index.html`, `style.css`, and `script.js` inside `main/web_assets`.
+    3.  Create a SPIFFS partition to store these assets. You will need to create a `spiffs.img` and configure PlatformIO to flash it.
+    4.  Modify `main.c` to serve the static files from SPIFFS instead of the embedded string.
+
+**Task 2: Implement File Transfer Progress with WebSockets**
+
+*   **Goal:** Provide real-time feedback during file transfers.
+*   **Instructions:**
+    1.  Add WebSocket support to the `esp_http_server`.
+    2.  Update the `copy_file` function to calculate and send progress updates over the WebSocket connection.
+    3.  Implement a progress bar in the JavaScript UI that updates based on messages from the WebSocket.
+
+**Task 3: Add E-Book Metadata Reading**
+
+*   **Goal:** Display book titles and authors instead of raw filenames.
+*   **Instructions:**
+    1.  Integrate a lightweight C library for parsing `.epub` files (which are zip archives).
+    2.  Create a function to extract the title and author from an `.epub` file's metadata (`.opf` file).
+    3.  Modify the `/list-files` API endpoint to include this metadata in the JSON response.
+    4.  Update the web UI to display the title and author.
