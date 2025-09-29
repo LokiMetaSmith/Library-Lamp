@@ -23,46 +23,64 @@ A full list of components is available in `BOM.md`.
 
 ## Software Architecture
 
-*   **Framework:** ESP-IDF (via PlatformIO)
+*   **Framework:** ESP-IDF
 *   **Language:** C
 *   **Key Libraries/Components:**
     *   **esp_http_server:** For the web interface.
-    *   **esp_vfs_fat & USB Host MSC:** For managing the SD card and e-reader filesystems.
+    *   **espressif/usb_host_msc:** Managed component for USB Mass Storage.
     *   **led_strip:** For controlling the RGB LED strip.
     *   **cJSON:** For handling JSON data in web requests.
-    *   **FreeRTOS:** For multitasking (e.g., running the web server and USB host stack concurrently).
+    *   **FreeRTOS:** For multitasking.
 
 ## Project Structure
 
 *   `main/`: Contains the main application source code (`main.c`).
-*   `main/web_assets/`: (To be created) Will contain the HTML, CSS, and JS for the web UI.
-*   `platformio.ini`: PlatformIO project configuration file.
-*   `BOM.md`: Bill of Materials for the hardware.
-*   `README.md`: General project documentation.
+*   `main/web_assets/`: Contains the HTML, CSS, and JS for the web UI.
+*   `main/idf_component.yml`: Manifest for managed dependencies.
+*   `components/`: For local components like `sqlite3`.
+*   `partitions.csv`: Defines the flash memory layout.
+*   `sdkconfig`: Project configuration file.
+*   `CMakeLists.txt`: Top-level build script for ESP-IDF.
 *   `agent.md`: This file.
 
 ## Environment Setup
 
-This project uses PlatformIO, which simplifies the ESP-IDF toolchain management.
+This project requires the ESP-IDF toolchain. The necessary tools are included in the environment, but they must be installed and activated first.
 
-1.  **Install PlatformIO:** Ensure you have PlatformIO Core installed or are using an IDE with the PlatformIO extension (like VS Code). The extension will handle the installation of the necessary toolchains and frameworks automatically.
-2.  **Project Dependencies:** PlatformIO will automatically download the `espressif32` platform and ESP-IDF version specified in `platformio.ini` the first time you build the project. No manual installation of ESP-IDF is required.
+1.  **Install System Dependencies:** This project requires `libusb` for the `openocd` tool. It must be installed first:
+    ```bash
+    sudo apt-get update && sudo apt-get install -y libusb-1.0-0
+    ```
+
+2.  **Install ESP-IDF Tools:** The ESP-IDF installation script must be run to set up the Python virtual environment and toolchains.
+    ```bash
+    chmod +x ~/.platformio/packages/framework-espidf/install.sh
+    ~/.platformio/packages/framework-espidf/install.sh
+    ```
+
+3.  **Activate the Environment:** Before building, you must activate the ESP-IDF environment in your shell session by sourcing the `export.sh` script:
+    ```bash
+    source ~/.platformio/packages/framework-espidf/export.sh
+    ```
+    After this, the `idf.py` command will be available.
 
 ## Building and Flashing
 
-Use the following PlatformIO commands to build and upload the project to the ESP32-S3 board.
+After setting up and activating the environment, use the following `idf.py` commands to build and flash the project.
 
 1.  **Build the project:**
     ```bash
-    pio run
+    idf.py build
     ```
-2.  **Upload the firmware:**
+
+2.  **Flash the project:**
     ```bash
-    pio run --target upload
+    idf.py flash
     ```
-3.  **Build, upload, and open the serial monitor:**
+
+3.  **Build, flash, and monitor:**
     ```bash
-    pio run -t upload -t monitor
+    idf.py flash monitor
     ```
 
 ## Working with the Code
@@ -77,8 +95,7 @@ Your next development tasks are outlined below. Please complete them in order.
 *   **Instructions:**
     1.  Create a `main/web_assets` directory.
     2.  Extract the HTML, CSS, and JavaScript from the `index_html_start` raw literal in `main.c` into `index.html`, `style.css`, and `script.js` inside `main/web_assets`.
-    3.  Create a SPIFFS partition to store these assets. You will need to create a `spiffs.img` and configure PlatformIO to flash it.
-    4.  Modify `main.c` to serve the static files from SPIFFS instead of the embedded string.
+    3.  The project is already configured to build a SPIFFS image from this directory.
 
 **Task 2: Implement File Transfer Progress with WebSockets**
 
