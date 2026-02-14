@@ -14,11 +14,10 @@
 # --- Prerequisites ---
 # - OpenSCAD:         Install from https://openscad.org/
 # - Blender:          Install from https://www.blender.org/
-# - Lithophane Tool:  You must provide your own tool for this step.
-#                     A good open-source option is LithoMaker:
-#                     https://github.com/muldjord/lithomaker
+# - Python 3:         Required for lithophane generation.
+#                     Dependencies: Pillow, numpy
 #
-# Make sure 'openscad' and 'blender' are in your system's PATH.
+# Make sure 'openscad', 'blender', and 'python3' are in your system's PATH.
 #
 # --- Usage ---
 #   ./build_enclosure.sh -i <path_to_image>
@@ -47,6 +46,12 @@ BEND_ANGLE=45 # Angle to bend the lithophane for the spine
 
 set -e # Exit immediately if a command exits with a non-zero status.
 
+# Check for required tools
+if ! command -v python3 &> /dev/null; then
+    echo "Error: python3 is not installed or not in PATH."
+    exit 1
+fi
+
 # --- Argument Parsing ---
 INPUT_IMAGE=""
 while [[ $# -gt 0 ]]; do
@@ -72,19 +77,23 @@ fi
 
 # --- Main Functions ---
 
-# Placeholder function for generating the lithophane.
-# You will need to replace this with the actual command for your tool.
+# Function for generating the lithophane using the python script.
 generate_flat_lithophane() {
-    echo "--- [Step 1/4] Generating Flat Lithophane (Placeholder) ---"
-    echo "This is a placeholder. Please replace this with your lithophane tool."
+    echo "--- [Step 1/4] Generating Flat Lithophane ---"
 
-    # Example using a hypothetical tool 'lithomaker-cli':
-    # lithomaker-cli --image "$1" --output "$2" --width $INTERIOR_DEPTH
+    # Use python script to generate lithophane
+    # Dimensions match INTERIOR_DEPTH (width) and INTERIOR_WIDTH (height)
+    # based on original placeholder.
+    python3 generate_lithophane.py \
+        --image "$1" \
+        --output "$2" \
+        --width "$INTERIOR_DEPTH" \
+        --height "$INTERIOR_WIDTH" \
+        --min-thickness 0.8 \
+        --max-thickness 3.0 \
+        --resolution 0.2
 
-    # For demonstration, we'll just create a dummy file.
-    openscad -o "$2" -D 'cube([120, 80, 2]);'
-
-    echo "Created dummy flat lithophane at $2"
+    echo "Created flat lithophane at $2"
     echo ""
 }
 
