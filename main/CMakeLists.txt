@@ -19,7 +19,7 @@ idf_component_register(SRCS "${COMPONENT_SRCS}"
                          esp_wifi
                          esp_event
                          esp_system
-			 esp_usb
+                         esp_usb
                          freertos
                          esp_common  # Good practice to include for driver dependencies
 
