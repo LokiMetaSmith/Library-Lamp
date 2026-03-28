@@ -42,7 +42,7 @@ outer_depth = interior_depth + (wall_thickness * 2);
 outer_height = interior_height + wall_thickness; // Bottom wall only
 
 cover_width = outer_width + (cover_overhang * 2);
-cover_depth = outer_depth + cover_overhang; // Overhang on front edge
+cover_depth = outer_depth + (cover_overhang * 2); // Overhang on top and bottom edges
 cover_height = wall_thickness;
 
 
@@ -68,7 +68,7 @@ module final_assembly() {
     book_box();
 
     // 2. The cover, placed on top of the box
-    translate([0, 0, outer_height]) {
+    translate([-cover_overhang, -cover_overhang, outer_height]) {
         cover();
     }
 
@@ -106,7 +106,10 @@ module cover() {
 module book_block(width, depth, height, radius) {
     hull() {
         cube([width - radius, depth, height]);
-        translate([width - radius, 0, 0]) {
+        translate([width - radius, radius, 0]) {
+            cylinder(h=height, r=radius, $fn=100);
+        }
+        translate([width - radius, depth - radius, 0]) {
             cylinder(h=height, r=radius, $fn=100);
         }
     }
