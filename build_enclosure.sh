@@ -14,11 +14,10 @@
 # --- Prerequisites ---
 # - OpenSCAD:         Install from https://openscad.org/
 # - Blender:          Install from https://www.blender.org/
-# - Lithophane Tool:  You must provide your own tool for this step.
-#                     A good open-source option is LithoMaker:
-#                     https://github.com/muldjord/lithomaker
+# - Python 3:         Required for lithophane generation.
+#                     Dependencies: Pillow, numpy
 #
-# Make sure 'openscad' and 'blender' are in your system's PATH.
+# Make sure 'openscad', 'blender', and 'python3' are in your system's PATH.
 #
 # --- Usage ---
 #   ./build_enclosure.sh -i <path_to_image>
@@ -47,6 +46,12 @@ BEND_ANGLE=45 # Angle to bend the lithophane for the spine
 
 set -e # Exit immediately if a command exits with a non-zero status.
 
+# Check for required tools
+if ! command -v python3 &> /dev/null; then
+    echo "Error: python3 is not installed or not in PATH."
+    exit 1
+fi
+
 # --- Argument Parsing ---
 INPUT_IMAGE=""
 while [[ $# -gt 0 ]]; do
@@ -72,36 +77,23 @@ fi
 
 # --- Main Functions ---
 
-# Guides the user to manually generate the flat lithophane.
+# Function for generating the lithophane using the python script.
 generate_flat_lithophane() {
-    local output_stl_path="$1"
+    echo "--- [Step 1/4] Generating Flat Lithophane ---"
 
-    echo "--- [Step 1/4] Manual Lithophane Generation ---"
-    echo ""
-    echo "This script requires you to manually generate the initial lithophane STL file"
-    echo "using the 'lithomaker' GUI tool, as it does not have a command-line interface."
-    echo ""
-    echo "Instructions:"
-    echo "1. Download and run lithomaker from: https://github.com/muldjord/lithomaker"
-    echo "2. Load your image: '$INPUT_IMAGE'"
-    echo "3. Configure the lithophane settings to your preference."
-    echo "4. Save the output STL file to the following exact path:"
-    echo "   -> $output_stl_path"
-    echo ""
-    echo "The script will now pause. Please complete the steps above."
-    echo ""
+    # Use python script to generate lithophane
+    # Dimensions match INTERIOR_DEPTH (width) and INTERIOR_WIDTH (height)
+    # based on original placeholder.
+    python3 generate_lithophane.py \
+        --image "$1" \
+        --output "$2" \
+        --width "$INTERIOR_DEPTH" \
+        --height "$INTERIOR_WIDTH" \
+        --min-thickness 0.8 \
+        --max-thickness 3.0 \
+        --resolution 0.2
 
-    read -p "Press [Enter] to continue once the file has been saved..."
-
-    if [ ! -f "$output_stl_path" ]; then
-        echo ""
-        echo "Error: The required lithophane file was not found at the expected location:"
-        echo "  -> $output_stl_path"
-        echo "Please run the script again and ensure you save the file correctly."
-        exit 1
-    fi
-
-    echo "File found. Continuing with the build process..."
+    echo "Created flat lithophane at $2"
     echo ""
 }
 
