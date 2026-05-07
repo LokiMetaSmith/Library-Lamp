@@ -46,3 +46,6 @@
 # PlatformIO
 .pio/
 managed_components/
+
+*.bak
+jules_session_*
