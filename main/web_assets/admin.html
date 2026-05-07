@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Admin — Community Hub</title>
+<style>
+:root {
+  --bg: #ede8de; --surface: #faf8f3; --surface2: #f0ebe0;
+  --border: #b0a080; --border-light: #d4c9b0;
+  --ink: #2c2416; --ink-muted: #7a6a55;
+  --accent-dark: #31502f; --accent-light: #c8ddc6;
+  --danger: #c0392b; --radius: 6px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+.site-header {
+  background: var(--accent-dark);
+  padding: 14px 20px;
+  border-bottom: 3px solid #1d3a1b;
+}
+.site-title {
+  font-size: 18px; font-weight: bold;
+  letter-spacing: 3px; color: #d8edcf;
+}
+.site-sub { font-size: 10px; letter-spacing: 2px; color: #8aad87; margin-top: 2px; }
+
+/* ── Gate ── */
+#gate {
+  max-width: 360px;
+  margin: 80px auto 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 28px 28px 24px;
+  box-shadow: 3px 4px 0 rgba(44,36,22,.1);
+}
+#gate h2 {
+  font-size: 13px; letter-spacing: 2px; text-transform: uppercase;
+  color: var(--ink-muted); margin-bottom: 14px;
+}
+#gate input {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--ink);
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  font-size: 14px;
+  padding: 8px 12px;
+  outline: none;
+  margin-bottom: 10px;
+}
+#gate input:focus { border-color: var(--accent-dark); }
+#gate button {
+  width: 100%;
+  background: var(--accent-dark);
+  border: 2px solid #1d3a1b;
+  border-radius: var(--radius);
+  color: var(--accent-light);
+  cursor: pointer;
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  font-size: 12px; font-weight: bold;
+  letter-spacing: 1px;
+  padding: 9px;
+}
+#gate button:hover { background: #3d6438; }
+#gate .error {
+  font-size: 11px; color: var(--danger);
+  margin-top: 8px; text-align: center;
+  min-height: 16px;
+}
+
+/* ── Admin panel ── */
+#panel { display: none; padding: 24px 20px; max-width: 640px; }
+.section {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 18px;
+  overflow: hidden;
+}
+.section-head {
+  background: var(--surface2);
+  border-bottom: 1px solid var(--border-light);
+  padding: 8px 14px;
+  font-size: 12px; letter-spacing: 1px;
+  font-weight: bolder;
+  text-transform: uppercase; color: var(--ink-muted);
+}
+.section-body { padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+.row { display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap; }
+.fld { display: flex; flex-direction: column; gap: 3px; }
+.fld label {
+  font-size: 10px; letter-spacing: 1px;
+  text-transform: uppercase; color: var(--ink-muted);
+}
+.fld input[type="text"],
+.fld input[type="number"],
+.fld input[type="datetime-local"] {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--ink);
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  font-size: 13px;
+  padding: 6px 10px;
+  outline: none;
+  width: 110px;
+}
+.fld input[type="text"],
+.fld input[type="datetime-local"] { width: 200px; }
+.fld input[type="number"] { width: 80px; }
+.fld input:focus { border-color: var(--accent-dark); }
+
+.btn {
+  background: var(--accent-dark);
+  border: 1px solid #1d3a1b;
+  border-radius: var(--radius);
+  color: var(--accent-light);
+  cursor: pointer;
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  font-size: 11px; font-weight: bold;
+  letter-spacing: 1px;
+  padding: 7px 14px;
+  transition: background .15s;
+  white-space: nowrap;
+}
+.btn:hover { background: #3d6438; }
+.btn.danger {
+  background: #8b1a10;
+  border-color: #6b1208;
+}
+.btn.danger:hover { background: var(--danger); }
+
+.feedback {
+  font-size: 11px;
+  color: var(--accent-dark);
+  min-height: 16px;
+}
+textarea.restore-area {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--ink);
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  font-size: 11px;
+  padding: 8px;
+  resize: vertical;
+  height: 120px;
+  outline: none;
+}
+textarea.restore-area:focus { border-color: var(--accent-dark); }
+
+/* ── Post list ── */
+.post-list { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
+.post-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--bg);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius);
+  padding: 8px 10px;
+  font-size: 12px;
+}
+.post-row-info { flex: 1; min-width: 0; }
+.post-row-meta {
+  font-size: 10px;
+  color: var(--ink-muted);
+  margin-bottom: 2px;
+}
+.post-row-text {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--ink);
+}
+.post-empty {
+  font-size: 12px;
+  color: var(--ink-muted);
+  font-style: italic;
+  padding: 8px 0;
+}
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="site-title">COMMUNITY HUB</div>
+  <div class="site-sub">ADMIN PANEL</div>
+</header>
+
+<!-- Password gate -->
+<div id="gate">
+  <h2>Admin Access</h2>
+  <input type="password" id="keyIn" placeholder="Enter admin key"
+         autocomplete="off">
+  <button onclick="tryLogin()">Unlock 🔑</button>
+  <div class="error" id="gateErr"></div>
+</div>
+
+<!-- Admin controls (hidden until authenticated) -->
+<div id="panel">
+
+  <div class="section">
+    <div class="section-head">Admin Key</div>
+    <div class="section-body">
+      <div class="row">
+        <div class="fld">
+          <label>New Key (min 4 characters)</label>
+          <input type="password" id="newKey" maxlength="64" autocomplete="new-password"
+                 placeholder="Enter new key" style="width:200px">
+        </div>
+        <div class="fld">
+          <label>Confirm</label>
+          <input type="password" id="newKeyConfirm" maxlength="64"
+                 placeholder="Confirm new key" style="width:200px">
+        </div>
+        <button class="btn" onclick="doSetKey()">Change Key</button>
+      </div>
+      <div class="feedback" id="keyFb"></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-head">Board Identity</div>
+    <div class="section-body">
+      <div class="row">
+        <div class="fld" style="flex:0 0 60px">
+          <label>Icon</label>
+          <input type="text" id="idIcon" maxlength="4" style="width:60px;font-size:20px;text-align:center;padding:4px 6px;">
+        </div>
+        <div class="fld" style="flex:1 1 200px">
+          <label>Board Name</label>
+          <input type="text" id="idName" maxlength="48" style="width:100%">
+        </div>
+      </div>
+      <div class="fld" style="flex:1">
+        <label>Tagline</label>
+        <input type="text" id="idTagline" maxlength="80" style="width:100%">
+      </div>
+      <div class="fld" style="flex:1">
+        <label>Rules</label>
+        <input type="text" id="idRules" maxlength="80" style="width:100%">
+      </div>
+      <div class="fld" style="flex:1">
+        <label>Footer</label>
+        <input type="text" id="idFooter" maxlength="80" style="width:100%">
+      </div>
+      <div class="row">
+        <button class="btn" onclick="doIdentity()">Save Identity</button>
+      </div>
+      <div class="feedback" id="idFb"></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-head">Manage Posts</div>
+    <div class="section-body">
+      <div class="row">
+        <button class="btn" onclick="loadPostList()">Refresh List</button>
+        <button class="btn danger" onclick="confirmClear()">Clear All Posts</button>
+      </div>
+      <div id="postListFb" class="feedback"></div>
+      <div id="postList"></div>
+    </div>
+  </div>
+
+</div><!-- #panel -->
+
+<script>
+let SESSION_TOKEN = '';
+
+// ── Gate ────────────────────────────────────────────────────────────────────
+function tryLogin() {
+  const val = document.getElementById('keyIn').value;
+  if (!val) return;
+
+  fetch('/board/admin/auth', {
+    method: 'POST',
+    body: JSON.stringify({ key: val })
+  })
+  .then(r => {
+    if (!r.ok) throw new Error('forbidden');
+    return r.text();
+  })
+  .then(token => {
+    SESSION_TOKEN = token;
+    document.getElementById('gate').style.display  = 'none';
+    document.getElementById('panel').style.display = 'block';
+    
+    // Load identity info
+    apiFetch(api('/board/admin/identity/get'))
+      .then(r => r.json())
+      .then(d => {
+        document.getElementById('idName').value = d.name || '';
+        document.getElementById('idIcon').value = d.icon || '';
+        document.getElementById('idTagline').value = d.tagline || '';
+        document.getElementById('idRules').value = d.rules || '';
+        document.getElementById('idFooter').value = d.footer || '';
+      });
+
+    loadPostList();
+  })
+  .catch(() => {
+    document.getElementById('gateErr').textContent = 'Incorrect key.';
+  });
+}
+document.getElementById('keyIn').addEventListener('keydown', e => {
+  if (e.key === 'Enter') tryLogin();
+});
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+function api(path) {
+  return path + (path.includes('?') ? '&' : '?') + 'token=' + encodeURIComponent(SESSION_TOKEN);
+}
+
+function apiFetch(url, options) {
+  return fetch(url, options).then(r => {
+    if (r.status === 403) {
+      SESSION_TOKEN = '';
+      document.getElementById('panel').style.display = 'none';
+      document.getElementById('gate').style.display  = 'block';
+      document.getElementById('gateErr').textContent = 'Session expired. Please log in again.';
+      document.getElementById('keyIn').value = '';
+      throw new Error('session expired');
+    }
+    return r;
+  });
+}
+
+function fb(id, msg) {
+  const el = document.getElementById(id);
+  el.textContent = msg;
+  setTimeout(() => { el.textContent = ''; }, 4000);
+}
+
+// ── Change admin key ──────────────────────────────────────────────────────────
+function doSetKey() {
+  const n = document.getElementById('newKey').value;
+  const c = document.getElementById('newKeyConfirm').value;
+  if (n.length < 4)  { fb('keyFb', '✗ Key must be at least 4 characters'); return; }
+  if (n !== c)       { fb('keyFb', '✗ Keys do not match'); return; }
+  apiFetch(api('/board/admin/setkey') + '&newkey=' + encodeURIComponent(n))
+    .then(r => r.text())
+    .then(msg => {
+      fb('keyFb', '✓ ' + msg);
+      setTimeout(() => location.reload(), 1500);
+    })
+    .catch(() => fb('keyFb', '✗ Request failed'));
+}
+
+// ── Identity ──────────────────────────────────────────────────────────────────
+function doIdentity() {
+  const params = new URLSearchParams({
+    name:    document.getElementById('idName').value.trim(),
+    icon:    document.getElementById('idIcon').value.trim(),
+    tagline: document.getElementById('idTagline').value.trim(),
+    rules:   document.getElementById('idRules').value.trim(),
+    footer:  document.getElementById('idFooter').value.trim()
+  });
+  apiFetch(api('/board/admin/identity/set') + '&' + params.toString())
+    .then(r => r.text())
+    .then(msg => fb('idFb', '✓ ' + msg))
+    .catch(() => fb('idFb', '✗ Request failed'));
+}
+
+// ── Board actions ─────────────────────────────────────────────────────────────
+function confirmClear() {
+  if (!confirm('Delete ALL posts? This cannot be undone.')) return;
+  apiFetch(api('/board/admin/clear'))
+    .then(r => r.text())
+    .then(msg => fb('postListFb', '✓ ' + msg))
+    .catch(() => fb('postListFb', '✗ Failed'));
+}
+
+// ── Manage Posts ──────────────────────────────────────────────────────────────
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function timeLeftShort(exp) {
+  const left = exp - Math.floor(Date.now() / 1000);
+  if (left <= 0)     return 'expired';
+  if (left < 3600)   return Math.floor(left/60) + 'm';
+  if (left < 86400)  return Math.floor(left/3600) + 'h';
+  return Math.floor(left/86400) + 'd';
+}
+
+async function loadPostList() {
+  const container = document.getElementById('postList');
+  container.innerHTML = '<div class="post-empty">Loading…</div>';
+  try {
+    const r    = await fetch('/board/messages');
+    const data = await r.json();
+    if (data.length === 0) {
+      container.innerHTML = '<div class="post-empty">No active posts.</div>';
+      return;
+    }
+    container.innerHTML = '<div class="post-list">' +
+      data.map(m => `
+<div class="post-row" id="pr-${m.id}">
+  <div class="post-row-info">
+    <div class="post-row-meta">${esc(m.type)} · ${esc(m.author)} · ${timeLeftShort(m.expires)} left</div>
+    <div class="post-row-text">${esc(m.text)}</div>
+  </div>
+  <button class="btn danger" onclick="deletePost(${m.id})">Delete</button>
+</div>`).join('') +
+    '</div>';
+  } catch (_) {
+    container.innerHTML = '<div class="post-empty">Failed to load posts.</div>';
+  }
+}
+
+async function deletePost(id) {
+  if (!confirm('Delete this post?')) return;
+  const r = await apiFetch(api('/board/admin/delete/post') + '&id=' + id);
+  if (r.ok) {
+    const row = document.getElementById('pr-' + id);
+    if (row) row.remove();
+    fb('postListFb', '✓ Post deleted');
+  } else {
+    fb('postListFb', '✗ Delete failed');
+  }
+}
+</script>
+</body>
+</html>

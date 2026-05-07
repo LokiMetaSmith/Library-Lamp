@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Community Hub</title>
+<style>
+:root {
+  --bg:            #ede8de;
+  --surface:       #faf8f3;
+  --surface2:      #f0ebe0;
+  --border:        #b0a080;
+  --border-light:  #d4c9b0;
+  --ink:           #2c2416;
+  --ink-muted:     #7a6a55;
+  --accent:        #8aad87;
+  --accent-dark:   #31502f;
+  --accent-light:  #c8ddc6;
+
+  --c-notice-fg:  #6b5a3e; --c-notice-bg: #f0e8d8; --c-notice-bar: #a09070;
+  --c-offer-fg:   #2d5c2a; --c-offer-bg:  #daeeda; --c-offer-bar:  #5a8a57;
+  --c-need-fg:    #7a4a10; --c-need-bg:   #f5e8d0; --c-need-bar:   #c4813a;
+  --c-event-fg:   #1e4f70; --c-event-bg:  #d8eaf5; --c-event-bar:  #4a88b0;
+
+  --radius: 6px;
+  --shadow: 3px 4px 0 rgba(44,36,22,0.10);
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Header ── */
+.site-header {
+  background: var(--accent-dark);
+  padding: 14px 20px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  border-bottom: 3px solid #1d3a1b;
+  flex-wrap: wrap;
+}
+.header-title-block { flex: 1; min-width: 160px; }
+.site-title {
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  font-size: 20px;
+  font-weight: bold;
+  color: #d8edcf;
+  line-height: 1.2;
+}
+.site-sub {
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  font-size: 14px;
+  color: var(--accent);
+  margin-top: 2px;
+}
+.header-meta {
+  text-align: right;
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  font-size: 11px;
+  color: var(--accent);
+  line-height: 1.7;
+}
+
+/* ── Post form ── */
+.post-form {
+  background: var(--surface);
+  border-bottom: 2px solid var(--border);
+  padding: 14px 20px;
+}
+
+.form-row {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+.field { display: flex; flex-direction: column; gap: 3px; }
+.field label {
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  font-size: 10px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+.field input,
+.field textarea {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--ink);
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  font-size: 14px;
+  padding: 7px 10px;
+  outline: none;
+  transition: border-color .2s;
+}
+.field input:focus,
+.field textarea:focus { border-color: var(--accent-dark); }
+.field-name  { flex: 0 0 160px; }
+.field-msg   { flex: 1 1 220px; }
+.field textarea { resize: vertical; height: 90px; min-height: 60px; }
+.char-hint {
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  font-size: 10px;
+  color: var(--ink-muted);
+  text-align: right;
+  height: 14px;
+}
+.char-hint.warn { color: var(--c-need-bar); }
+
+/* Category buttons */
+.field-cat { flex: 0 0 auto; }
+.cat-btns {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+  padding-top: 1px;
+}
+.cat-btn {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--ink-muted);
+  cursor: pointer;
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  font-size: 11px;
+  padding: 5px 10px;
+  transition: all .15s;
+  white-space: nowrap;
+}
+.cat-btn:hover { border-color: var(--border); color: var(--ink); background: var(--surface2); }
+.cat-btn.active-Notice { background: var(--c-notice-bg); border-color: var(--c-notice-bar); color: var(--c-notice-fg); font-weight: bold; }
+.cat-btn.active-Offer  { background: var(--c-offer-bg);  border-color: var(--c-offer-bar);  color: var(--c-offer-fg);  font-weight: bold; }
+.cat-btn.active-Need   { background: var(--c-need-bg);   border-color: var(--c-need-bar);   color: var(--c-need-fg);   font-weight: bold; }
+.cat-btn.active-Event  { background: var(--c-event-bg);  border-color: var(--c-event-bar);  color: var(--c-event-fg);  font-weight: bold; }
+
+/* Expiry row */
+.expiry-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+.expiry-label {
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  font-size: 10px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+  margin-right: 2px;
+}
+.exp-btn {
+  background: var(--bg);
+  border: 1px solid var(--border-light);
+  border-radius: 99px;
+  color: var(--ink-muted);
+  cursor: pointer;
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  font-size: 11px;
+  padding: 3px 11px;
+  transition: all .15s;
+}
+.exp-btn:hover  { border-color: var(--border); color: var(--ink); }
+.exp-btn.active { background: var(--accent-dark); border-color: var(--accent-dark); color: var(--accent-light); }
+
+.post-btn {
+  background: var(--accent-dark);
+  border: 2px solid #1d3a1b;
+  border-radius: var(--radius);
+  color: var(--accent-light);
+  cursor: pointer;
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  font-size: 12px;
+  font-weight: bold;
+  letter-spacing: 1px;
+  padding: 8px 20px;
+  margin-top: 8px;
+  transition: background .15s;
+  white-space: nowrap;
+  align-self: flex-end;
+}
+.post-btn:hover { background: #3d6438; }
+
+/* ── Filter bar ── */
+.filter-bar {
+  background: var(--surface2);
+  border-bottom: 1px solid var(--border-light);
+  padding: 9px 20px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.filter-label {
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  font-size: 10px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+.sep { flex: 1; }
+.ftab {
+  background: none;
+  border: 1px solid var(--border-light);
+  border-radius: 99px;
+  color: var(--ink-muted);
+  cursor: pointer;
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  font-size: 11px;
+  padding: 3px 12px;
+  transition: all .15s;
+}
+.ftab:hover  { border-color: var(--accent-dark); color: var(--accent-dark); }
+.ftab.active { background: var(--accent-dark); border-color: var(--accent-dark); color: var(--accent-light); }
+
+/* ── Board ── */
+.board {
+  flex: 1;
+  padding: 16px 20px;
+  columns: 3 260px;
+  gap: 14px;
+}
+
+/* ── Card ── */
+.card {
+  display: inline-block;
+  width: 100%;
+  margin-bottom: 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  break-inside: avoid;
+  overflow: hidden;
+  animation: cardIn .2s ease;
+}
+@keyframes cardIn { from { opacity:0; transform:translateY(5px); } }
+.card-stripe { height: 4px; }
+.card-body { padding: 11px 13px 9px; }
+.cat-badge {
+  display: inline-block;
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  font-size: 10px;
+  font-weight: bold;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  padding: 2px 9px;
+  border-radius: 99px;
+  margin-bottom: 7px;
+}
+.card-text { font-size: 14px; line-height: 1.6; color: var(--ink); word-break: break-word; }
+.card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 7px 13px;
+  background: var(--surface2);
+  border-top: 1px solid var(--border-light);
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  font-size: 11px;
+  color: var(--ink-muted);
+}
+.card-author { font-weight: bold; color: var(--ink); }
+.card-expiry { font-size: 10px; }
+.card-expiry.soon { color: var(--c-need-bar); }
+
+.type-Notice .card-stripe { background: var(--c-notice-bar); }
+.type-Notice .cat-badge   { background: var(--c-notice-bg); color: var(--c-notice-fg); }
+.type-Offer  .card-stripe { background: var(--c-offer-bar);  }
+.type-Offer  .cat-badge   { background: var(--c-offer-bg);  color: var(--c-offer-fg);  }
+.type-Need   .card-stripe { background: var(--c-need-bar);  }
+.type-Need   .cat-badge   { background: var(--c-need-bg);   color: var(--c-need-fg);   }
+.type-Event  .card-stripe { background: var(--c-event-bar); }
+.type-Event  .cat-badge   { background: var(--c-event-bg);  color: var(--c-event-fg);  }
+
+.empty {
+  column-span: all;
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--ink-muted);
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  font-size: 13px;
+  line-height: 2.2;
+}
+
+/* ── Footer ── */
+.site-footer {
+  background: var(--surface2);
+  border-top: 1px solid var(--border-light);
+  padding: 7px 20px;
+  display: flex;
+  justify-content: space-between;
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  font-size: 10px;
+  color: var(--ink-muted);
+}
+
+@media (max-width: 540px) {
+  .board { columns: 1; padding: 12px; }
+  .form-row { flex-direction: column; }
+  .field-name { flex: 1 1 auto; }
+  .post-btn { width: 100%; text-align: center; }
+}
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="header-title-block">
+    <div class="site-title" id="boardTitle">COMMUNITY HUB</div>
+    <div class="site-sub"   id="boardTagline"></div>
+  </div>
+  <div class="header-meta">
+    <div id="boardRules"></div>
+    <div id="postCount">— posts</div>
+  </div>
+</header>
+<div id="fullBanner" style="display:none;background:#a30000;color:#fff;
+     text-align:center;padding:10px 16px;font-weight:600">
+  📋 This board is currently full. Check back once some posts have expired. 📋
+</div>
+<div class="post-form">
+  <div class="form-row">
+
+    <div class="field field-name">
+      <label>Your Name</label>
+      <input id="nameIn" maxlength="24" placeholder="neighbor"
+             autocomplete="off" spellcheck="false">
+      <div class="char-hint" id="nameHint"></div>
+    </div>
+
+    <div class="field field-cat">
+      <label>Category</label>
+      <div class="cat-btns">
+        <button class="cat-btn" onclick="setType('Notice',this)">📌 Notice</button>
+        <button class="cat-btn" onclick="setType('Offer', this)">🌱 Offer</button>
+        <button class="cat-btn" onclick="setType('Need',  this)">🤝 Need</button>
+        <button class="cat-btn" onclick="setType('Event', this)">📅 Event</button>
+      </div>
+      <div class="char-hint"></div>
+    </div>
+
+    <div class="field field-msg">
+      <label>Message</label>
+      <textarea id="msgIn" maxlength="300"
+                placeholder="What's on the board?"
+                spellcheck="false"></textarea>
+      <div class="char-hint" id="msgHint"></div>
+    </div>
+
+  </div>
+
+  <div class="expiry-row">
+    <span class="expiry-label">Expires:</span>
+    <button class="exp-btn" onclick="setExpiry(24,  this)">1 day</button>
+    <button class="exp-btn" onclick="setExpiry(72,  this)">3 days</button>
+    <button class="exp-btn active" onclick="setExpiry(168, this)">1 week</button>
+    <button class="post-btn" id="postBtn" onclick="doPost()">POST</button>
+  </div>
+</div>
+
+<div class="filter-bar">
+  <span class="filter-label">Show:</span>
+  <button class="ftab active" onclick="setFilter('',       this)">All</button>
+  <button class="ftab"        onclick="setFilter('Notice', this)">📌 Notice</button>
+  <button class="ftab"        onclick="setFilter('Offer',  this)">🌱 Offer</button>
+  <button class="ftab"        onclick="setFilter('Need',   this)">🤝 Need</button>
+  <button class="ftab"        onclick="setFilter('Event',  this)">📅 Event</button>
+  <span class="sep"></span>
+  <button class="ftab active" id="sNew" onclick="setSort('new', this)">New</button>
+  <button class="ftab"        id="sExp" onclick="setSort('exp', this)">Expiring</button>
+</div>
+
+<div class="board" id="board"></div>
+
+<footer class="site-footer">
+  <span id="boardFooter"></span>
+  <span id="uptimeDisplay">—</span>
+</footer>
+
+<script>
+// First thing's first:
+function checkBoardStatus() {
+  fetch('/board/api/status')
+    .then(r => r.json())
+    .then(d => {
+      const banner = document.getElementById('fullBanner');
+      const btn    = document.getElementById('postBtn');
+      if (d.full) {
+        banner.style.display = 'block';
+        if (btn) btn.disabled = true;
+      } else {
+        banner.style.display = 'none';
+        if (btn) btn.disabled = false;
+      }
+    })
+    .catch(() => {});
+}
+// ── XSS-safe escaping ──────────────────────────
+function esc(s) {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function timeLeft(expSecs) {
+  const now  = Math.floor(Date.now() / 1000);
+  const left = expSecs - now;
+  if (left <= 0)      return { label: 'expired',   soon: true  };
+  if (left < 3600)    return { label: Math.floor(left / 60) + 'm left',   soon: true  };
+  if (left < 86400)   return { label: Math.floor(left / 3600) + 'h left', soon: left < 10800 };
+  return { label: Math.floor(left / 86400) + 'd left', soon: false };
+}
+
+// ── State ──────────────────────────────────────
+let currentType   = 'Notice';
+let currentExpiry = 168;
+let activeFilter  = '';
+let activeSort    = 'new';
+
+// ── Restore name from localStorage ────────────
+const savedName = localStorage.getItem('cn_name');
+if (savedName) document.getElementById('nameIn').value = savedName;
+
+document.getElementById('nameIn').addEventListener('input', function () {
+  localStorage.setItem('cn_name', this.value);
+  const h = document.getElementById('nameHint');
+  const n = this.value.length;
+  h.textContent = n > 18 ? n + '/24' : '';
+  h.className   = 'char-hint' + (n > 20 ? ' warn' : '');
+});
+
+document.getElementById('msgIn').addEventListener('input', function () {
+  const h = document.getElementById('msgHint');
+  const n = this.value.length;
+  h.textContent = n > 240 ? n + '/300' : '';
+  h.className   = 'char-hint' + (n > 270 ? ' warn' : '');
+});
+
+document.getElementById('msgIn').addEventListener('keydown', function (e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); doPost(); }
+});
+
+// ── Category selection ─────────────────────────
+function setType(t, btn) {
+  currentType = t;
+  document.querySelectorAll('.cat-btn').forEach(b => {
+    b.className = 'cat-btn';
+  });
+  btn.classList.add('active-' + t);
+}
+// Set default active on load
+document.querySelector('.cat-btn').classList.add('active-Notice');
+
+// ── Expiry selection ───────────────────────────
+function setExpiry(h, btn) {
+  currentExpiry = h;
+  document.querySelectorAll('.exp-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+// ── Filter / sort ──────────────────────────────
+function setFilter(f, btn) {
+  activeFilter = f;
+  document.querySelectorAll('.filter-bar .ftab').forEach(b => {
+    if (b.id === 'sNew' || b.id === 'sExp') return;
+    b.classList.remove('active');
+  });
+  btn.classList.add('active');
+  if (lastData.length) render(lastData);
+}
+
+function setSort(s, btn) {
+  activeSort = s;
+  document.getElementById('sNew').classList.toggle('active', s === 'new');
+  document.getElementById('sExp').classList.toggle('active', s === 'exp');
+  load();
+}
+
+// ── Data ───────────────────────────────────────
+let lastData = [];
+
+async function load() {
+  try {
+    checkBoardStatus();
+    const r  = await fetch('/board/messages');
+    lastData = await r.json();
+    render(lastData);
+  } catch (_) {
+    console.error('Connection lost');
+  }
+}
+
+function render(data) {
+  let filtered = activeFilter ? data.filter(m => m.type === activeFilter) : data;
+
+  if (activeSort === 'exp') {
+    filtered = [...filtered].sort((a, b) => a.expires - b.expires);
+  }
+
+  document.getElementById('postCount').textContent =
+    data.length + ' post' + (data.length !== 1 ? 's' : '');
+
+  const board = document.getElementById('board');
+
+  if (filtered.length === 0) {
+    board.innerHTML = '<div class="empty">Nothing here yet.<br>Be the first to post.</div>';
+    return;
+  }
+
+  board.innerHTML = filtered.map(m => {
+    const tl = timeLeft(m.expires);
+    return `
+<div class="card type-${esc(m.type)}">
+  <div class="card-stripe"></div>
+  <div class="card-body">
+    <span class="cat-badge">${esc(m.type)}</span>
+    <div class="card-text">${esc(m.text)}</div>
+  </div>
+  <div class="card-footer">
+    <span class="card-author">${esc(m.author)}</span>
+    <span class="card-expiry${tl.soon ? ' soon' : ''}">${tl.label}</span>
+  </div>
+</div>`;
+  }).join('');
+}
+
+// ── Post ───────────────────────────────────────
+async function doPost() {
+  checkBoardStatus();
+  const n = document.getElementById('nameIn').value.trim() || 'neighbor';
+  const t = document.getElementById('msgIn').value.trim();
+  if (!t) return;
+
+  localStorage.setItem('cn_name', n);
+  document.getElementById('nameIn').value = n;
+
+  await fetch('/board/post', {
+    method: 'POST',
+    body: JSON.stringify({ author: n, type: currentType, text: t, expiry: currentExpiry })
+  });
+
+  document.getElementById('msgIn').value      = '';
+  document.getElementById('msgHint').textContent = '';
+  load();
+}
+
+// ── Board info ─────────────────────────────────
+function loadInfo() {
+  fetch('/board/info').then(r => r.json()).then(d => {
+    document.getElementById('boardTitle').textContent   = d.icon + '  ' + d.name;
+    document.getElementById('boardTagline').textContent = d.tagline;
+    document.getElementById('boardRules').textContent   = d.rules;
+    document.getElementById('boardFooter').textContent  = d.footer;
+    document.getElementById('uptimeDisplay').textContent = d.uptime;
+  });
+}
+
+setInterval(load,     60000);
+setInterval(loadInfo, 60000);
+load();
+loadInfo();
+checkBoardStatus();
+</script>
+</body>
+</html>
