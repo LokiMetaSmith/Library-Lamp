@@ -109,6 +109,10 @@
 #define HOST_LIB_TASK_PRIORITY    2
 #define CLASS_TASK_PRIORITY     3
 
+#define APP_QUIT_PIN 0
+
+static SemaphoreHandle_t ws_mutex;
+
 #ifdef CONFIG_USB_HOST_ENABLE_ENUM_FILTER_CALLBACK
 #define ENABLE_ENUM_FILTER_CALLBACK
 #endif // CONFIG_USB_HOST_ENABLE_ENUM_FILTER_CALLBACK
@@ -1464,6 +1468,7 @@ static void usb_host_lib_task(void *arg)
     vTaskSuspend(NULL);
 }
 
+
 // --- USB HOST SETUP ---
 static void msc_event_cb(const msc_host_event_t *event, void *arg)
 {
@@ -1631,10 +1636,14 @@ void init_led_strip(void) {
     ESP_ERROR_CHECK(rmt_new_tx_channel(&tx_chan_config, &led_chan));
 
     ESP_LOGI(TAG, "Install WS2812 driver");
-    led_strip_encoder_config_t encoder_config = {
-        .resolution = LED_STRIP_RMT_RES_HZ,
+    led_strip_rmt_config_t rmt_config = {
+        .resolution_hz = LED_STRIP_RMT_RES_HZ,
     };
-    ESP_ERROR_CHECK(led_strip_new_rmt_encoder(&encoder_config, &g_led_strip));
+    led_strip_config_t strip_config = {
+        .max_leds = LED_STRIP_LED_NUMBERS,
+        .strip_gpio_num = LED_STRIP_GPIO,
+    };
+    ESP_ERROR_CHECK(led_strip_new_rmt_device(&strip_config, &rmt_config, &g_led_strip));
 
     ESP_LOGI(TAG, "Enable RMT TX channel");
     ESP_ERROR_CHECK(rmt_enable(led_chan));
@@ -1741,6 +1750,7 @@ void app_main(void) {
     ESP_ERROR_CHECK(gpio_config(&input_pin));
     ESP_ERROR_CHECK(gpio_install_isr_service(ESP_INTR_FLAG_LOWMED));
     ESP_ERROR_CHECK(gpio_isr_handler_add(APP_QUIT_PIN, gpio_cb, NULL));
+ 
     // Initialize NVS
     esp_err_t ret = nvs_flash_init();
     if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
