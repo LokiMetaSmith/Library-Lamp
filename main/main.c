@@ -55,7 +55,8 @@
 #include "esp_usb.h"
 #include "usb/usb_host.h"
 #include "usb/msc_host.h"
-#include "usb/vfs_msc.h"
+#include "usb/msc_host_vfs.h"
+#include "vfs_fat_internal.h"
 
 // --- LED Strip Dependencies ---
 #include "driver/gpio.h"
@@ -1476,10 +1477,15 @@ static void msc_event_cb(const msc_host_event_t *event, void *arg)
         ESP_LOGI(TAG, "MSC device connected");
         ebook_reader_connected = true;
         g_led_state = LED_STATE_CONNECTED;
-        ESP_ERROR_CHECK(msc_host_install_device(event->device, &device_handle));
+        ESP_ERROR_CHECK(msc_host_install_device(event->device.address, &device_handle));
+        esp_vfs_fat_mount_config_t msc_mount_config = {
+            .format_if_mount_failed = false,
+            .max_files = 5,
+            .allocation_unit_size = 16 * 1024
+        };
 
         // Mount the filesystem
-        if (vfs_msc_mount(MOUNT_POINT_USB, device_handle) == ESP_OK) {
+        if (esp_vfs_fat_msc_mount(MOUNT_POINT_USB, &msc_mount_config) == ESP_OK) {
             ESP_LOGI(TAG, "MSC device mounted at %s", MOUNT_POINT_USB);
             // Attempt to import from Calibre DB
             import_from_calibre_db(MOUNT_POINT_USB);
@@ -1493,7 +1499,7 @@ static void msc_event_cb(const msc_host_event_t *event, void *arg)
         ebook_reader_connected = false;
         g_led_state = LED_STATE_IDLE;
         // Unmount the filesystem
-        vfs_msc_unmount(MOUNT_POINT_USB);
+        esp_vfs_fat_msc_unmount(MOUNT_POINT_USB);
         ESP_LOGI(TAG, "MSC device unmounted");
         msc_host_uninstall_device(device_handle);
     }
