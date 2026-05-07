@@ -45,3 +45,4 @@
 
 # PlatformIO
 .pio/
+managed_components/
