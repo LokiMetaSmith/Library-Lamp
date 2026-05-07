@@ -1,6 +1,6 @@
 
 # List of source files for this component.
-set(COMPONENT_SRCS "main.c" "dns_server.c")
+set(COMPONENT_SRCS "main.c" "dns_server.c" "lorawan.c" "bulletin_board.c" "bulletin_api.c")
 
 # List of directories to add to the include path.
 set(COMPONENT_ADD_INCLUDEDIRS ".")
@@ -13,6 +13,7 @@ target_add_binary_data(app "web_assets/setup.html" TEXT)
 # This specifies the source files and the dependencies (other components) it requires.
 idf_component_register(SRCS "${COMPONENT_SRCS}"
                     INCLUDE_DIRS "${COMPONENT_ADD_INCLUDEDIRS}"
+                    EMBED_TXTFILES "web_assets/setup.html"
                     REQUIRES
                          # Core IDF components
                          nvs_flash
@@ -22,6 +23,8 @@ idf_component_register(SRCS "${COMPONENT_SRCS}"
                          esp_usb
                          freertos
                          esp_common  # Good practice to include for driver dependencies
+                         esp_timer
+                         esp_hw_support
 
                          # Filesystem components
                          fatfs
@@ -33,6 +36,7 @@ idf_component_register(SRCS "${COMPONENT_SRCS}"
 
                          # USB Host components
                          usb
+                         usb_host_msc
 
                          # Peripherals
                          # RMT and GPIO drivers are typically brought in by esp_common or other components
