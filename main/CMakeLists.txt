@@ -7,20 +7,20 @@ set(COMPONENT_ADD_INCLUDEDIRS ".")
 
 # Embed the setup page directly into the firmware binary.
 # This allows it to be served in AP mode before SPIFFS is mounted.
-target_add_binary_data(app "web_assets/setup.html" TEXT)
+# # target_add_binary_data(app "web_assets/setup.html" TEXT)
 
 # Register the component with the ESP-IDF build system.
 # This specifies the source files and the dependencies (other components) it requires.
 idf_component_register(SRCS "${COMPONENT_SRCS}"
                     INCLUDE_DIRS "${COMPONENT_ADD_INCLUDEDIRS}"
-                    EMBED_TXTFILES "web_assets/setup.html"
+                    # EMBED_TXTFILES "web_assets/setup.html"
                     REQUIRES
                          # Core IDF components
                          nvs_flash
                          esp_wifi
                          esp_event
                          esp_system
-                         esp_usb
+                         usb
                          freertos
                          esp_common  # Good practice to include for driver dependencies
                          esp_timer

@@ -52,7 +52,12 @@
 #include "dns_server.h"
 
 // --- USB Host Dependencies (from the official ESP-IDF stack) ---
-#include "esp_usb.h"
+#include "usb/usb_host.h"
+#include "usb/msc_host_vfs.h"
+#include "esp_bt_main.h"
+#include "esp_gap_ble_api.h"
+#include "esp_gatts_api.h"
+#include "esp_sleep.h"
 #include "usb/usb_host.h"
 #include "usb/msc_host.h"
 #include "usb/msc_host_vfs.h"
@@ -62,7 +67,7 @@
 #include "driver/gpio.h"
 #include "driver/rmt_tx.h"
 #include "led_strip.h"
-#include "miniz.h"
+////#include "miniz.h"
 #include "sqlite3.h"
 
 // --- Bluetooth Dependencies ---
@@ -118,7 +123,7 @@ static SemaphoreHandle_t ws_mutex;
 #define ENABLE_ENUM_FILTER_CALLBACK
 #endif // CONFIG_USB_HOST_ENABLE_ENUM_FILTER_CALLBACK
 
-extern void class_driver_task(void *arg);
+// // extern void class_driver_task(void *arg);
 extern void class_driver_client_deregister(void);
 
 
@@ -126,6 +131,7 @@ extern void class_driver_client_deregister(void);
 static const char *TAG = "EBOOK_LIBRARIAN";
 static bool ebook_reader_connected = false;
 static msc_host_device_handle_t device_handle = NULL;
+static msc_host_vfs_handle_t vfs_handle = NULL;
 static led_strip_handle_t g_led_strip;
 static bool g_wifi_configured = false;
 QueueHandle_t app_event_queue = NULL;
@@ -154,9 +160,7 @@ typedef struct {
     app_event_group_t event_group;
     /* HID Host - Device related info */
     struct {
-        hid_host_device_handle_t handle;
-        hid_host_driver_event_t event;
-        void *arg;
+
     } hid_host_device;
 } app_event_queue_t;
 
@@ -272,54 +276,7 @@ esp_err_t load_wifi_credentials(char *ssid, size_t ssid_len, char *password, siz
 // Simple helper to extract content from an XML tag.
 // NOTE: This is a very basic parser and will not handle complex XML,
 // but it's sufficient for the simple structure of OPF files.
-static char* parse_xml_tag(const char* xml_buffer, const char* tag) {
-    char start_tag[64];
-    char end_tag[64];
-    snprintf(start_tag, sizeof(start_tag), "<%s", tag);
-    snprintf(end_tag, sizeof(end_tag), "</%s>", tag);
 
-    char *start_ptr = strstr(xml_buffer, start_tag);
-    if (!start_ptr) {
-        return NULL;
-    }
-
-    // Find the closing '>' of the start tag
-    start_ptr = strstr(start_ptr, ">");
-    if (!start_ptr) {
-        return NULL;
-    }
-    start_ptr++; // Move past '>'
-
-    char *end_ptr = strstr(start_ptr, end_tag);
-    if (!end_ptr) {
-        return NULL;
-    }
-
-    size_t len = end_ptr - start_ptr;
-    char *value = malloc(len + 1);
-    if (!value) {
-        return NULL;
-    }
-    memcpy(value, start_ptr, len);
-    value[len] = '\0';
-
-    // Basic XML unescaping for &amp;, &lt;, &gt;
-    char *p = value;
-    char *q = value;
-    while (*p) {
-        if (*p == '&') {
-            if (strncmp(p, "&amp;", 5) == 0) { *q++ = '&'; p += 5; }
-            else if (strncmp(p, "&lt;", 4) == 0) { *q++ = '<'; p += 4; }
-            else if (strncmp(p, "&gt;", 4) == 0) { *q++ = '>'; p += 4; }
-            else { *q++ = *p++; }
-        } else {
-            *q++ = *p++;
-        }
-    }
-    *q = '\0';
-
-    return value;
-}
 
 // Helper to copy file between two filesystems
 static esp_err_t copy_file(const char *source_path, const char *dest_path, transfer_progress_t *progress) {
@@ -395,7 +352,7 @@ static esp_err_t copy_file(const char *source_path, const char *dest_path, trans
 // --- WEB SERVER HANDLERS (MAIN APP) ---
 static esp_err_t static_file_handler(httpd_req_t *req) {
     char filepath[512];
-    snprintf(filepath, sizeof(filepath), "%s%s", MOUNT_POINT_SPIFFS, req->uri);
+    snprintf(filepath, sizeof(filepath), "%s%.*s", MOUNT_POINT_SPIFFS, (int)(sizeof(filepath) - strlen(MOUNT_POINT_SPIFFS) - 1), req->uri);
 
     // Default to index.html if root is requested
     if (strcmp(req->uri, "/") == 0) {
@@ -464,13 +421,13 @@ static esp_err_t status_handler(httpd_req_t *req) {
 static esp_err_t list_files_handler(httpd_req_t *req) {
     char buf[128];
     if (httpd_req_get_url_query_str(req, buf, sizeof(buf)) != ESP_OK) {
-        httpd_resp_send_400(req);
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Bad Request");
         return ESP_FAIL;
     }
 
     char param[32];
     if (httpd_query_key_value(buf, "type", param, sizeof(param)) != ESP_OK) {
-        httpd_resp_send_400(req);
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Bad Request");
         return ESP_FAIL;
     }
 
@@ -502,38 +459,10 @@ static esp_err_t list_files_handler(httpd_req_t *req) {
                     char full_path[512];
                     snprintf(full_path, sizeof(full_path), "%s/%s", mount_path, dir->d_name);
 
-                    mz_zip_archive zip_archive;
-                    memset(&zip_archive, 0, sizeof(zip_archive));
-
-                    if (mz_zip_reader_init_file(&zip_archive, full_path, 0)) {
-                        char *opf_content = NULL;
-                        size_t opf_size = 0;
-
-                        // Try common OPF paths
-                        const char* opf_paths[] = {"OEBPS/content.opf", "content.opf", "OPS/content.opf"};
-                        for (int i = 0; i < sizeof(opf_paths)/sizeof(opf_paths[0]); i++) {
-                            int file_index = mz_zip_reader_locate_file(&zip_archive, opf_paths[i], NULL, 0);
-                            if (file_index >= 0) {
-                                opf_content = mz_zip_reader_extract_file_to_heap(&zip_archive, file_index, &opf_size, 0);
-                                break;
-                            }
-                        }
-
-                        if (opf_content) {
-                            char *title = parse_xml_tag(opf_content, "dc:title");
-                            char *author = parse_xml_tag(opf_content, "dc:creator");
-
-                            cJSON_AddStringToObject(file_obj, "title", title ? title : dir->d_name);
-                            cJSON_AddStringToObject(file_obj, "author", author ? author : "Unknown");
-
-                            if (title) free(title);
-                            if (author) free(author);
-                            free(opf_content);
-                        } else {
-                             cJSON_AddStringToObject(file_obj, "title", dir->d_name);
-                             cJSON_AddStringToObject(file_obj, "author", "Unknown");
-                        }
-                        mz_zip_reader_end(&zip_archive);
+                    // miniz not available
+                    if (strstr(dir->d_name, ".epub")) {
+                        cJSON_AddStringToObject(file_obj, "title", dir->d_name);
+                        cJSON_AddStringToObject(file_obj, "author", "Unknown Author");
                     } else {
                         cJSON_AddStringToObject(file_obj, "title", dir->d_name);
                         cJSON_AddStringToObject(file_obj, "author", "Unknown");
@@ -560,7 +489,7 @@ static esp_err_t list_files_handler(httpd_req_t *req) {
 
 static esp_err_t transfer_file_handler(httpd_req_t *req) {
     if (g_transfer_progress.active) {
-        httpd_resp_send_err(req, HTTPD_429_TOO_MANY_REQUESTS, "A file transfer is already in progress.");
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "A file transfer is already in progress.");
         return ESP_FAIL;
     }
 
@@ -576,7 +505,7 @@ static esp_err_t transfer_file_handler(httpd_req_t *req) {
 
     cJSON *json = cJSON_Parse(content);
     if (!json) {
-        httpd_resp_send_400(req);
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Bad Request");
         g_led_state = ebook_reader_connected ? LED_STATE_CONNECTED : LED_STATE_IDLE;
         return ESP_FAIL;
     }
@@ -587,7 +516,7 @@ static esp_err_t transfer_file_handler(httpd_req_t *req) {
 
     if (!source || !destination || !filename) {
         cJSON_Delete(json);
-        httpd_resp_send_400(req);
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Bad Request");
         g_led_state = ebook_reader_connected ? LED_STATE_CONNECTED : LED_STATE_IDLE;
         return ESP_FAIL;
     }
@@ -637,7 +566,7 @@ static esp_err_t transfer_file_handler(httpd_req_t *req) {
 static esp_err_t transfer_cancel_handler(httpd_req_t *req) {
     ESP_LOGI(TAG, "Received request to cancel transfer");
     g_cancel_transfer = true;
-    httpd_resp_send(req, "OK", HTTPD_200_OK);
+    httpd_resp_send(req, "OK", HTTPD_RESP_USE_STRLEN);
     return ESP_OK;
 }
 
@@ -664,7 +593,7 @@ static esp_err_t transfer_progress_handler(httpd_req_t *req) {
 
 static esp_err_t sleep_handler(httpd_req_t *req) {
     ESP_LOGI(TAG, "Received request to enter deep sleep.");
-    httpd_resp_send(req, "OK", HTTPD_200_OK);
+    httpd_resp_send(req, "OK", HTTPD_RESP_USE_STRLEN);
 
     // Short delay to ensure the HTTP response is sent before sleeping
     vTaskDelay(pdMS_TO_TICKS(100));
@@ -742,7 +671,7 @@ static esp_err_t save_credentials_post_handler(httpd_req_t *req) {
 
     if (remaining > sizeof(buf) -1) {
         ESP_LOGE(TAG, "Content too long");
-        httpd_resp_send_400(req);
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Bad Request");
         return ESP_FAIL;
     }
 
@@ -761,7 +690,7 @@ static esp_err_t save_credentials_post_handler(httpd_req_t *req) {
     if (httpd_query_key_value(buf, "ssid", ssid, sizeof(ssid)) != ESP_OK ||
         httpd_query_key_value(buf, "password", password, sizeof(password)) != ESP_OK) {
         ESP_LOGE(TAG, "Could not parse ssid/password from POST data: %s", buf);
-        httpd_resp_send_400(req);
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Bad Request");
         return ESP_FAIL;
     }
 
@@ -775,7 +704,7 @@ static esp_err_t save_credentials_post_handler(httpd_req_t *req) {
     }
 
     // Respond before restarting
-    httpd_resp_send(req, "Wi-Fi credentials saved. The device will now restart.", HTTPD_200_OK);
+    httpd_resp_send(req, "Wi-Fi credentials saved. The device will now restart.", HTTPD_RESP_USE_STRLEN);
 
     // Restart the device to apply the new settings
     vTaskDelay(pdMS_TO_TICKS(2000));
@@ -841,9 +770,7 @@ static const uint16_t primary_service_uuid         = ESP_GATT_UUID_PRI_SERVICE;
 static const uint16_t character_declaration_uuid   = ESP_GATT_UUID_CHAR_DECLARE;
 static const uint16_t character_client_config_uuid = ESP_GATT_UUID_CHAR_CLIENT_CONFIG;
 
-static const uint8_t char_prop_read                = ESP_GATT_CHAR_PROP_BIT_READ;
 static const uint8_t char_prop_write               = ESP_GATT_CHAR_PROP_BIT_WRITE;
-static const uint8_t char_prop_read_write          = ESP_GATT_CHAR_PROP_BIT_READ | ESP_GATT_CHAR_PROP_BIT_WRITE;
 static const uint8_t char_prop_read_notify         = ESP_GATT_CHAR_PROP_BIT_READ | ESP_GATT_CHAR_PROP_BIT_NOTIFY;
 
 /// Wifi Provisioning Service - Attribute Table
@@ -1101,7 +1028,7 @@ static void gatts_profile_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_
             esp_ble_gatts_create_attr_tab(gatt_db, gatts_if, WIFI_PROV_IDX_NB, SVC_INST_ID);
             break;
         case ESP_GATTS_READ_EVT: {
-            ESP_LOGI(GATTS_TAG, "GATT_READ_EVT, conn_id %d, trans_id %d, handle %d", param->read.conn_id, param->read.trans_id, param->read.handle);
+            ESP_LOGI(GATTS_TAG, "GATT_READ_EVT, conn_id %d, trans_id %lu, handle %d", param->read.conn_id, (unsigned long)param->read.trans_id, param->read.handle);
             esp_gatt_rsp_t rsp;
             memset(&rsp, 0, sizeof(esp_gatt_rsp_t));
             rsp.attr_value.handle = param->read.handle;
@@ -1114,7 +1041,7 @@ static void gatts_profile_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_
             break;
         }
         case ESP_GATTS_WRITE_EVT: {
-            ESP_LOGI(GATTS_TAG, "GATT_WRITE_EVT, conn_id %d, trans_id %d, handle %d", param->write.conn_id, param->write.trans_id, param->write.handle);
+            ESP_LOGI(GATTS_TAG, "GATT_WRITE_EVT, conn_id %d, trans_id %lu, handle %d", param->write.conn_id, (unsigned long)param->write.trans_id, param->write.handle);
 
             if (param->write.handle == gatt_db_handle_table[IDX_CHAR_VAL_SSID]) {
                 strncpy(wifi_ssid, (char*)param->write.value, sizeof(wifi_ssid) - 1);
@@ -1176,10 +1103,14 @@ static void gatts_profile_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_
 static void wifi_event_handler(void* arg, esp_event_base_t event_base, int32_t event_id, void* event_data) {
     if (event_id == WIFI_EVENT_AP_STACONNECTED) {
         wifi_event_ap_staconnected_t* event = (wifi_event_ap_staconnected_t*) event_data;
-        ESP_LOGI(TAG, "station "MACSTR" join, AID=%d", MAC2STR(event->mac), event->aid);
+        (void)event;
+        (void)event;
+        ESP_LOGI(TAG, "station %02x:%02x:%02x:%02x:%02x:%02x join, AID=%d", event->mac[0], event->mac[1], event->mac[2], event->mac[3], event->mac[4], event->mac[5], event->aid);
     } else if (event_id == WIFI_EVENT_AP_STADISCONNECTED) {
         wifi_event_ap_stadisconnected_t* event = (wifi_event_ap_stadisconnected_t*) event_data;
-        ESP_LOGI(TAG, "station "MACSTR" leave, AID=%d", MAC2STR(event->mac), event->aid);
+        (void)event;
+        (void)event;
+        ESP_LOGI(TAG, "station %02x:%02x:%02x:%02x:%02x:%02x leave, AID=%d", event->mac[0], event->mac[1], event->mac[2], event->mac[3], event->mac[4], event->mac[5], event->aid);
     } else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START) {
         esp_wifi_connect();
         ESP_LOGI(TAG, "Attempting to connect to the AP...");
@@ -1434,10 +1365,10 @@ static void usb_host_lib_task(void *arg)
 # ifdef ENABLE_ENUM_FILTER_CALLBACK
         .enum_filter_cb = set_config_cb,
 # endif // ENABLE_ENUM_FILTER_CALLBACK
-        .peripheral_map = BIT0,
+        // // .peripheral_map = BIT0,
     };
     ESP_ERROR_CHECK(usb_host_install(&host_config));
-    ESP_LOGI(TAG, "USB Host installed with peripheral map 0x%x", host_config.peripheral_map);
+    // // ESP_LOGI(TAG, "USB Host installed with peripheral map 0x%x", host_config.peripheral_map);
 
     //Signalize the app_main, the USB host library has been installed
     xTaskNotifyGive(arg);
@@ -1485,7 +1416,7 @@ static void msc_event_cb(const msc_host_event_t *event, void *arg)
         };
 
         // Mount the filesystem
-        if (esp_vfs_fat_msc_mount(MOUNT_POINT_USB, &msc_mount_config) == ESP_OK) {
+        if (msc_host_vfs_register(device_handle, MOUNT_POINT_USB, &msc_mount_config, &vfs_handle) == ESP_OK) {
             ESP_LOGI(TAG, "MSC device mounted at %s", MOUNT_POINT_USB);
             // Attempt to import from Calibre DB
             import_from_calibre_db(MOUNT_POINT_USB);
@@ -1499,13 +1430,13 @@ static void msc_event_cb(const msc_host_event_t *event, void *arg)
         ebook_reader_connected = false;
         g_led_state = LED_STATE_IDLE;
         // Unmount the filesystem
-        esp_vfs_fat_msc_unmount(MOUNT_POINT_USB);
+        msc_host_vfs_unregister(vfs_handle);
         ESP_LOGI(TAG, "MSC device unmounted");
         msc_host_uninstall_device(device_handle);
     }
 }
 
-void usb_host_lib_task(void *arg)
+void usb_host_lib_task_dummy(void *arg)
 {
     while (1) {
         uint32_t event_flags;
@@ -1728,7 +1659,7 @@ void eject_button_task(void *pvParameters) {
             ESP_LOGI(TAG, "Short press detected.");
             if (ebook_reader_connected) {
                 ESP_LOGI(TAG, "Unmounting USB drive...");
-                vfs_msc_unmount(MOUNT_POINT_USB);
+                msc_host_vfs_unregister(vfs_handle);
                 // The msc_event_cb will set ebook_reader_connected to false
                 // and the LED state to IDLE. We will override it here for feedback.
                 g_led_state = LED_STATE_EJECT;
@@ -1767,8 +1698,11 @@ void app_main(void) {
 
     app_event_queue = xQueueCreate(10, sizeof(app_event_queue_t));
     app_event_queue_t evt_queue;
+    (void)evt_queue;
+    (void)evt_queue;
 
-    TaskHandle_t host_lib_task_hdl, class_driver_task_hdl;
+    TaskHandle_t host_lib_task_hdl;
+    // TaskHandle_t class_driver_task_hdl;
 
     // Create usb host lib task
     BaseType_t task_created;
@@ -1785,13 +1719,7 @@ void app_main(void) {
     ulTaskNotifyTake(false, 1000);
 
     // Create class driver task
-    task_created = xTaskCreatePinnedToCore(class_driver_task,
-                                           "class",
-                                           5 * 1024,
-                                           NULL,
-                                           CLASS_TASK_PRIORITY,
-                                           &class_driver_task_hdl,
-                                           0);
+
     assert(task_created == pdTRUE);
     // Add a short delay to let the tasks run
     vTaskDelay(10);
