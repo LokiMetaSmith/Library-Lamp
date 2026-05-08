@@ -256,7 +256,7 @@ void bb_clear_messages(void) {
     bb_save_messages();
 }
 
-void bb_init(void) {
+void bb_initialize(void) {
     bb_load_identity();
     bb_load_admin_key();
     bb_load_messages();

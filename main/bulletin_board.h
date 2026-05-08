@@ -30,7 +30,7 @@ extern unsigned long token_issued_at;
 extern int msgCount;
 extern BulletinMessage msgs[MAX_MSGS];
 
-void bb_init(void);
+void bb_initialize(void);
 
 void bb_load_identity(void);
 void bb_save_identity(void);
