@@ -46,6 +46,7 @@
 # PlatformIO
 .pio/
 managed_components/
+sdkconfig
 
 *.bak
 jules_session_*
