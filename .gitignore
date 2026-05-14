@@ -50,5 +50,4 @@ sdkconfig
 
 *.bak
 jules_session_*
-
 .venv/
