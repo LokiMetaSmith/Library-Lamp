@@ -47,6 +47,7 @@
 #include "esp_spiffs.h"
 #include "sdmmc_cmd.h"
 #include "cJSON.h"
+#include "lorawan.h"
 
 // --- Local Dependencies ---
 #include "dns_server.h"
@@ -1688,6 +1689,9 @@ void app_main(void) {
     ESP_ERROR_CHECK(gpio_install_isr_service(ESP_INTR_FLAG_LOWMED));
     ESP_ERROR_CHECK(gpio_isr_handler_add(APP_QUIT_PIN, gpio_cb, NULL));
  
+    // Initialize LoRaWAN
+    lora_wan_init();
+
     // Initialize NVS
     esp_err_t ret = nvs_flash_init();
     if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
