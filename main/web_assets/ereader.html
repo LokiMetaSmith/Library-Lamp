@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>E-Book Library</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            margin: 0;
+            padding: 10px;
+            background: #fff;
+            color: #000;
+        }
+        h1 {
+            text-align: center;
+            font-size: 1.5em;
+        }
+        .book-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .book-item {
+            margin-bottom: 15px;
+            padding: 10px;
+            border-bottom: 1px solid #ccc;
+        }
+        .book-title {
+            font-size: 1.2em;
+            font-weight: bold;
+            margin-bottom: 5px;
+            display: block;
+            text-decoration: none;
+            color: #000;
+        }
+        .book-author {
+            font-size: 0.9em;
+            color: #555;
+        }
+        .loading {
+            text-align: center;
+            font-style: italic;
+        }
+        .error {
+            color: red;
+            text-align: center;
+        }
+        .footer {
+            margin-top: 30px;
+            text-align: center;
+            font-size: 0.8em;
+            color: #777;
+            padding-bottom: 20px;
+        }
+        .admin-link {
+            display: inline-block;
+            margin-top: 10px;
+            padding: 5px 10px;
+            background: #eee;
+            border: 1px solid #ccc;
+            text-decoration: none;
+            color: #333;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>E-Book Library</h1>
+
+    <div id="loading" class="loading">Loading books...</div>
+    <div id="error" class="error" style="display: none;"></div>
+
+    <ul id="book-list" class="book-list">
+        <!-- Books will be inserted here -->
+    </ul>
+
+    <div class="footer">
+        Direct Download Interface<br>
+        <a href="/" class="admin-link">Switch to Admin View</a>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            fetchBooks();
+        });
+
+        async function fetchBooks() {
+            try {
+                const response = await fetch('/list-files?type=sd');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const books = await response.json();
+                renderBooks(books);
+            } catch (error) {
+                console.error('Error fetching books:', error);
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('error').textContent = 'Failed to load books. Please refresh the page.';
+                document.getElementById('error').style.display = 'block';
+            }
+        }
+
+        function renderBooks(books) {
+            const listElement = document.getElementById('book-list');
+            const loadingElement = document.getElementById('loading');
+
+            listElement.innerHTML = ''; // Clear existing
+            loadingElement.style.display = 'none';
+
+            if (books.length === 0) {
+                listElement.innerHTML = '<li class="book-item">No books found in the library.</li>';
+                return;
+            }
+
+            // Sort books alphabetically by title
+            books.sort((a, b) => a.title.localeCompare(b.title));
+
+            books.forEach(book => {
+                const li = document.createElement('li');
+                li.className = 'book-item';
+
+                const titleLink = document.createElement('a');
+                titleLink.className = 'book-title';
+                titleLink.textContent = book.title;
+                // Link directly to the download endpoint
+                titleLink.href = `/download?file=${encodeURIComponent(book.name)}&source=sd`;
+
+                li.appendChild(titleLink);
+
+                if (book.author) {
+                    const authorDiv = document.createElement('div');
+                    authorDiv.className = 'book-author';
+                    authorDiv.textContent = `by ${book.author}`;
+                    li.appendChild(authorDiv);
+                }
+
+                listElement.appendChild(li);
+            });
+        }
+    </script>
+</body>
+</html>

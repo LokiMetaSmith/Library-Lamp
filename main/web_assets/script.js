@@ -65,7 +65,11 @@ createApp({
             this.transfer.error = '';
 
             try {
-                const response = await fetch('/transfer-file', {
+                if (source === 'sd') {
+            alert('A transfer has been initiated. Please press the physical Eject/Sleep button on the E-Book Librarian device to confirm the transfer.');
+        }
+
+        const response = await fetch('/transfer-file', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ source, destination, filename })

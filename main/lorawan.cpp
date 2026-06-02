@@ -29,7 +29,7 @@ void loraReceiveTask(void *pvParameters) {
         if (hal->digitalRead(LORA_DIO1_PIN) == HIGH) {
             if (xSemaphoreTake(loraMutex, portMAX_DELAY) == pdTRUE) {
                 // Read IRQ status to verify it's an RX DONE event
-                uint16_t irq = radio->getIrqFlags();
+                uint16_t irq = radio->getIrqStatus();
                 if (irq & RADIOLIB_SX126X_IRQ_RX_DONE) {
                     uint8_t rx_len = radio->getPacketLength();
                     if (rx_len > 0) {
@@ -54,7 +54,7 @@ void loraReceiveTask(void *pvParameters) {
                      // handle timeout if necessary
                 }
                 // Clear IRQ flags and restart receive mode
-                radio->clearIrqFlags(irq);
+                // IRQ flags cleared automatically by RadioLib startReceive
                 radio->startReceive();
 
                 xSemaphoreGive(loraMutex);
