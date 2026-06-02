@@ -13,12 +13,12 @@ The device hosts its own Wi-Fi network and provides a simple web interface, allo
 - **USB Host for E-Readers:** Automatically detects and mounts the storage of any USB Mass Storage compatible e-reader.
 - **Local Library Storage:** Uses a MicroSD card to hold a large collection of e-books.
 - **Simple Web Interface:** Provides an intuitive, browser-based UI for transferring files between the SD card and the connected e-reader.
+- **Direct Wi-Fi Download:** E-readers connecting directly to the device's Wi-Fi network are automatically served a lightweight, e-reader-friendly interface that allows them to download files wirelessly, without needing a USB connection.
+- **Two-Step Transfer Confirmation:** Pushing files via USB requires physical confirmation (pressing the device button) to prevent accidental or unauthorized transfers.
 - **Wi-Fi Access Point:** Creates its own Wi-Fi network, making it fully portable and operational without an internet connection.
-- **Visual Status Indicator:** An onboard RGB LED strip shows the system's current state (idle, connected, transferring).
+- **Visual Status Indicator:** An onboard RGB LED strip shows the system's current state (idle, connected, waiting for confirmation, transferring).
 - **Manual Sleep Mode:** A "shipping mode" can be activated from the web interface to put the device into deep sleep, conserving battery for long periods. A manual reset is required to wake the device.
-- **Physical Eject/Sleep Button:** A single button provides two functions: a short press safely ejects the connected USB device, and a long press puts the device into deep sleep.
-
-## 🛠️ Hardware & Wiring
+- **Physical Eject/Sleep Button:** A single button provides three functions: confirming a pending USB transfer, safely ejecting the connected USB device (short press), and putting the device into deep sleep (long press).
 
 All the necessary components to build this project are listed in the [Bill of Materials (BOM.md)](BOM.md).
 
@@ -58,17 +58,19 @@ This project is built using the **Espressif IoT Development Framework (ESP-IDF)*
 ## 💻 Usage
 
 1.  **Power On:** Power the ESP32-S3 board using a reliable 5V power supply. The LED strip will light up with a pulsing blue light, indicating it's ready.
-2.  **Connect to Wi-Fi:** On your phone or computer, connect to the Wi-Fi network with the SSID `Ebook-Library-Box-Setup`. There is no password.
-3.  **Open the Web Interface:** Open a web browser and navigate to `http://192.168.4.1`. This will either show you a Wi-Fi setup page (on first boot) or the main library interface.
-4.  **Connect Your E-Reader:** Plug your e-reader into the ESP32-S3's USB OTG port. The LED strip will turn solid green, and the web interface will update to show the files on your device.
-5.  **Transfer Books:** Select a book from either the library or your e-reader and use the buttons to copy it to the other device. The LED will pulse white during the transfer.
+2.  **Connect to Wi-Fi:** On your phone, computer, or e-reader, connect to the Wi-Fi network with the SSID `Ebook-Library-Box-Setup`. There is no password.
+3.  **Open the Web Interface:** Open a web browser and navigate to `http://192.168.4.1`.
+    - If you are on an e-reader, you will be automatically redirected to a simple list of available e-books that you can download directly over Wi-Fi.
+    - If you are on a phone or computer, you will see the main library interface (or the Wi-Fi setup page on first boot).
+4.  **Connect Your E-Reader (USB Method):** Plug your e-reader into the ESP32-S3's USB OTG port. The LED strip will turn solid green, and the web interface will update to show the files on your device.
+5.  **Transfer Books (USB Method):** Select a book from either the library or your e-reader and use the buttons to copy it to the other device.
+    - **Confirmation Required:** The UI will prompt you, and the LED strip will begin flashing yellow. You must physically press the `EJECT/SLEEP` button on the ESP32-S3 to authorize the transfer.
+    - The LED will pulse white during the transfer.
 6.  **Enter Sleep Mode (Optional):** From the web interface, you can click the "Enter Sleep Mode" button. This will put the device into a very low power deep sleep state. **To wake the device, you must press the physical `RESET` button on the board.**
-7.  **Eject or Sleep (Optional):** You can use the physical button for two actions:
-    - **Short Press:** Safely unmounts the connected e-reader. The LED will flash green, indicating it's safe to unplug the USB cable.
+7.  **Button Functions:** You can use the physical button for three actions:
+    - **Confirm Transfer:** When a transfer is initiated via the web UI, a short press confirms and starts the transfer.
+    - **Short Press (Idle):** Safely unmounts the connected e-reader. The LED will flash green, indicating it's safe to unplug the USB cable.
     - **Long Press (2-3 seconds):** Puts the device into deep sleep mode. You must press the `RESET` button to wake it.
-
-
-Here's the breakdown:
 
 1.  **The Technology (SDHC vs. SDXC):**
     * SD cards up to **32GB** are typically **SDHC** (Secure Digital High Capacity) and are formatted with the **FAT32** filesystem.
