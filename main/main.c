@@ -24,6 +24,7 @@
 
 // --- Standard and ESP-IDF Dependencies ---
 #include <stdio.h>
+#include <ctype.h>
 #include <stdbool.h>
 #include <string.h>
 #include <dirent.h>
@@ -184,6 +185,7 @@ typedef enum {
     LED_STATE_ERROR,
     LED_STATE_SETUP, // New state for config mode
     LED_STATE_EJECT, // For eject button feedback
+    LED_STATE_WAIT_CONFIRM,
 } led_state_t;
 
 volatile led_state_t g_led_state = LED_STATE_INIT;
@@ -202,6 +204,8 @@ static transfer_progress_t g_transfer_progress = {
     .active = false,
 };
 volatile bool g_cancel_transfer = false;
+volatile bool g_transfer_confirmed = false;
+volatile bool g_waiting_for_transfer_confirm = false;
 
 
 // --- NVS Functions ---
@@ -352,6 +356,24 @@ static esp_err_t copy_file(const char *source_path, const char *dest_path, trans
 
 // --- WEB SERVER HANDLERS (MAIN APP) ---
 static esp_err_t static_file_handler(httpd_req_t *req) {
+
+    // Detect e-readers and serve ereader.html by default instead of index.html
+    if (strcmp(req->uri, "/") == 0) {
+        char user_agent[256];
+        if (httpd_req_get_hdr_value_str(req, "User-Agent", user_agent, sizeof(user_agent)) == ESP_OK) {
+            // Convert user agent to lower case for easier matching
+            for(int i = 0; user_agent[i]; i++) {
+                user_agent[i] = tolower((unsigned char)user_agent[i]);
+            }
+            if (strstr(user_agent, "kobo") || strstr(user_agent, "kindle") || strstr(user_agent, "tolino") || strstr(user_agent, "ereader")) {
+                ESP_LOGI(TAG, "E-Reader detected, redirecting to /ereader.html");
+                httpd_resp_set_status(req, "302 Temporary Redirect");
+                httpd_resp_set_hdr(req, "Location", "/ereader.html");
+                httpd_resp_send(req, "Redirecting", HTTPD_RESP_USE_STRLEN);
+                return ESP_OK;
+            }
+        }
+    }
     char filepath[512];
     snprintf(filepath, sizeof(filepath), "%s%.*s", MOUNT_POINT_SPIFFS, (int)(sizeof(filepath) - strlen(MOUNT_POINT_SPIFFS) - 1), req->uri);
 
@@ -399,6 +421,133 @@ static esp_err_t static_file_handler(httpd_req_t *req) {
     httpd_resp_send_chunk(req, NULL, 0); // End response
     fclose(fd);
     free(chunk);
+    return ESP_OK;
+}
+
+
+
+// Simple URL decode function
+static void urldecode(char *dst, const char *src) {
+    char a, b;
+    while (*src) {
+        if ((*src == '%') &&
+            ((a = src[1]) && (b = src[2])) &&
+            (isxdigit((unsigned char)a) && isxdigit((unsigned char)b))) {
+            if (a >= 'a')
+                    a -= 'a'-'A';
+            if (a >= 'A')
+                    a -= ('A' - 10);
+            else
+                    a -= '0';
+            if (b >= 'a')
+                    b -= 'a'-'A';
+            if (b >= 'A')
+                    b -= ('A' - 10);
+            else
+                    b -= '0';
+            *dst++ = 16*a+b;
+            src+=3;
+        } else if (*src == '+') {
+            *dst++ = ' ';
+            src++;
+        } else {
+            *dst++ = *src++;
+        }
+    }
+    *dst++ = '\0';
+}
+
+// --- Download File Handler ---
+
+static esp_err_t download_handler(httpd_req_t *req) {
+    char buf[256];
+    if (httpd_req_get_url_query_str(req, buf, sizeof(buf)) != ESP_OK) {
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Bad Request");
+        return ESP_FAIL;
+    }
+
+    char file_param[128];
+    char source_param[32];
+
+    if (httpd_query_key_value(buf, "file", file_param, sizeof(file_param)) != ESP_OK ||
+        httpd_query_key_value(buf, "source", source_param, sizeof(source_param)) != ESP_OK) {
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Bad Request");
+        return ESP_FAIL;
+    }
+
+    char decoded_file_param[128];
+    urldecode(decoded_file_param, file_param);
+
+
+    const char *mount_path = (strcmp(source_param, "sd") == 0) ? MOUNT_POINT_SD : MOUNT_POINT_USB;
+
+    if (strcmp(source_param, "usb") == 0 && !ebook_reader_connected) {
+         httpd_resp_send_err(req, HTTPD_404_NOT_FOUND, "USB Not Connected");
+         return ESP_FAIL;
+    }
+
+    char filepath[512];
+    snprintf(filepath, sizeof(filepath), "%s/%s", mount_path, decoded_file_param);
+
+    // Basic path traversal prevention
+    if (strstr(decoded_file_param, "..") != NULL) {
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid Filename");
+        return ESP_FAIL;
+    }
+
+    struct stat path_stat;
+    if (stat(filepath, &path_stat) == -1) {
+        ESP_LOGE(TAG, "File not found for download: %s", filepath);
+        httpd_resp_send_404(req);
+        return ESP_FAIL;
+    }
+
+    // Determine content type based on extension
+    const char *type = "application/octet-stream";
+    if (strstr(filepath, ".epub")) type = "application/epub+zip";
+    else if (strstr(filepath, ".mobi")) type = "application/x-mobipocket-ebook";
+    else if (strstr(filepath, ".pdf")) type = "application/pdf";
+    else if (strstr(filepath, ".txt")) type = "text/plain";
+
+    httpd_resp_set_type(req, type);
+
+    // Set Content-Disposition header to encourage downloading
+    char disposition_header[256];
+    snprintf(disposition_header, sizeof(disposition_header), "attachment; filename=\"%s\"", decoded_file_param);
+    httpd_resp_set_hdr(req, "Content-Disposition", disposition_header);
+
+    FILE *fd = fopen(filepath, "rb");
+    if (!fd) {
+        ESP_LOGE(TAG, "Failed to open file for download: %s", filepath);
+        httpd_resp_send_500(req);
+        return ESP_FAIL;
+    }
+
+    char *chunk = malloc(4096);
+    if (!chunk) {
+        ESP_LOGE(TAG, "Failed to allocate memory for download chunk");
+        fclose(fd);
+        httpd_resp_send_500(req);
+        return ESP_FAIL;
+    }
+
+    size_t chunk_size;
+    do {
+        chunk_size = fread(chunk, 1, 4096, fd);
+        if (chunk_size > 0) {
+            if (httpd_resp_send_chunk(req, chunk, chunk_size) != ESP_OK) {
+                fclose(fd);
+                free(chunk);
+                ESP_LOGE(TAG, "File download chunk sending failed!");
+                return ESP_FAIL;
+            }
+        }
+    } while (chunk_size > 0);
+
+    httpd_resp_send_chunk(req, NULL, 0); // End response
+    fclose(fd);
+    free(chunk);
+    ESP_LOGI(TAG, "File download complete: %s", filepath);
     return ESP_OK;
 }
 
@@ -494,8 +643,6 @@ static esp_err_t transfer_file_handler(httpd_req_t *req) {
         return ESP_FAIL;
     }
 
-    g_led_state = LED_STATE_TRANSFER;
-
     char content[256];
     int ret = httpd_req_recv(req, content, sizeof(content) - 1);
     if (ret <= 0) {
@@ -536,6 +683,43 @@ static esp_err_t transfer_file_handler(httpd_req_t *req) {
 
     snprintf(source_path, sizeof(source_path), "%s/%s", (strcmp(source, "sd") == 0) ? MOUNT_POINT_SD : MOUNT_POINT_USB, filename);
     snprintf(dest_path, sizeof(dest_path), "%s/%s", (strcmp(destination, "sd") == 0) ? MOUNT_POINT_SD : MOUNT_POINT_USB, filename);
+
+    // Wait for physical confirmation if transferring to USB
+    if (strcmp(destination, "sd") != 0) {
+        g_waiting_for_transfer_confirm = true;
+        g_transfer_confirmed = false;
+        g_led_state = LED_STATE_WAIT_CONFIRM;
+
+        ESP_LOGI(TAG, "Waiting for physical button press to confirm transfer to USB...");
+
+        // Wait loop - timeout after 60 seconds
+        int timeout = 600; // 600 * 100ms = 60s
+        while (g_waiting_for_transfer_confirm && !g_transfer_confirmed && !g_cancel_transfer && timeout > 0) {
+            vTaskDelay(pdMS_TO_TICKS(100));
+            timeout--;
+        }
+
+        g_waiting_for_transfer_confirm = false;
+
+        if (g_cancel_transfer || timeout == 0 || !g_transfer_confirmed) {
+            ESP_LOGW(TAG, "Transfer cancelled or timed out waiting for confirmation.");
+            cJSON_Delete(json);
+            g_transfer_progress.active = false;
+            g_led_state = ebook_reader_connected ? LED_STATE_CONNECTED : LED_STATE_IDLE;
+
+            cJSON *response_json = cJSON_CreateObject();
+            cJSON_AddBoolToObject(response_json, "success", false);
+            cJSON_AddStringToObject(response_json, "message", "Transfer cancelled or timed out waiting for button press.");
+            char *json_str = cJSON_PrintUnformatted(response_json);
+            httpd_resp_set_type(req, "application/json");
+            httpd_resp_send(req, json_str, strlen(json_str));
+            free(json_str);
+            cJSON_Delete(response_json);
+            return ESP_OK;
+        }
+    }
+
+    g_led_state = LED_STATE_TRANSFER;
 
     esp_err_t res = copy_file(source_path, dest_path, &g_transfer_progress);
 
@@ -648,6 +832,9 @@ static httpd_handle_t start_webserver(void) {
 
         httpd_uri_t sleep_uri = { "/enter-sleep", HTTP_POST, sleep_handler, NULL };
         httpd_register_uri_handler(server, &sleep_uri);
+        httpd_uri_t download_uri = { "/download", HTTP_GET, download_handler, NULL };
+        httpd_register_uri_handler(server, &download_uri);
+
 
         // Handler for all other URIs (serves static files)
         httpd_uri_t static_uri = { "/*", HTTP_GET, static_file_handler, NULL };
@@ -1554,6 +1741,16 @@ static void led_status_task(void *pvParameters) {
                 g_led_state = LED_STATE_IDLE; // Revert to idle state
                 break;
 
+            case LED_STATE_WAIT_CONFIRM: // Fast blinking yellow
+                for (int i = 0; i < LED_STRIP_LED_NUMBERS; i++) {
+                    led_strip_set_pixel(g_led_strip, i, 200, 150, 0); // Yellow/Orange
+                }
+                led_strip_refresh(g_led_strip);
+                vTaskDelay(pdMS_TO_TICKS(200));
+                led_strip_clear(g_led_strip);
+                vTaskDelay(pdMS_TO_TICKS(200));
+                break;
+
             default:
                  vTaskDelay(pdMS_TO_TICKS(100));
                  break;
@@ -1658,7 +1855,13 @@ void eject_button_task(void *pvParameters) {
 
             // If we get here, it was a short press
             ESP_LOGI(TAG, "Short press detected.");
-            if (ebook_reader_connected) {
+
+            if (g_waiting_for_transfer_confirm) {
+                ESP_LOGI(TAG, "Transfer confirmed by physical button press.");
+                g_transfer_confirmed = true;
+                g_waiting_for_transfer_confirm = false;
+                // Don't unmount or show eject LED if we are just confirming a transfer
+            } else if (ebook_reader_connected) {
                 ESP_LOGI(TAG, "Unmounting USB drive...");
                 msc_host_vfs_unregister(vfs_handle);
                 // The msc_event_cb will set ebook_reader_connected to false
