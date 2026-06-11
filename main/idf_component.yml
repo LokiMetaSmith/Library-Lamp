@@ -5,3 +5,4 @@ dependencies:
   espressif/usb_host_msc: "^1.2.0"
   espressif/led_strip: "^3.0.0"
   jgromes/radiolib: "*"
+  espressif/cjson: "^1.7.17"
