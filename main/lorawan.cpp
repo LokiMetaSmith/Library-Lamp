@@ -28,30 +28,21 @@ void loraReceiveTask(void *pvParameters) {
         // Poll DIO1 pin for IRQ events (like RX Done)
         if (hal->digitalRead(LORA_DIO1_PIN) == HIGH) {
             if (xSemaphoreTake(loraMutex, portMAX_DELAY) == pdTRUE) {
-                // Read IRQ status to verify it's an RX DONE event
-                uint16_t irq = radio->getIrqStatus();
-                if (irq & RADIOLIB_SX126X_IRQ_RX_DONE) {
-                    uint8_t rx_len = radio->getPacketLength();
-                    if (rx_len > 0) {
-                        uint8_t str[256];
-                        memset(str, 0, 256);
-                        state = radio->readData(str, rx_len);
+                uint8_t str[256];
+                memset(str, 0, 256);
+                state = radio->readData(str, 255);
 
-                        if (state == RADIOLIB_ERR_NONE) {
-                            ESP_LOGI(TAG, "Received packet!");
-                            ESP_LOGI(TAG, "Data: %s", (char*)str);
-                            ESP_LOGI(TAG, "RSSI: %f dBm", radio->getRSSI());
-                            ESP_LOGI(TAG, "SNR: %f dB", radio->getSNR());
+                if (state == RADIOLIB_ERR_NONE) {
+                    ESP_LOGI(TAG, "Received packet!");
+                    ESP_LOGI(TAG, "Data: %s", (char*)str);
+                    ESP_LOGI(TAG, "RSSI: %f dBm", radio->getRSSI());
+                    ESP_LOGI(TAG, "SNR: %f dB", radio->getSNR());
 
-                            // TODO: Parse MSG packets and inject them into bulletin_board
-                        } else if (state == RADIOLIB_ERR_CRC_MISMATCH) {
-                            ESP_LOGW(TAG, "CRC error!");
-                        } else {
-                            ESP_LOGW(TAG, "Failed to read data, code %d", state);
-                        }
-                    }
-                } else if (irq & RADIOLIB_SX126X_IRQ_TIMEOUT) {
-                     // handle timeout if necessary
+                    // TODO: Parse MSG packets and inject them into bulletin_board
+                } else if (state == RADIOLIB_ERR_CRC_MISMATCH) {
+                    ESP_LOGW(TAG, "CRC error!");
+                } else {
+                    ESP_LOGW(TAG, "Failed to read data, code %d", state);
                 }
                 // Clear IRQ flags and restart receive mode
                 // IRQ flags cleared automatically by RadioLib startReceive
