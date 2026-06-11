@@ -47,7 +47,7 @@ idf_component_register(SRCS "${COMPONENT_SRCS}"
 
                          # External Components
                          radiolib
-                         json
+                         cjson
 )
 # Generate the SPIFFS image from the web_assets directory
 set(SPIFFS_IMAGE_DIR "${CMAKE_CURRENT_LIST_DIR}/web_assets")
