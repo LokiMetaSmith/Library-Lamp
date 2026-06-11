@@ -10,3 +10,12 @@ idf_component_register(
     INCLUDE_DIRS
         "."
 )
+
+target_compile_options(${COMPONENT_LIB} PRIVATE
+    -Wno-error
+    -Wno-unused-variable
+    -Wno-unused-but-set-variable
+    -Wno-missing-field-initializers
+    -Wno-implicit-fallthrough
+    -Wno-type-limits
+)
