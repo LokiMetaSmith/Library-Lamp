@@ -354,8 +354,75 @@ static esp_err_t copy_file(const char *source_path, const char *dest_path, trans
     return ESP_OK;
 }
 
+// --- WEB SERVER HANDLERS (CAPTIVE PORTAL) ---
+// Handler to serve the setup page
+static esp_err_t setup_get_handler(httpd_req_t *req) {
+    ESP_LOGI(TAG, "Serving setup page");
+    httpd_resp_set_type(req, "text/html");
+    httpd_resp_send(req, (const char*)main_web_assets_setup_html, main_web_assets_setup_html_len);
+    return ESP_OK;
+}
+
+// Handler to save credentials and restart
+static esp_err_t save_credentials_post_handler(httpd_req_t *req) {
+    char buf[128];
+    int ret, remaining = req->content_len;
+
+    if (remaining > sizeof(buf) -1) {
+        ESP_LOGE(TAG, "Content too long");
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Bad Request");
+        return ESP_FAIL;
+    }
+
+    ret = httpd_req_recv(req, buf, remaining);
+    if (ret <= 0) {
+        if (ret == HTTPD_SOCK_ERR_TIMEOUT) {
+            httpd_resp_send_408(req);
+        }
+        return ESP_FAIL;
+    }
+    buf[ret] = '\0';
+
+    char ssid[32] = {0};
+    char password[64] = {0};
+
+    if (httpd_query_key_value(buf, "ssid", ssid, sizeof(ssid)) != ESP_OK ||
+        httpd_query_key_value(buf, "password", password, sizeof(password)) != ESP_OK) {
+        ESP_LOGE(TAG, "Could not parse ssid/password from POST data: %s", buf);
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Bad Request");
+        return ESP_FAIL;
+    }
+
+    ESP_LOGI(TAG, "Received SSID: %s", ssid);
+    // Do not log password for security reasons
+
+    esp_err_t err = save_wifi_credentials(ssid, password);
+    if (err != ESP_OK) {
+        httpd_resp_send_500(req);
+        return ESP_FAIL;
+    }
+
+    // Respond before restarting
+    httpd_resp_send(req, "Wi-Fi credentials saved. The device will now restart.", HTTPD_RESP_USE_STRLEN);
+
+    // Restart the device to apply the new settings
+    vTaskDelay(pdMS_TO_TICKS(2000));
+    esp_restart();
+
+    return ESP_OK;
+}
+
 // --- WEB SERVER HANDLERS (MAIN APP) ---
 static esp_err_t static_file_handler(httpd_req_t *req) {
+
+    // If we're hitting /generate_204 or other known captive portal probe endpoints, redirect them to root
+    if (strstr(req->uri, "generate_204") != NULL || strstr(req->uri, "hotspot-detect") != NULL) {
+        httpd_resp_set_status(req, "302 Temporary Redirect");
+        httpd_resp_set_hdr(req, "Location", "/");
+        httpd_resp_send(req, "Redirecting to main page", HTTPD_RESP_USE_STRLEN);
+        ESP_LOGI(TAG, "Redirecting to root for captive portal");
+        return ESP_OK;
+    }
 
     // Detect e-readers and serve ereader.html by default instead of index.html
     if (strcmp(req->uri, "/") == 0) {
@@ -385,8 +452,12 @@ static esp_err_t static_file_handler(httpd_req_t *req) {
     struct stat path_stat;
     if (stat(filepath, &path_stat) == -1) {
         ESP_LOGE(TAG, "File not found: %s", filepath);
-        httpd_resp_send_404(req);
-        return ESP_FAIL;
+        // Instead of 404, redirect to root for captive portal functionality
+        httpd_resp_set_status(req, "302 Temporary Redirect");
+        httpd_resp_set_hdr(req, "Location", "/");
+        httpd_resp_send(req, "Redirecting to main page", HTTPD_RESP_USE_STRLEN);
+        ESP_LOGI(TAG, "Redirecting to root for captive portal");
+        return ESP_OK;
     }
 
     // Set content type based on file extension
@@ -835,105 +906,15 @@ static httpd_handle_t start_webserver(void) {
         httpd_uri_t download_uri = { "/download", HTTP_GET, download_handler, NULL };
         httpd_register_uri_handler(server, &download_uri);
 
-
-        // Handler for all other URIs (serves static files)
-        httpd_uri_t static_uri = { "/*", HTTP_GET, static_file_handler, NULL };
-        httpd_register_uri_handler(server, &static_uri);
-    }
-    return server;
-}
-
-// --- WEB SERVER HANDLERS (CAPTIVE PORTAL) ---
-// Handler to serve the setup page
-static esp_err_t setup_get_handler(httpd_req_t *req) {
-    ESP_LOGI(TAG, "Serving setup page");
-    httpd_resp_set_type(req, "text/html");
-    httpd_resp_send(req, (const char*)main_web_assets_setup_html, main_web_assets_setup_html_len);
-    return ESP_OK;
-}
-
-// Handler to save credentials and restart
-static esp_err_t save_credentials_post_handler(httpd_req_t *req) {
-    char buf[128];
-    int ret, remaining = req->content_len;
-
-    if (remaining > sizeof(buf) -1) {
-        ESP_LOGE(TAG, "Content too long");
-        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Bad Request");
-        return ESP_FAIL;
-    }
-
-    ret = httpd_req_recv(req, buf, remaining);
-    if (ret <= 0) {
-        if (ret == HTTPD_SOCK_ERR_TIMEOUT) {
-            httpd_resp_send_408(req);
-        }
-        return ESP_FAIL;
-    }
-    buf[ret] = '\0';
-
-    char ssid[32] = {0};
-    char password[64] = {0};
-
-    if (httpd_query_key_value(buf, "ssid", ssid, sizeof(ssid)) != ESP_OK ||
-        httpd_query_key_value(buf, "password", password, sizeof(password)) != ESP_OK) {
-        ESP_LOGE(TAG, "Could not parse ssid/password from POST data: %s", buf);
-        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Bad Request");
-        return ESP_FAIL;
-    }
-
-    ESP_LOGI(TAG, "Received SSID: %s", ssid);
-    // Do not log password for security reasons
-
-    esp_err_t err = save_wifi_credentials(ssid, password);
-    if (err != ESP_OK) {
-        httpd_resp_send_500(req);
-        return ESP_FAIL;
-    }
-
-    // Respond before restarting
-    httpd_resp_send(req, "Wi-Fi credentials saved. The device will now restart.", HTTPD_RESP_USE_STRLEN);
-
-    // Restart the device to apply the new settings
-    vTaskDelay(pdMS_TO_TICKS(2000));
-    esp_restart();
-
-    return ESP_OK;
-}
-
-// HTTP Error (404) Handler - Redirects all requests to the root page
-static esp_err_t http_404_error_handler(httpd_req_t *req, httpd_err_code_t err)
-{
-    // Set status
-    httpd_resp_set_status(req, "302 Temporary Redirect");
-    // Redirect to the "/" root directory
-    httpd_resp_set_hdr(req, "Location", "/");
-    // iOS requires content in the response to detect a captive portal, simply redirecting is not sufficient.
-    httpd_resp_send(req, "Redirecting to setup", HTTPD_RESP_USE_STRLEN);
-
-    ESP_LOGI(TAG, "Redirecting to root for captive portal");
-    return ESP_OK;
-}
-
-
-// --- WEB SERVER SETUP (CAPTIVE PORTAL) ---
-static httpd_handle_t start_captive_portal_server(void) {
-    httpd_handle_t server = NULL;
-    httpd_config_t config = HTTPD_DEFAULT_CONFIG();
-    config.max_open_sockets = 7;
-    config.lru_purge_enable = true;
-    config.uri_match_fn = httpd_uri_match_wildcard;
-
-    // Start the httpd server
-    ESP_LOGI(TAG, "Starting captive portal server on port: '%d'", config.server_port);
-    if (httpd_start(&server, &config) == ESP_OK) {
-        httpd_uri_t setup_uri = { "/", HTTP_GET, setup_get_handler, NULL };
+        httpd_uri_t setup_uri = { "/setup", HTTP_GET, setup_get_handler, NULL };
         httpd_register_uri_handler(server, &setup_uri);
 
         httpd_uri_t save_uri = { "/save-credentials", HTTP_POST, save_credentials_post_handler, NULL };
         httpd_register_uri_handler(server, &save_uri);
 
-        httpd_register_err_handler(server, HTTPD_404_NOT_FOUND, http_404_error_handler);
+        // Handler for all other URIs (serves static files)
+        httpd_uri_t static_uri = { "/*", HTTP_GET, static_file_handler, NULL };
+        httpd_register_uri_handler(server, &static_uri);
     }
     return server;
 }
@@ -1329,7 +1310,7 @@ void init_wifi(void) {
         ESP_ERROR_CHECK(esp_event_handler_instance_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &wifi_event_handler, NULL, NULL));
         ESP_ERROR_CHECK(esp_event_handler_instance_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &wifi_event_handler, NULL, NULL));
 
-        wifi_config_t wifi_config = { .sta = { .threshold.authmode = WIFI_AUTH_WPA2_PSK } };
+        wifi_config_t wifi_config = { .sta = { .threshold.authmode = WIFI_AUTH_WPA_WPA2_PSK } };
         strlcpy((char*)wifi_config.sta.ssid, ssid, sizeof(wifi_config.sta.ssid));
         strlcpy((char*)wifi_config.sta.password, password, sizeof(wifi_config.sta.password));
 
@@ -1942,22 +1923,22 @@ void app_main(void) {
 
     init_wifi();
 
+    ESP_LOGI(TAG, "Starting main application and services...");
+    init_spiffs();
+    init_sd_card();
+    init_usb_host();
+    start_webserver();
+
     if (g_wifi_configured) {
         // Normal operation
-        ESP_LOGI(TAG, "Starting main application...");
-        init_spiffs();
-        init_sd_card();
-        init_usb_host();
-        start_webserver();
-        ESP_LOGI(TAG, "E-Book Librarian is running!");
+        ESP_LOGI(TAG, "E-Book Librarian is running in STA mode!");
         g_led_state = LED_STATE_IDLE;
     } else {
         // Configuration mode
-        ESP_LOGI(TAG, "Starting configuration portal...");
+        ESP_LOGI(TAG, "Starting AP mode services...");
         g_led_state = LED_STATE_SETUP; // Set LED to setup mode
         start_dns_server();
-        start_captive_portal_server();
-        ESP_LOGI(TAG, "Captive portal is running. Connect to the Wi-Fi AP to configure.");
+        ESP_LOGI(TAG, "AP mode and Captive Portal services are running. Connect to the Wi-Fi AP to configure or browse.");
     }
 
     // Start the eject button monitoring task
