@@ -9,6 +9,11 @@
 <body>
     <div id="app">
         <header class="app-header">
+        <div v-if="systemErrors.length > 0" class="system-banner">
+            <ul>
+                <li v-for="err in systemErrors" :key="err">{{ err }}</li>
+            </ul>
+        </div>
             <h1>E-Book Librarian</h1>
             <div class="status-indicator" :class="statusClass"></div>
         <div style="text-align: right; font-size: 1.1em; padding-bottom: 5px;">
