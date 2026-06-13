@@ -136,6 +136,9 @@ static msc_host_device_handle_t device_handle = NULL;
 static msc_host_vfs_handle_t vfs_handle = NULL;
 static led_strip_handle_t g_led_strip;
 static bool g_wifi_configured = false;
+bool g_usb_mounted = false;
+bool g_sd_card_initialized = false;
+extern bool lora_initialized;
 QueueHandle_t app_event_queue = NULL;
 
 /**
@@ -627,6 +630,9 @@ static esp_err_t status_handler(httpd_req_t *req) {
     cJSON *root = cJSON_CreateObject();
     cJSON_AddBoolToObject(root, "reader_connected", ebook_reader_connected);
     cJSON_AddBoolToObject(root, "transfer_active", g_transfer_progress.active);
+    cJSON_AddBoolToObject(root, "sd_mounted", g_sd_card_initialized);
+    cJSON_AddBoolToObject(root, "usb_mounted", g_usb_mounted);
+    cJSON_AddBoolToObject(root, "lora_initialized", lora_initialized);
     if (g_transfer_progress.active) {
         cJSON_AddStringToObject(root, "filename", g_transfer_progress.filename);
         cJSON_AddNumberToObject(root, "bytes_transferred", g_transfer_progress.bytes_transferred);
@@ -654,6 +660,12 @@ static esp_err_t list_files_handler(httpd_req_t *req) {
 
     const char *mount_path = (strcmp(param, "sd") == 0) ? MOUNT_POINT_SD : MOUNT_POINT_USB;
 
+    if (strcmp(param, "sd") == 0 && !g_sd_card_initialized) {
+         httpd_resp_set_type(req, "application/json");
+         httpd_resp_send(req, "[]", 2);
+         return ESP_OK;
+    }
+
     if (strcmp(param, "usb") == 0 && !ebook_reader_connected) {
          httpd_resp_set_type(req, "application/json");
          httpd_resp_send(req, "[]", 2);
@@ -662,9 +674,10 @@ static esp_err_t list_files_handler(httpd_req_t *req) {
 
     DIR *d = opendir(mount_path);
     if (!d) {
-        ESP_LOGE(TAG, "Failed to open directory: %s", mount_path);
-        httpd_resp_send_500(req);
-        return ESP_FAIL;
+        ESP_LOGW(TAG, "Failed to open directory: %s", mount_path);
+        httpd_resp_set_type(req, "application/json");
+        httpd_resp_send(req, "[]", 2);
+        return ESP_OK;
     }
 
     cJSON *root = cJSON_CreateArray();
@@ -1413,7 +1426,7 @@ void init_sd_card(void) {
     };
     ret = spi_bus_initialize(host.slot, &bus_cfg, SDSPI_DEFAULT_DMA);
     if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to initialize spi bus.");
+        ESP_LOGE(TAG, "Failed to initialize spi bus."); g_sd_card_initialized = false;
         g_led_state = LED_STATE_ERROR;
         return;
     }
@@ -1425,10 +1438,10 @@ void init_sd_card(void) {
     ret = esp_vfs_fat_sdspi_mount(mount_point, &host, &slot_config, &mount_config, &card);
 
     if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to mount SD card VFS");
+        ESP_LOGE(TAG, "Failed to mount SD card VFS"); g_sd_card_initialized = false;
         g_led_state = LED_STATE_ERROR;
     } else {
-        ESP_LOGI(TAG, "SD card mounted successfully at %s", mount_point);
+        ESP_LOGI(TAG, "SD card mounted successfully at %s", mount_point); g_sd_card_initialized = true;
     }
 }
 
@@ -1622,13 +1635,7 @@ void usb_host_lib_task_dummy(void *arg)
 
 void init_usb_host() {
     ESP_LOGI(TAG, "Installing USB Host Library");
-    const usb_host_config_t host_config = {
-        .intr_flags = ESP_INTR_FLAG_LEVEL1,
-    };
-    ESP_ERROR_CHECK(usb_host_install(&host_config));
 
-    // Create a task to handle USB library events
-    xTaskCreate(usb_host_lib_task, "usb_host", 4096, NULL, 10, NULL);
 
     ESP_LOGI(TAG, "Installing MSC client");
     const msc_host_driver_config_t msc_config = {
@@ -1637,7 +1644,13 @@ void init_usb_host() {
         .stack_size = 4096,
         .callback = msc_event_cb,
     };
-    ESP_ERROR_CHECK(msc_host_install(&msc_config));
+    esp_err_t err = msc_host_install(&msc_config);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to install MSC client");
+        g_usb_mounted = false;
+    } else {
+        g_usb_mounted = true;
+    }
 }
 
 // --- LED STRIP ---

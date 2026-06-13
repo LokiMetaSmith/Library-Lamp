@@ -12,6 +12,7 @@ EspHal* hal = nullptr;
 SX1262* radio = nullptr;
 
 // FreeRTOS task handle and mutex
+bool lora_initialized = false;
 TaskHandle_t loraReceiveTaskHandle = NULL;
 SemaphoreHandle_t loraMutex = NULL;
 
@@ -77,7 +78,7 @@ void lora_wan_init(void) {
     int state = radio->begin(915.0);
 
     if (state == RADIOLIB_ERR_NONE) {
-        ESP_LOGI(TAG, "SX1262 init success!");
+        ESP_LOGI(TAG, "SX1262 init success!"); lora_initialized = true;
 
         // Apply Meshtastic LongFast equivalents
         radio->setBandwidth(250.0);
@@ -107,7 +108,7 @@ void lora_wan_init(void) {
 }
 
 void lora_wan_broadcast(const char *message) {
-    if (!radio) {
+    if (!lora_initialized) {
         ESP_LOGE(TAG, "Radio not initialized!");
         return;
     }

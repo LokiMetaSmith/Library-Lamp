@@ -6,6 +6,7 @@ createApp({
             localFiles: [],
             ereaderFiles: [],
             isEReaderConnected: false,
+            systemErrors: [],
             status: 'idle', // idle, connected, transferring
             transfer: {
                 active: false,
@@ -29,6 +30,11 @@ createApp({
                 const response = await fetch('/status');
                 const data = await response.json();
                 this.isEReaderConnected = data.reader_connected;
+                const errors = [];
+                if (!data.sd_mounted) errors.push("Warning: SD Card not mounted.");
+                if (!data.usb_mounted) errors.push("Warning: USB initialization failed.");
+                if (!data.lora_initialized) errors.push("Warning: LoRaWAN initialization failed.");
+                this.systemErrors = errors;
                 if (data.transfer_active) {
                     this.transfer.active = true;
                     this.transfer.filename = data.filename;

@@ -316,6 +316,9 @@ body {
 <body>
 
 <header class="site-header">
+  <div id="systemBanner" style="display:none;background:#ffcc00;color:#333;padding:10px;margin:0 24px 15px 24px;border-radius:5px;border:1px solid #e6b800;">
+    <ul id="systemErrorsList" style="margin:0;padding-left:20px;"></ul>
+  </div>
   <div class="header-title-block">
     <div class="site-title" id="boardTitle">COMMUNITY HUB</div>
     <div class="site-sub"   id="boardTagline"></div>
@@ -488,11 +491,32 @@ function setSort(s, btn) {
   document.getElementById('sNew').classList.toggle('active', s === 'new');
   document.getElementById('sExp').classList.toggle('active', s === 'exp');
   load();
+  loadSystemStatus();
 }
 
 // ── Data ───────────────────────────────────────
 let lastData = [];
 
+async function loadSystemStatus() {
+  try {
+    const res = await fetch("/status");
+    if (res.ok) {
+      const data = await res.json();
+      const errors = [];
+      if (!data.sd_mounted) errors.push("Warning: SD Card not mounted.");
+      if (!data.usb_mounted) errors.push("Warning: USB initialization failed.");
+      if (!data.lora_initialized) errors.push("Warning: LoRaWAN initialization failed.");
+      if (errors.length > 0) {
+        const banner = document.getElementById("systemBanner");
+        const list = document.getElementById("systemErrorsList");
+        list.innerHTML = errors.map(e => `<li>${e}</li>`).join("");
+        banner.style.display = "block";
+      }
+    }
+  } catch (e) {
+    console.error("Failed to load status", e);
+  }
+}
 async function load() {
   try {
     checkBoardStatus();
@@ -556,6 +580,7 @@ async function doPost() {
   document.getElementById('msgIn').value      = '';
   document.getElementById('msgHint').textContent = '';
   load();
+  loadSystemStatus();
 }
 
 // ── Board info ─────────────────────────────────
@@ -572,6 +597,7 @@ function loadInfo() {
 setInterval(load,     60000);
 setInterval(loadInfo, 60000);
 load();
+  loadSystemStatus();
 loadInfo();
 checkBoardStatus();
 </script>

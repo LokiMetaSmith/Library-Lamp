@@ -78,3 +78,17 @@ button.cancel-btn:hover {
 .sleep-btn:hover {
     background-color: #e74c3c;
 }
+
+/* System Banner */
+.system-banner {
+    background-color: #ffcc00;
+    color: #333;
+    padding: 10px;
+    margin-bottom: 15px;
+    border-radius: 5px;
+    border: 1px solid #e6b800;
+}
+.system-banner ul {
+    margin: 0;
+    padding-left: 20px;
+}
