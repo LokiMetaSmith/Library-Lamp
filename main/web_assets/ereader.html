@@ -69,6 +69,9 @@
 
     <h1>E-Book Library</h1>
 
+<div id="systemBanner" style="display:none;background:#ffcc00;color:#333;padding:10px;margin-bottom:15px;border-radius:5px;border:1px solid #e6b800;font-size:0.9em;">
+    <ul id="systemErrorsList" style="margin:0;padding-left:20px;"></ul>
+</div>
     <div id="loading" class="loading">Loading books...</div>
     <div id="error" class="error" style="display: none;"></div>
 
@@ -84,8 +87,29 @@
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             fetchBooks();
+        loadSystemStatus();
         });
 
+        async function loadSystemStatus() {
+            try {
+                const res = await fetch("/status");
+                if (res.ok) {
+                    const data = await res.json();
+                    const errors = [];
+                    if (!data.sd_mounted) errors.push("Warning: SD Card not mounted.");
+                    if (!data.usb_mounted) errors.push("Warning: USB initialization failed.");
+                    if (!data.lora_initialized) errors.push("Warning: LoRaWAN initialization failed.");
+                    if (errors.length > 0) {
+                        const banner = document.getElementById("systemBanner");
+                        const list = document.getElementById("systemErrorsList");
+                        list.innerHTML = errors.map(e => `<li>${e}</li>`).join("");
+                        banner.style.display = "block";
+                    }
+                }
+            } catch (e) {
+                console.error("Failed to load status", e);
+            }
+        }
         async function fetchBooks() {
             try {
                 const response = await fetch('/list-files?type=sd');
