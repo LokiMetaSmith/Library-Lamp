@@ -49,6 +49,7 @@
 #include "sdmmc_cmd.h"
 #include "cJSON.h"
 #include "lorawan.h"
+#include "bulletin_api.h"
 
 // --- Local Dependencies ---
 #include "dns_server.h"
@@ -991,6 +992,7 @@ static httpd_handle_t start_webserver(void) {
     httpd_handle_t server = NULL;
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
     config.uri_match_fn = httpd_uri_match_wildcard;
+    config.max_uri_handlers = 24;
 
     ESP_LOGI(TAG, "Starting server on port: '%d'", config.server_port);
     if (httpd_start(&server, &config) == ESP_OK) {
@@ -1023,6 +1025,9 @@ static httpd_handle_t start_webserver(void) {
 
         httpd_uri_t set_led_uri = { "/set-led-color", HTTP_POST, set_led_color_handler, NULL };
         httpd_register_uri_handler(server, &set_led_uri);
+
+        // Register bulletin board API endpoints
+        register_bulletin_api_handlers(server);
 
         // Handler for all other URIs (serves static files)
         httpd_uri_t static_uri = { "/*", HTTP_GET, static_file_handler, NULL };
