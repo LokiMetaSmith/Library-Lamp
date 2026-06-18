@@ -6,62 +6,96 @@
     <title>E-Book Library</title>
     <style>
         body {
-            font-family: sans-serif;
+            font-family: "Georgia", "Times New Roman", serif;
             margin: 0;
             padding: 10px;
-            background: #fff;
-            color: #000;
+            background: #2b211a;
+            color: #e8dbce;
         }
         h1 {
             text-align: center;
-            font-size: 1.5em;
+            font-size: 1.8em;
+            color: #ffcc80;
+            text-shadow: 0 0 10px rgba(255, 204, 128, 0.4);
+            border-bottom: 2px solid #5a4634;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
         }
         .book-list {
             list-style: none;
             padding: 0;
             margin: 0;
+            max-width: 600px;
+            margin: 0 auto;
         }
         .book-item {
             margin-bottom: 15px;
-            padding: 10px;
-            border-bottom: 1px solid #ccc;
+            padding: 15px;
+            background-color: #3f3127;
+            border: 1px solid #5a4634;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5), 0 0 15px rgba(255, 180, 100, 0.1);
         }
         .book-title {
-            font-size: 1.2em;
+            font-size: 1.3em;
             font-weight: bold;
             margin-bottom: 5px;
             display: block;
             text-decoration: none;
-            color: #000;
+            color: #ffcc80;
+        }
+        .book-title:hover {
+            color: #ffe0b2;
+            text-shadow: 0 0 5px rgba(255, 204, 128, 0.5);
         }
         .book-author {
+            font-size: 1em;
+            color: #d1bfae;
+            font-style: italic;
+        }
+        .book-notes {
             font-size: 0.9em;
-            color: #555;
+            color: #a89f91;
+            margin-top: 8px;
+            line-height: 1.4;
         }
         .loading {
             text-align: center;
             font-style: italic;
+            color: #ffcc80;
         }
         .error {
-            color: red;
+            color: #ff8a80;
             text-align: center;
+            background-color: #3a2220;
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #5a2a25;
+            max-width: 600px;
+            margin: 0 auto;
         }
         .footer {
-            margin-top: 30px;
+            margin-top: 40px;
             text-align: center;
-            font-size: 0.8em;
-            color: #777;
+            font-size: 0.9em;
+            color: #8a7b6c;
             padding-bottom: 20px;
         }
         .admin-link {
             display: inline-block;
-            margin-top: 10px;
-            padding: 5px 10px;
-            background: #eee;
-            border: 1px solid #ccc;
+            margin-top: 15px;
+            padding: 8px 16px;
+            background: #8c5a35;
+            border: 1px solid #5a3820;
             text-decoration: none;
-            color: #333;
-            border-radius: 4px;
+            color: #f5eedc;
+            border-radius: 6px;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.1), 0 1px 2px rgba(0,0,0,0.3);
+            transition: background-color 0.2s;
+        }
+        .admin-link:hover {
+            background-color: #a06b43;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.2), 0 0 8px rgba(255, 204, 128, 0.4);
         }
     </style>
 </head>
@@ -69,7 +103,7 @@
 
     <h1>E-Book Library</h1>
 
-<div id="systemBanner" style="display:none;background:#ffcc00;color:#333;padding:10px;margin-bottom:15px;border-radius:5px;border:1px solid #e6b800;font-size:0.9em;">
+<div id="systemBanner" style="display:none;background:#8a6a24;color:#f5eedc;padding:10px;margin: 0 auto 20px auto;border-radius:5px;border:1px solid #a88532;font-size:0.9em;max-width:600px;box-shadow: 0 0 10px rgba(255, 200, 50, 0.2);">
     <ul id="systemErrorsList" style="margin:0;padding-left:20px;"></ul>
 </div>
     <div id="loading" class="loading">Loading books...</div>
@@ -134,7 +168,7 @@
             loadingElement.style.display = 'none';
 
             if (books.length === 0) {
-                listElement.innerHTML = '<li class="book-item">No books found in the library.</li>';
+                listElement.innerHTML = '<li class="book-item" style="text-align: center; color: #a89f91;">No books found in the library.</li>';
                 return;
             }
 
@@ -158,6 +192,13 @@
                     authorDiv.className = 'book-author';
                     authorDiv.textContent = `by ${book.author}`;
                     li.appendChild(authorDiv);
+                }
+
+                if (book.notes) {
+                    const notesDiv = document.createElement('div');
+                    notesDiv.className = 'book-notes';
+                    notesDiv.textContent = book.notes;
+                    li.appendChild(notesDiv);
                 }
 
                 listElement.appendChild(li);
