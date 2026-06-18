@@ -4,9 +4,13 @@ This document lists the necessary hardware components to build the E-Book Librar
 
 ### Core Components
 
-* **ESP32-S3 Development Board with USB OTG**
-    * **Description:** The main microcontroller for the project. It is essential to choose a model that has a USB-C or Micro-USB port specifically for OTG/Host functionality.
-    * **Notes / Example Link:** The official [ESP32-S3-USB-OTG board](https://www.espressif.com/en/products/devkits/esp32-s3-usb-otg) is ideal, but other S3 boards with OTG support will work.
+* **Seeed Studio XIAO ESP32S3**
+    * **Description:** The main microcontroller for the project. The XIAO ESP32S3 provides a compact form factor with the necessary power and USB OTG support.
+    * **Notes / Example Link:** [Seeed Studio XIAO ESP32S3](https://www.seeedstudio.com/XIAO-ESP32S3-p-5627.html).
+
+* **Wio-SX1262 LoRa Module**
+    * **Description:** A LoRaWAN / Meshtastic compatible module used for long-range communication.
+    * **Notes / Example Link:** This module pairs perfectly with the XIAO ESP32S3.
 
 * **MicroSD Card Module**
     * **Description:** A standard SPI-based MicroSD card reader to store the main e-book library.
