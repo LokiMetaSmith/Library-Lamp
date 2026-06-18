@@ -1,0 +1,87 @@
+menu "E-Book Librarian Configuration"
+
+    config SD_MISO_PIN
+        int "SD Card MISO Pin"
+        default 10
+        help
+            MISO pin for SD Card SPI bus
+
+    config SD_MOSI_PIN
+        int "SD Card MOSI Pin"
+        default 11
+        help
+            MOSI pin for SD Card SPI bus
+
+    config SD_CLK_PIN
+        int "SD Card CLK Pin"
+        default 12
+        help
+            CLK pin for SD Card SPI bus
+
+    config SD_CS_PIN
+        int "SD Card CS Pin"
+        default 13
+        help
+            CS pin for SD Card SPI bus
+
+    config LORA_MISO_PIN
+        int "LoRa MISO Pin"
+        default 8
+        help
+            MISO pin for LoRa SPI bus
+
+    config LORA_MOSI_PIN
+        int "LoRa MOSI Pin"
+        default 9
+        help
+            MOSI pin for LoRa SPI bus
+
+    config LORA_CLK_PIN
+        int "LoRa CLK Pin"
+        default 7
+        help
+            CLK pin for LoRa SPI bus
+
+    config LORA_CS_PIN
+        int "LoRa CS Pin"
+        default 5
+        help
+            CS pin for LoRa SPI bus
+
+    config LORA_RST_PIN
+        int "LoRa RST Pin"
+        default 3
+        help
+            RST pin for LoRa
+
+    config LORA_BUSY_PIN
+        int "LoRa BUSY Pin"
+        default 4
+        help
+            BUSY pin for LoRa
+
+    config LORA_DIO1_PIN
+        int "LoRa DIO1 Pin"
+        default 2
+        help
+            DIO1 pin for LoRa
+
+    config LORA_DIO2_PIN
+        int "LoRa DIO2 Pin"
+        default 6
+        help
+            DIO2 pin for LoRa
+
+    config LED_STRIP_GPIO
+        int "LED Strip GPIO Pin"
+        default 21
+        help
+            GPIO pin for the WS2812 LED strip
+
+    config EJECT_BUTTON_GPIO
+        int "Eject Button GPIO Pin"
+        default 0
+        help
+            GPIO pin for the eject/sleep button
+
+endmenu
