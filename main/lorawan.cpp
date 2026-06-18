@@ -103,7 +103,8 @@ void lora_wan_init(void) {
         );
 
     } else {
-        ESP_LOGE(TAG, "SX1262 init failed, code %d", state);
+        ESP_LOGW(TAG, "SX1262 init failed (soft fail), code %d", state);
+        lora_initialized = false;
     }
 }
 

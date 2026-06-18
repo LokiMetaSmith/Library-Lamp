@@ -98,10 +98,29 @@
 
 // SD Card mount point and pin configuration
 #define MOUNT_POINT_SD "/sdcard"
-#define PIN_NUM_MISO 19
-#define PIN_NUM_MOSI 23
-#define PIN_NUM_CLK  18
-#define PIN_NUM_CS   5
+#ifdef CONFIG_SD_MISO_PIN
+#define PIN_NUM_MISO CONFIG_SD_MISO_PIN
+#else
+#define PIN_NUM_MISO 10
+#endif
+
+#ifdef CONFIG_SD_MOSI_PIN
+#define PIN_NUM_MOSI CONFIG_SD_MOSI_PIN
+#else
+#define PIN_NUM_MOSI 11
+#endif
+
+#ifdef CONFIG_SD_CLK_PIN
+#define PIN_NUM_CLK  CONFIG_SD_CLK_PIN
+#else
+#define PIN_NUM_CLK  12
+#endif
+
+#ifdef CONFIG_SD_CS_PIN
+#define PIN_NUM_CS   CONFIG_SD_CS_PIN
+#else
+#define PIN_NUM_CS   13
+#endif
 
 // USB mount point
 #define MOUNT_POINT_USB "/usb"
@@ -111,12 +130,21 @@
 
 
 // LED Strip configuration
-#define LED_STRIP_GPIO              4
+#ifdef CONFIG_LED_STRIP_GPIO
+#define LED_STRIP_GPIO              CONFIG_LED_STRIP_GPIO
+#else
+#define LED_STRIP_GPIO              21
+#endif
+
 #define LED_STRIP_LED_NUMBERS       8
 #define LED_STRIP_RMT_RES_HZ        (10 * 1000 * 1000) // 10MHz resolution
 
 // Eject Button
-#define EJECT_BUTTON_GPIO           33
+#ifdef CONFIG_EJECT_BUTTON_GPIO
+#define EJECT_BUTTON_GPIO           CONFIG_EJECT_BUTTON_GPIO
+#else
+#define EJECT_BUTTON_GPIO           0
+#endif
 
 #define HOST_LIB_TASK_PRIORITY    2
 #define CLASS_TASK_PRIORITY     3
@@ -1528,10 +1556,13 @@ void init_sd_card(void) {
         .quadhd_io_num = -1,
         .max_transfer_sz = 4000,
     };
+    // Ensure SPI3 is used for SD card to avoid conflict with LoRa on SPI2
+    host.slot = SPI3_HOST;
+
     ret = spi_bus_initialize(host.slot, &bus_cfg, SDSPI_DEFAULT_DMA);
     if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to initialize spi bus."); g_sd_card_initialized = false;
-        g_led_state = LED_STATE_ERROR;
+        ESP_LOGW(TAG, "Failed to initialize spi bus for SD card (soft fail).");
+        g_sd_card_initialized = false;
         return;
     }
 
@@ -1542,10 +1573,11 @@ void init_sd_card(void) {
     ret = esp_vfs_fat_sdspi_mount(mount_point, &host, &slot_config, &mount_config, &card);
 
     if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to mount SD card VFS"); g_sd_card_initialized = false;
-        g_led_state = LED_STATE_ERROR;
+        ESP_LOGW(TAG, "Failed to mount SD card VFS (soft fail)");
+        g_sd_card_initialized = false;
     } else {
-        ESP_LOGI(TAG, "SD card mounted successfully at %s", mount_point); g_sd_card_initialized = true;
+        ESP_LOGI(TAG, "SD card mounted successfully at %s", mount_point);
+        g_sd_card_initialized = true;
     }
 }
 
