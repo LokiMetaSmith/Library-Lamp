@@ -90,6 +90,9 @@
 #define NVS_NAMESPACE "wifi_creds"
 #define NVS_KEY_SSID "ssid"
 #define NVS_KEY_PASS "password"
+#define NVS_KEY_LED_R "led_r"
+#define NVS_KEY_LED_G "led_g"
+#define NVS_KEY_LED_B "led_b"
 
 
 // SD Card mount point and pin configuration
@@ -210,6 +213,11 @@ volatile bool g_cancel_transfer = false;
 volatile bool g_transfer_confirmed = false;
 volatile bool g_waiting_for_transfer_confirm = false;
 
+// Global LED colors
+uint8_t g_led_color_r = 255;
+uint8_t g_led_color_g = 255;
+uint8_t g_led_color_b = 255;
+
 
 // --- NVS Functions ---
 esp_err_t save_wifi_credentials(const char *ssid, const char *password) {
@@ -245,6 +253,30 @@ esp_err_t save_wifi_credentials(const char *ssid, const char *password) {
 
     nvs_close(my_handle);
     return err;
+}
+
+void load_led_color_from_nvs(void) {
+    nvs_handle_t my_handle;
+    esp_err_t err = nvs_open(NVS_NAMESPACE, NVS_READONLY, &my_handle);
+    if (err == ESP_OK) {
+        uint8_t r, g, b;
+        if (nvs_get_u8(my_handle, NVS_KEY_LED_R, &r) == ESP_OK) g_led_color_r = r;
+        if (nvs_get_u8(my_handle, NVS_KEY_LED_G, &g) == ESP_OK) g_led_color_g = g;
+        if (nvs_get_u8(my_handle, NVS_KEY_LED_B, &b) == ESP_OK) g_led_color_b = b;
+        nvs_close(my_handle);
+    }
+}
+
+void save_led_color_to_nvs(uint8_t r, uint8_t g, uint8_t b) {
+    nvs_handle_t my_handle;
+    esp_err_t err = nvs_open(NVS_NAMESPACE, NVS_READWRITE, &my_handle);
+    if (err == ESP_OK) {
+        nvs_set_u8(my_handle, NVS_KEY_LED_R, r);
+        nvs_set_u8(my_handle, NVS_KEY_LED_G, g);
+        nvs_set_u8(my_handle, NVS_KEY_LED_B, b);
+        nvs_commit(my_handle);
+        nvs_close(my_handle);
+    }
 }
 
 esp_err_t load_wifi_credentials(char *ssid, size_t ssid_len, char *password, size_t pass_len) {
@@ -672,6 +704,38 @@ static esp_err_t list_files_handler(httpd_req_t *req) {
          return ESP_OK;
     }
 
+    if (strcmp(param, "sd") == 0) {
+        char catalog_path[256];
+        snprintf(catalog_path, sizeof(catalog_path), "%s/catalog.json", mount_path);
+        FILE *f = fopen(catalog_path, "r");
+        if (f) {
+            fseek(f, 0, SEEK_END);
+            long fsize = ftell(f);
+            fseek(f, 0, SEEK_SET);
+
+            char *json_data = malloc(fsize + 1);
+            if (json_data) {
+                fread(json_data, 1, fsize, f);
+                json_data[fsize] = '\0';
+                fclose(f);
+
+                httpd_resp_set_type(req, "application/json");
+                httpd_resp_send(req, json_data, fsize);
+
+                // Also broadcast the availability over LoRaWAN
+                #ifdef LORA_USE_SX1262
+                char lora_msg[128];
+                snprintf(lora_msg, sizeof(lora_msg), "Library active: catalog.json available.");
+                lora_wan_broadcast(lora_msg);
+                #endif
+
+                free(json_data);
+                return ESP_OK;
+            }
+            fclose(f);
+        }
+    }
+
     DIR *d = opendir(mount_path);
     if (!d) {
         ESP_LOGW(TAG, "Failed to open directory: %s", mount_path);
@@ -890,6 +954,38 @@ static esp_err_t sleep_handler(httpd_req_t *req) {
 }
 
 
+static esp_err_t set_led_color_handler(httpd_req_t *req) {
+    char content[100];
+    int ret = httpd_req_recv(req, content, sizeof(content) - 1);
+    if (ret <= 0) {
+        return ESP_FAIL;
+    }
+    content[ret] = '\0';
+
+    cJSON *json = cJSON_Parse(content);
+    if (!json) {
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid JSON");
+        return ESP_FAIL;
+    }
+
+    cJSON *r_item = cJSON_GetObjectItem(json, "r");
+    cJSON *g_item = cJSON_GetObjectItem(json, "g");
+    cJSON *b_item = cJSON_GetObjectItem(json, "b");
+
+    if (r_item && g_item && b_item) {
+        g_led_color_r = r_item->valueint;
+        g_led_color_g = g_item->valueint;
+        g_led_color_b = b_item->valueint;
+        save_led_color_to_nvs(g_led_color_r, g_led_color_g, g_led_color_b);
+        httpd_resp_send(req, "{\"success\":true}", 16);
+    } else {
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Missing RGB values");
+    }
+
+    cJSON_Delete(json);
+    return ESP_OK;
+}
+
 // --- WEB SERVER SETUP (MAIN APP) ---
 static httpd_handle_t start_webserver(void) {
     httpd_handle_t server = NULL;
@@ -924,6 +1020,9 @@ static httpd_handle_t start_webserver(void) {
 
         httpd_uri_t save_uri = { "/save-credentials", HTTP_POST, save_credentials_post_handler, NULL };
         httpd_register_uri_handler(server, &save_uri);
+
+        httpd_uri_t set_led_uri = { "/set-led-color", HTTP_POST, set_led_color_handler, NULL };
+        httpd_register_uri_handler(server, &set_led_uri);
 
         // Handler for all other URIs (serves static files)
         httpd_uri_t static_uri = { "/*", HTTP_GET, static_file_handler, NULL };
@@ -1660,7 +1759,7 @@ static void led_status_task(void *pvParameters) {
 
     while (1) {
         switch (g_led_state) {
-            case LED_STATE_IDLE: // Slow breathing white
+            case LED_STATE_IDLE: // Slow breathing custom color
                 if (increasing) {
                     brightness += 1;
                     if (brightness >= 80) increasing = false;
@@ -1669,8 +1768,11 @@ static void led_status_task(void *pvParameters) {
                     if (brightness <= 5) increasing = true;
                 }
                 for (int i = 0; i < LED_STRIP_LED_NUMBERS; i++) {
-                    // Set all LEDs to a white color with the current brightness
-                    led_strip_set_pixel(g_led_strip, i, brightness, brightness, brightness);
+                    // Set all LEDs to custom color with the current brightness scaling
+                    uint32_t r = (g_led_color_r * brightness) / 100;
+                    uint32_t g = (g_led_color_g * brightness) / 100;
+                    uint32_t b = (g_led_color_b * brightness) / 100;
+                    led_strip_set_pixel(g_led_strip, i, r, g, b);
                 }
                 led_strip_refresh(g_led_strip);
                 vTaskDelay(pdMS_TO_TICKS(35));
@@ -1896,6 +1998,8 @@ void app_main(void) {
       ret = nvs_flash_init();
     }
     ESP_ERROR_CHECK(ret);
+
+    load_led_color_from_nvs();
 
     app_event_queue = xQueueCreate(10, sizeof(app_event_queue_t));
     app_event_queue_t evt_queue;

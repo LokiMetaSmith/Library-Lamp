@@ -17,7 +17,7 @@
             <h1>E-Book Librarian</h1>
             <div class="status-indicator" :class="statusClass"></div>
         <div style="text-align: right; font-size: 1.1em; padding-bottom: 5px;">
-            <a href="/ereader.html" style="color: #007bff; text-decoration: underline; font-weight: bold;">Direct Download Mode</a>
+            <a href="/ereader.html" style="color: #ffcc80; text-decoration: underline; font-weight: bold;">Direct Download Mode</a>
         </div>
         </header>
         <main class="app-main">
@@ -28,6 +28,7 @@
                         <div class="file-info">
                             <span class="file-title">{{ file.title }}</span>
                             <span class="file-author">{{ file.author }}</span>
+                            <span v-if="file.notes" class="file-notes">{{ file.notes }}</span>
                         </div>
                         <div class="transfer-controls">
                             <div class="progress-container" v-if="transfer.active && transfer.filename === file.name">
@@ -47,6 +48,7 @@
                             <div class="file-info">
                                 <span class="file-title">{{ file.title }}</span>
                                 <span class="file-author">{{ file.author }}</span>
+                                <span v-if="file.notes" class="file-notes">{{ file.notes }}</span>
                             </div>
                             <div class="transfer-controls">
                                 <div class="progress-container" v-if="transfer.active && transfer.filename === file.name">
