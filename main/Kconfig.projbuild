@@ -2,13 +2,13 @@ menu "E-Book Librarian Configuration"
 
     config SD_MISO_PIN
         int "SD Card MISO Pin"
-        default 10
+        default 14
         help
             MISO pin for SD Card SPI bus
 
     config SD_MOSI_PIN
         int "SD Card MOSI Pin"
-        default 11
+        default 13
         help
             MOSI pin for SD Card SPI bus
 
@@ -20,7 +20,7 @@ menu "E-Book Librarian Configuration"
 
     config SD_CS_PIN
         int "SD Card CS Pin"
-        default 13
+        default 11
         help
             CS pin for SD Card SPI bus
 
