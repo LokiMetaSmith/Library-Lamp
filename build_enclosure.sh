@@ -47,8 +47,12 @@ BEND_ANGLE=45 # Angle to bend the lithophane for the spine
 set -e # Exit immediately if a command exits with a non-zero status.
 
 # Check for required tools
-if ! command -v python3 &> /dev/null; then
-    echo "Error: python3 is not installed or not in PATH."
+if command -v python3 &> /dev/null && python3 -c "import sys" &> /dev/null; then
+    PYTHON_CMD="python3"
+elif command -v python &> /dev/null && python -c "import sys" &> /dev/null; then
+    PYTHON_CMD="python"
+else
+    echo "Error: python3 or python is not installed, not in PATH, or is a Windows Store alias."
     exit 1
 fi
 
@@ -84,7 +88,7 @@ generate_flat_lithophane() {
     # Use python script to generate lithophane
     # Dimensions match INTERIOR_DEPTH (width) and INTERIOR_WIDTH (height)
     # based on original placeholder.
-    python3 generate_lithophane.py \
+    "$PYTHON_CMD" generate_lithophane.py \
         --image "$1" \
         --output "$2" \
         --width "$INTERIOR_DEPTH" \
