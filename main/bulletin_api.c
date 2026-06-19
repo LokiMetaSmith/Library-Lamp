@@ -224,7 +224,7 @@ static esp_err_t admin_delete_post_handler(httpd_req_t *req) {
 extern bool format_sd_card(void);
 
 static esp_err_t admin_format_sd_handler(httpd_req_t *req) {
-    if (!check_admin_token(req)) { httpd_resp_send_err(req, HTTPD_403_FORBIDDEN, "forbidden"); return ESP_FAIL; }
+    if (!bb_is_admin_request(req)) { httpd_resp_send_err(req, HTTPD_403_FORBIDDEN, "forbidden"); return ESP_FAIL; }
 
     if (format_sd_card()) {
         httpd_resp_send(req, "formatted", 9);
