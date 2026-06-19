@@ -1,14 +1,14 @@
 body {
     font-family: "Georgia", "Times New Roman", serif;
     margin: 0;
-    background-color: #2b211a;
+    background-color: #352920;
     color: #e8dbce;
 }
 .container {
     max-width: 900px;
     margin: 20px auto;
     padding: 20px;
-    background-color: #3f3127;
+    background-color: #4a382a;
     border-radius: 12px;
     box-shadow: 0 4px 15px rgba(0,0,0,0.5), 0 0 20px rgba(255, 180, 100, 0.15);
     border: 1px solid #5a4634;
@@ -27,7 +27,7 @@ h2 {
     max-width: 900px;
     margin: 20px auto;
     padding: 20px;
-    background-color: #3f3127;
+    background-color: #4a382a;
     border-radius: 12px;
     box-shadow: 0 4px 15px rgba(0,0,0,0.5), 0 0 20px rgba(255, 180, 100, 0.15);
     border: 1px solid #5a4634;
@@ -43,7 +43,7 @@ h2 {
 .library-section, .ereader-section {
     flex: 1;
     min-width: 300px;
-    background: #3f3127;
+    background: #4a382a;
     padding: 20px;
     border-radius: 12px;
     border: 1px solid #5a4634;
@@ -144,7 +144,7 @@ button.cancel-btn:hover {
 .app-footer {
     max-width: 900px;
     margin: 20px auto;
-    background-color: #3f3127;
+    background-color: #4a382a;
     color: #e8dbce;
     padding: 15px 25px;
     text-align: center;

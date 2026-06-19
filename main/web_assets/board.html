@@ -6,21 +6,21 @@
 <title>Community Hub</title>
 <style>
 :root {
-  --bg:            #ede8de;
-  --surface:       #faf8f3;
-  --surface2:      #f0ebe0;
-  --border:        #b0a080;
-  --border-light:  #d4c9b0;
-  --ink:           #2c2416;
-  --ink-muted:     #7a6a55;
-  --accent:        #8aad87;
-  --accent-dark:   #31502f;
-  --accent-light:  #c8ddc6;
+  --bg:            #352920;
+  --surface:       #3f3127;
+  --surface2:      #4a382a;
+  --border:        #5a4634;
+  --border-light:  #7a5f47;
+  --ink:           #e8dbce;
+  --ink-muted:     #d1bfae;
+  --accent:        #ffcc80;
+  --accent-dark:   #8c5a35;
+  --accent-light:  #f5eedc;
 
   --c-notice-fg:  #6b5a3e; --c-notice-bg: #f0e8d8; --c-notice-bar: #a09070;
-  --c-offer-fg:   #2d5c2a; --c-offer-bg:  #daeeda; --c-offer-bar:  #5a8a57;
-  --c-need-fg:    #7a4a10; --c-need-bg:   #f5e8d0; --c-need-bar:   #c4813a;
-  --c-event-fg:   #1e4f70; --c-event-bg:  #d8eaf5; --c-event-bar:  #4a88b0;
+  --c-review-fg:   #2d5c2a; --c-review-bg:  #daeeda; --c-review-bar:  #5a8a57;
+  --c-recomm-fg:    #7a4a10; --c-recomm-bg:   #f5e8d0; --c-recomm-bar:   #c4813a;
+  --c-request-fg:   #1e4f70; --c-request-bg:  #d8eaf5; --c-request-bar:  #4a88b0;
 
   --radius: 6px;
   --shadow: 3px 4px 0 rgba(44,36,22,0.10);
@@ -43,7 +43,7 @@ body {
   display: flex;
   align-items: center;
   gap: 14px;
-  border-bottom: 3px solid #1d3a1b;
+  border-bottom: 3px solid #5a3820;
   flex-wrap: wrap;
 }
 .header-title-block { flex: 1; min-width: 160px; }
@@ -138,9 +138,9 @@ body {
 }
 .cat-btn:hover { border-color: var(--border); color: var(--ink); background: var(--surface2); }
 .cat-btn.active-Notice { background: var(--c-notice-bg); border-color: var(--c-notice-bar); color: var(--c-notice-fg); font-weight: bold; }
-.cat-btn.active-Offer  { background: var(--c-offer-bg);  border-color: var(--c-offer-bar);  color: var(--c-offer-fg);  font-weight: bold; }
-.cat-btn.active-Need   { background: var(--c-need-bg);   border-color: var(--c-need-bar);   color: var(--c-need-fg);   font-weight: bold; }
-.cat-btn.active-Event  { background: var(--c-event-bg);  border-color: var(--c-event-bar);  color: var(--c-event-fg);  font-weight: bold; }
+.cat-btn.active-Review { background: var(--c-review-bg); border-color: var(--c-review-bar); color: var(--c-review-fg); font-weight: bold; }
+.cat-btn.active-Recomm { background: var(--c-recomm-bg); border-color: var(--c-recomm-bar); color: var(--c-recomm-fg); font-weight: bold; }
+.cat-btn.active-Request { background: var(--c-request-bg); border-color: var(--c-request-bar); color: var(--c-request-fg); font-weight: bold; }
 
 /* Expiry row */
 .expiry-row {
@@ -174,7 +174,7 @@ body {
 
 .post-btn {
   background: var(--accent-dark);
-  border: 2px solid #1d3a1b;
+  border: 2px solid #5a3820;
   border-radius: var(--radius);
   color: var(--accent-light);
   cursor: pointer;
@@ -188,7 +188,7 @@ body {
   white-space: nowrap;
   align-self: flex-end;
 }
-.post-btn:hover { background: #3d6438; }
+.post-btn:hover { background: #a06b43; }
 
 /* ── Filter bar ── */
 .filter-bar {
@@ -276,12 +276,12 @@ body {
 
 .type-Notice .card-stripe { background: var(--c-notice-bar); }
 .type-Notice .cat-badge   { background: var(--c-notice-bg); color: var(--c-notice-fg); }
-.type-Offer  .card-stripe { background: var(--c-offer-bar);  }
-.type-Offer  .cat-badge   { background: var(--c-offer-bg);  color: var(--c-offer-fg);  }
-.type-Need   .card-stripe { background: var(--c-need-bar);  }
-.type-Need   .cat-badge   { background: var(--c-need-bg);   color: var(--c-need-fg);   }
-.type-Event  .card-stripe { background: var(--c-event-bar); }
-.type-Event  .cat-badge   { background: var(--c-event-bg);  color: var(--c-event-fg);  }
+.type-Review .card-stripe { background: var(--c-review-bar);  }
+.type-Review .cat-badge   { background: var(--c-review-bg);  color: var(--c-review-fg);  }
+.type-Recomm .card-stripe { background: var(--c-recomm-bar);  }
+.type-Recomm .cat-badge   { background: var(--c-recomm-bg);   color: var(--c-recomm-fg);   }
+.type-Request .card-stripe { background: var(--c-request-bar); }
+.type-Request .cat-badge   { background: var(--c-request-bg);  color: var(--c-request-fg);  }
 
 .empty {
   column-span: all;
@@ -346,9 +346,9 @@ body {
       <label>Category</label>
       <div class="cat-btns">
         <button class="cat-btn" onclick="setType('Notice',this)">📌 Notice</button>
-        <button class="cat-btn" onclick="setType('Offer', this)">🌱 Offer</button>
-        <button class="cat-btn" onclick="setType('Need',  this)">🤝 Need</button>
-        <button class="cat-btn" onclick="setType('Event', this)">📅 Event</button>
+        <button class="cat-btn" onclick="setType('Review', this)">📖 Review</button>
+        <button class="cat-btn" onclick="setType('Recomm',  this)">💡 Recomm.</button>
+        <button class="cat-btn" onclick="setType('Request', this)">🔍 Request</button>
       </div>
       <div class="char-hint"></div>
     </div>
@@ -376,9 +376,9 @@ body {
   <span class="filter-label">Show:</span>
   <button class="ftab active" onclick="setFilter('',       this)">All</button>
   <button class="ftab"        onclick="setFilter('Notice', this)">📌 Notice</button>
-  <button class="ftab"        onclick="setFilter('Offer',  this)">🌱 Offer</button>
-  <button class="ftab"        onclick="setFilter('Need',   this)">🤝 Need</button>
-  <button class="ftab"        onclick="setFilter('Event',  this)">📅 Event</button>
+  <button class="ftab"        onclick="setFilter('Review',  this)">📖 Review</button>
+  <button class="ftab"        onclick="setFilter('Recomm',   this)">💡 Recomm.</button>
+  <button class="ftab"        onclick="setFilter('Request',  this)">🔍 Request</button>
   <span class="sep"></span>
   <button class="ftab active" id="sNew" onclick="setSort('new', this)">New</button>
   <button class="ftab"        id="sExp" onclick="setSort('exp', this)">Expiring</button>
