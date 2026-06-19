@@ -16,8 +16,11 @@
         </div>
             <h1>E-Book Librarian</h1>
             <div class="status-indicator" :class="statusClass"></div>
-        <div style="text-align: right; font-size: 1.1em; padding-bottom: 5px;">
-            <a href="/ereader.html" style="color: #ffcc80; text-decoration: underline; font-weight: bold;">Direct Download Mode</a>
+        <div style="display: flex; justify-content: flex-end; gap: 10px; padding-bottom: 10px; flex-wrap: wrap;">
+            <button onclick="window.location.href='/board.html'">Bulletin Board</button>
+            <button onclick="window.location.href='/setup.html'">Setup</button>
+            <button onclick="window.location.href='/admin.html'">Admin</button>
+            <button onclick="window.location.href='/ereader.html'">Direct Download Mode</button>
         </div>
         </header>
         <main class="app-main">
