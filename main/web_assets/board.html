@@ -18,9 +18,12 @@
   --accent-light:  #f5eedc;
 
   --c-notice-fg:  #6b5a3e; --c-notice-bg: #f0e8d8; --c-notice-bar: #a09070;
-  --c-review-fg:   #2d5c2a; --c-review-bg:  #daeeda; --c-review-bar:  #5a8a57;
-  --c-recomm-fg:    #7a4a10; --c-recomm-bg:   #f5e8d0; --c-recomm-bar:   #c4813a;
-  --c-request-fg:   #1e4f70; --c-request-bg:  #d8eaf5; --c-request-bar:  #4a88b0;
+  --c-offer-fg:   #2d5c2a; --c-offer-bg:  #daeeda; --c-offer-bar:  #5a8a57;
+  --c-need-fg:    #7a4a10; --c-need-bg:   #f5e8d0; --c-need-bar:   #c4813a;
+  --c-event-fg:   #1e4f70; --c-event-bg:  #d8eaf5; --c-event-bar:  #4a88b0;
+  --c-review-fg:  #5c2a4a; --c-review-bg: #eedaea; --c-review-bar: #8a577a;
+  --c-recomm-fg:  #2a5c55; --c-recomm-bg: #daeeee; --c-recomm-bar: #578a82;
+  --c-request-fg: #4a4a4a; --c-request-bg: #e0e0e0; --c-request-bar: #8a8a8a;
 
   --radius: 6px;
   --shadow: 3px 4px 0 rgba(44,36,22,0.10);
@@ -138,6 +141,9 @@ body {
 }
 .cat-btn:hover { border-color: var(--border); color: var(--ink); background: var(--surface2); }
 .cat-btn.active-Notice { background: var(--c-notice-bg); border-color: var(--c-notice-bar); color: var(--c-notice-fg); font-weight: bold; }
+.cat-btn.active-Offer  { background: var(--c-offer-bg);  border-color: var(--c-offer-bar);  color: var(--c-offer-fg);  font-weight: bold; }
+.cat-btn.active-Need   { background: var(--c-need-bg);   border-color: var(--c-need-bar);   color: var(--c-need-fg);   font-weight: bold; }
+.cat-btn.active-Event  { background: var(--c-event-bg);  border-color: var(--c-event-bar);  color: var(--c-event-fg);  font-weight: bold; }
 .cat-btn.active-Review { background: var(--c-review-bg); border-color: var(--c-review-bar); color: var(--c-review-fg); font-weight: bold; }
 .cat-btn.active-Recomm { background: var(--c-recomm-bg); border-color: var(--c-recomm-bar); color: var(--c-recomm-fg); font-weight: bold; }
 .cat-btn.active-Request { background: var(--c-request-bg); border-color: var(--c-request-bar); color: var(--c-request-fg); font-weight: bold; }
@@ -276,6 +282,12 @@ body {
 
 .type-Notice .card-stripe { background: var(--c-notice-bar); }
 .type-Notice .cat-badge   { background: var(--c-notice-bg); color: var(--c-notice-fg); }
+.type-Offer  .card-stripe { background: var(--c-offer-bar);  }
+.type-Offer  .cat-badge   { background: var(--c-offer-bg);  color: var(--c-offer-fg);  }
+.type-Need   .card-stripe { background: var(--c-need-bar);  }
+.type-Need   .cat-badge   { background: var(--c-need-bg);   color: var(--c-need-fg);   }
+.type-Event  .card-stripe { background: var(--c-event-bar); }
+.type-Event  .cat-badge   { background: var(--c-event-bg);  color: var(--c-event-fg);  }
 .type-Review .card-stripe { background: var(--c-review-bar);  }
 .type-Review .cat-badge   { background: var(--c-review-bg);  color: var(--c-review-fg);  }
 .type-Recomm .card-stripe { background: var(--c-recomm-bar);  }
@@ -346,6 +358,9 @@ body {
       <label>Category</label>
       <div class="cat-btns">
         <button class="cat-btn" onclick="setType('Notice',this)">📌 Notice</button>
+        <button class="cat-btn" onclick="setType('Offer', this)">🌱 Offer</button>
+        <button class="cat-btn" onclick="setType('Need',  this)">🤝 Need</button>
+        <button class="cat-btn" onclick="setType('Event', this)">📅 Event</button>
         <button class="cat-btn" onclick="setType('Review', this)">📖 Review</button>
         <button class="cat-btn" onclick="setType('Recomm',  this)">💡 Recomm.</button>
         <button class="cat-btn" onclick="setType('Request', this)">🔍 Request</button>
@@ -376,6 +391,9 @@ body {
   <span class="filter-label">Show:</span>
   <button class="ftab active" onclick="setFilter('',       this)">All</button>
   <button class="ftab"        onclick="setFilter('Notice', this)">📌 Notice</button>
+  <button class="ftab"        onclick="setFilter('Offer',  this)">🌱 Offer</button>
+  <button class="ftab"        onclick="setFilter('Need',   this)">🤝 Need</button>
+  <button class="ftab"        onclick="setFilter('Event',  this)">📅 Event</button>
   <button class="ftab"        onclick="setFilter('Review',  this)">📖 Review</button>
   <button class="ftab"        onclick="setFilter('Recomm',   this)">💡 Recomm.</button>
   <button class="ftab"        onclick="setFilter('Request',  this)">🔍 Request</button>
