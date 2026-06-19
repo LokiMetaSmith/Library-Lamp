@@ -287,13 +287,15 @@ esp_err_t save_wifi_credentials(const char *ssid, const char *password) {
 
 void load_led_color_from_nvs(void) {
     nvs_handle_t my_handle;
-    esp_err_t err = nvs_open(NVS_NAMESPACE, NVS_READONLY, &my_handle);
+    esp_err_t err = nvs_open(NVS_NAMESPACE, NVS_READWRITE, &my_handle);
     if (err == ESP_OK) {
         uint8_t r, g, b;
         if (nvs_get_u8(my_handle, NVS_KEY_LED_R, &r) == ESP_OK) g_led_color_r = r;
         if (nvs_get_u8(my_handle, NVS_KEY_LED_G, &g) == ESP_OK) g_led_color_g = g;
         if (nvs_get_u8(my_handle, NVS_KEY_LED_B, &b) == ESP_OK) g_led_color_b = b;
         nvs_close(my_handle);
+    } else {
+        ESP_LOGE(TAG, "Error (%s) opening NVS handle to load LED color!", esp_err_to_name(err));
     }
 }
 
@@ -304,8 +306,16 @@ void save_led_color_to_nvs(uint8_t r, uint8_t g, uint8_t b) {
         nvs_set_u8(my_handle, NVS_KEY_LED_R, r);
         nvs_set_u8(my_handle, NVS_KEY_LED_G, g);
         nvs_set_u8(my_handle, NVS_KEY_LED_B, b);
-        nvs_commit(my_handle);
+
+        err = nvs_commit(my_handle);
+        if (err != ESP_OK) {
+            ESP_LOGE(TAG, "Failed to commit LED NVS changes: %s", esp_err_to_name(err));
+        } else {
+            ESP_LOGI(TAG, "LED color saved to NVS: %d, %d, %d", r, g, b);
+        }
         nvs_close(my_handle);
+    } else {
+        ESP_LOGE(TAG, "Error (%s) opening NVS handle to save LED color!", esp_err_to_name(err));
     }
 }
 

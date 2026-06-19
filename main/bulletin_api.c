@@ -137,7 +137,7 @@ static esp_err_t admin_auth_handler(httpd_req_t *req) {
 
 bool bb_is_admin_request(httpd_req_t *req) {
     if (g_hardware_key_authenticated) return true;
-    char buf[128];
+    char buf[512];
     if (httpd_req_get_url_query_str(req, buf, sizeof(buf)) == ESP_OK) {
         char token[33];
         if (httpd_query_key_value(buf, "token", token, sizeof(token)) == ESP_OK) {
