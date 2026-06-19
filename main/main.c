@@ -170,6 +170,7 @@ static led_strip_handle_t g_led_strip;
 static bool g_wifi_configured = false;
 bool g_usb_mounted = false;
 bool g_sd_card_initialized = false;
+sdmmc_card_t *g_sd_card_handle = NULL;
 extern bool lora_initialized;
 QueueHandle_t app_event_queue = NULL;
 
@@ -1564,7 +1565,6 @@ void init_sd_card(void) {
         .max_files = 5,
         .allocation_unit_size = 16 * 1024
     };
-    sdmmc_card_t *card;
     const char mount_point[] = MOUNT_POINT_SD;
     ESP_LOGI(TAG, "Initializing SD card");
 
@@ -1602,7 +1602,7 @@ void init_sd_card(void) {
     slot_config.gpio_cs = PIN_NUM_CS;
     slot_config.host_id = host.slot;
 
-    ret = esp_vfs_fat_sdspi_mount(mount_point, &host, &slot_config, &mount_config, &card);
+    ret = esp_vfs_fat_sdspi_mount(mount_point, &host, &slot_config, &mount_config, &g_sd_card_handle);
 
     if (ret != ESP_OK) {
         ESP_LOGW(TAG, "Failed to mount SD card VFS (soft fail)");
@@ -1610,6 +1610,29 @@ void init_sd_card(void) {
     } else {
         ESP_LOGI(TAG, "SD card mounted successfully at %s", mount_point);
         g_sd_card_initialized = true;
+    }
+}
+
+bool format_sd_card(void) {
+    if (!g_sd_card_initialized || g_sd_card_handle == NULL) {
+        ESP_LOGW(TAG, "Cannot format SD card: Not initialized or not mounted.");
+        return false;
+    }
+
+    esp_vfs_fat_sdmmc_mount_config_t mount_config = {
+        .format_if_mount_failed = true,
+        .max_files = 5,
+        .allocation_unit_size = 16 * 1024
+    };
+
+    ESP_LOGI(TAG, "Explicitly formatting SD card...");
+    esp_err_t err = esp_vfs_fat_sdcard_format_cfg(MOUNT_POINT_SD, g_sd_card_handle, &mount_config);
+    if (err == ESP_OK) {
+        ESP_LOGI(TAG, "SD Card formatted successfully!");
+        return true;
+    } else {
+        ESP_LOGE(TAG, "Failed to format SD card: %s", esp_err_to_name(err));
+        return false;
     }
 }
 
