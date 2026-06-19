@@ -8,9 +8,10 @@ connectors:
   esp32s3_devkit:
     type: pin-header
     # Pins on the ESP32-S3-DevKitC-1 board used in this project
-    pins: [3V3, 5V, GND, IO0, IO11, IO12, IO13, IO14, IO48]
+    pins: [3V3, 5V, GND, IO0, IO2, IO3, IO4, IO5, IO6, IO7, IO8, IO9, IO11, IO12, IO13, IO14, IO48]
     pin_labels:
-      GND: [GND.1, GND.2, GND.3] # For connecting multiple grounds
+      3V3: [3V3.1, 3V3.2] # For connecting multiple 3V3 lines
+      GND: [GND.1, GND.2, GND.3, GND.4] # For connecting multiple grounds
 
   sd_module:
     type: pin-header
@@ -30,13 +31,23 @@ connectors:
     # A standard 2-pin tactile pushbutton
     pins: [1, 2]
 
+  lora_module:
+    type: pin-header
+    # Pins on a standard LoRa module (like Wio-SX1262)
+    pins: [3V3, GND, SCK, MISO, MOSI, CS, RST, BUSY, DIO1, DIO2]
+
 # --- Define Wires and Connections ---
 
 wires:
   # --- Power Connections ---
   - connect:
-      - esp32s3_devkit: [3V3, GND.1]
+      - esp32s3_devkit: [3V3.1, GND.1]
       - sd_module: [VCC, GND]
+    color: [RD, BK] # Red for 3.3V, Black for Ground
+
+  - connect:
+      - esp32s3_devkit: [3V3.2, GND.4]
+      - lora_module: [3V3, GND]
     color: [RD, BK] # Red for 3.3V, Black for Ground
     
   - connect:
@@ -75,3 +86,44 @@ wires:
       - esp32s3_devkit: [IO48]
       - led_strip: ["Data In"]
     color: WT # White
+
+  # --- LoRa (SPI & Control) Connections ---
+  - connect:
+      - esp32s3_devkit: [IO5]
+      - lora_module: [CS]
+    color: YL # Yellow
+
+  - connect:
+      - esp32s3_devkit: [IO7]
+      - lora_module: [SCK]
+    color: BU # Blue
+
+  - connect:
+      - esp32s3_devkit: [IO8]
+      - lora_module: [MISO]
+    color: GN # Green
+
+  - connect:
+      - esp32s3_devkit: [IO9]
+      - lora_module: [MOSI]
+    color: OG # Orange
+
+  - connect:
+      - esp32s3_devkit: [IO3]
+      - lora_module: [RST]
+    color: WH # White
+
+  - connect:
+      - esp32s3_devkit: [IO4]
+      - lora_module: [BUSY]
+    color: GY # Grey
+
+  - connect:
+      - esp32s3_devkit: [IO2]
+      - lora_module: [DIO1]
+    color: VT # Violet
+
+  - connect:
+      - esp32s3_devkit: [IO6]
+      - lora_module: [DIO2]
+    color: PK # Pink

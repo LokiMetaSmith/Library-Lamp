@@ -1,0 +1,3 @@
+## 2024-06-19 - Pure UI State Reloading Data
+**Learning:** In standard HTML/JS applications without reactive frameworks, UI sorting actions (like clicking "New" or "Expiring") can easily be hardcoded to trigger redundant full data reloads (e.g., `load(); loadSystemStatus();`) instead of re-rendering cached data. This causes severe, unnecessary backend load and UI latency for simple list sorts.
+**Action:** When inspecting client-side sorting and filtering, check if the data is being fetched anew. Always reuse cached data (e.g., `lastData`) for operations that only change the presentation order.

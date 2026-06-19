@@ -135,7 +135,8 @@ static esp_err_t admin_auth_handler(httpd_req_t *req) {
     return ESP_OK;
 }
 
-static bool check_admin_token(httpd_req_t *req) {
+bool bb_is_admin_request(httpd_req_t *req) {
+    if (g_hardware_key_authenticated) return true;
     char buf[512];
     if (httpd_req_get_url_query_str(req, buf, sizeof(buf)) == ESP_OK) {
         char token[33];
@@ -146,13 +147,22 @@ static bool check_admin_token(httpd_req_t *req) {
     return false;
 }
 
+static esp_err_t admin_auth_status_handler(httpd_req_t *req) {
+    if (bb_is_admin_request(req)) {
+        httpd_resp_send(req, "{\"authenticated\": true}", 23);
+        return ESP_OK;
+    }
+    httpd_resp_send_err(req, HTTPD_403_FORBIDDEN, "forbidden");
+    return ESP_FAIL;
+}
+
 static esp_err_t admin_identity_get_handler(httpd_req_t *req) {
-    if (!check_admin_token(req)) { httpd_resp_send_err(req, HTTPD_403_FORBIDDEN, "forbidden"); return ESP_FAIL; }
+    if (!bb_is_admin_request(req)) { httpd_resp_send_err(req, HTTPD_403_FORBIDDEN, "forbidden"); return ESP_FAIL; }
     return board_info_handler(req);
 }
 
 static esp_err_t admin_identity_set_handler(httpd_req_t *req) {
-    if (!check_admin_token(req)) { httpd_resp_send_err(req, HTTPD_403_FORBIDDEN, "forbidden"); return ESP_FAIL; }
+    if (!bb_is_admin_request(req)) { httpd_resp_send_err(req, HTTPD_403_FORBIDDEN, "forbidden"); return ESP_FAIL; }
     
     char buf[512];
     if (httpd_req_get_url_query_str(req, buf, sizeof(buf)) == ESP_OK) {
@@ -171,7 +181,7 @@ static esp_err_t admin_identity_set_handler(httpd_req_t *req) {
 }
 
 static esp_err_t admin_setkey_handler(httpd_req_t *req) {
-    if (!check_admin_token(req)) { httpd_resp_send_err(req, HTTPD_403_FORBIDDEN, "forbidden"); return ESP_FAIL; }
+    if (!bb_is_admin_request(req)) { httpd_resp_send_err(req, HTTPD_403_FORBIDDEN, "forbidden"); return ESP_FAIL; }
     
     char buf[128];
     if (httpd_req_get_url_query_str(req, buf, sizeof(buf)) == ESP_OK) {
@@ -188,14 +198,14 @@ static esp_err_t admin_setkey_handler(httpd_req_t *req) {
 }
 
 static esp_err_t admin_clear_handler(httpd_req_t *req) {
-    if (!check_admin_token(req)) { httpd_resp_send_err(req, HTTPD_403_FORBIDDEN, "forbidden"); return ESP_FAIL; }
+    if (!bb_is_admin_request(req)) { httpd_resp_send_err(req, HTTPD_403_FORBIDDEN, "forbidden"); return ESP_FAIL; }
     bb_clear_messages();
     httpd_resp_send(req, "cleared", 7);
     return ESP_OK;
 }
 
 static esp_err_t admin_delete_post_handler(httpd_req_t *req) {
-    if (!check_admin_token(req)) { httpd_resp_send_err(req, HTTPD_403_FORBIDDEN, "forbidden"); return ESP_FAIL; }
+    if (!bb_is_admin_request(req)) { httpd_resp_send_err(req, HTTPD_403_FORBIDDEN, "forbidden"); return ESP_FAIL; }
     
     char buf[128];
     if (httpd_req_get_url_query_str(req, buf, sizeof(buf)) == ESP_OK) {
@@ -223,6 +233,9 @@ void register_bulletin_api_handlers(httpd_handle_t server) {
 
     httpd_uri_t admin_auth_uri = { .uri = "/board/admin/auth", .method = HTTP_POST, .handler = admin_auth_handler, .user_ctx = NULL };
     httpd_register_uri_handler(server, &admin_auth_uri);
+
+    httpd_uri_t admin_auth_status_uri = { .uri = "/board/admin/auth/status", .method = HTTP_GET, .handler = admin_auth_status_handler, .user_ctx = NULL };
+    httpd_register_uri_handler(server, &admin_auth_status_uri);
 
     httpd_uri_t admin_id_get_uri = { .uri = "/board/admin/identity/get", .method = HTTP_GET, .handler = admin_identity_get_handler, .user_ctx = NULL };
     httpd_register_uri_handler(server, &admin_id_get_uri);

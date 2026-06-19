@@ -508,8 +508,9 @@ function setSort(s, btn) {
   activeSort = s;
   document.getElementById('sNew').classList.toggle('active', s === 'new');
   document.getElementById('sExp').classList.toggle('active', s === 'exp');
-  load();
-  loadSystemStatus();
+
+  // ⚡ Bolt: Render locally instead of fetching from server to save 2 network requests
+  if (lastData.length) render(lastData);
 }
 
 // ── Data ───────────────────────────────────────
