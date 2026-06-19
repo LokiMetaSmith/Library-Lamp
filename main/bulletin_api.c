@@ -179,11 +179,11 @@ static esp_err_t admin_identity_set_handler(httpd_req_t *req) {
     char buf[512];
     if (httpd_req_get_url_query_str(req, buf, sizeof(buf)) == ESP_OK) {
         char temp[101];
-        if (httpd_query_key_value(buf, "name", temp, sizeof(temp)) == ESP_OK) sanitize(temp, id_name, 49);
-        if (httpd_query_key_value(buf, "icon", temp, sizeof(temp)) == ESP_OK) sanitize(temp, id_icon, 9);
-        if (httpd_query_key_value(buf, "tagline", temp, sizeof(temp)) == ESP_OK) sanitize(temp, id_tagline, 101);
-        if (httpd_query_key_value(buf, "rules", temp, sizeof(temp)) == ESP_OK) sanitize(temp, id_rules, 101);
-        if (httpd_query_key_value(buf, "footer", temp, sizeof(temp)) == ESP_OK) sanitize(temp, id_footer, 101);
+        if (httpd_query_key_value(buf, "name", temp, sizeof(temp)) == ESP_OK) { urldecode(temp, temp); sanitize(temp, id_name, 49); }
+        if (httpd_query_key_value(buf, "icon", temp, sizeof(temp)) == ESP_OK) { urldecode(temp, temp); sanitize(temp, id_icon, 9); }
+        if (httpd_query_key_value(buf, "tagline", temp, sizeof(temp)) == ESP_OK) { urldecode(temp, temp); sanitize(temp, id_tagline, 101); }
+        if (httpd_query_key_value(buf, "rules", temp, sizeof(temp)) == ESP_OK) { urldecode(temp, temp); sanitize(temp, id_rules, 101); }
+        if (httpd_query_key_value(buf, "footer", temp, sizeof(temp)) == ESP_OK) { urldecode(temp, temp); sanitize(temp, id_footer, 101); }
         bb_save_identity();
         httpd_resp_send(req, "identity saved", 14);
         return ESP_OK;
