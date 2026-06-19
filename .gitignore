@@ -42,11 +42,16 @@
 
 # Build output
 /build/
+/main/build/
 
 # PlatformIO
 .pio/
 managed_components/
 sdkconfig
+
+eim_config.toml
+
+/__pycache__/
 
 *.bak
 jules_session_*
