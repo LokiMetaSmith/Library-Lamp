@@ -74,7 +74,7 @@ menu "E-Book Librarian Configuration"
 
     config LED_STRIP_GPIO
         int "LED Strip GPIO Pin"
-        default 21
+        default 48
         help
             GPIO pin for the WS2812 LED strip
 
