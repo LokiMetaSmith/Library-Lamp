@@ -842,13 +842,27 @@ static esp_err_t transfer_file_handler(httpd_req_t *req) {
         return ESP_FAIL;
     }
 
-    const char *source = cJSON_GetObjectItem(json, "source")->valuestring;
-    const char *destination = cJSON_GetObjectItem(json, "destination")->valuestring;
-    const char *filename = cJSON_GetObjectItem(json, "filename")->valuestring;
+    cJSON *j_source = cJSON_GetObjectItem(json, "source");
+    cJSON *j_destination = cJSON_GetObjectItem(json, "destination");
+    cJSON *j_filename = cJSON_GetObjectItem(json, "filename");
 
-    if (!source || !destination || !filename) {
+    if (!j_source || !j_source->valuestring ||
+        !j_destination || !j_destination->valuestring ||
+        !j_filename || !j_filename->valuestring) {
         cJSON_Delete(json);
         httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Bad Request");
+        g_led_state = ebook_reader_connected ? LED_STATE_CONNECTED : LED_STATE_IDLE;
+        return ESP_FAIL;
+    }
+
+    const char *source = j_source->valuestring;
+    const char *destination = j_destination->valuestring;
+    const char *filename = j_filename->valuestring;
+
+    // Basic path traversal prevention
+    if (strstr(filename, "..") != NULL) {
+        cJSON_Delete(json);
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid Filename");
         g_led_state = ebook_reader_connected ? LED_STATE_CONNECTED : LED_STATE_IDLE;
         return ESP_FAIL;
     }
