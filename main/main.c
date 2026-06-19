@@ -516,6 +516,13 @@ static esp_err_t static_file_handler(httpd_req_t *req) {
     struct stat path_stat;
     if (stat(filepath, &path_stat) == -1) {
         ESP_LOGE(TAG, "File not found: %s", filepath);
+
+        // Prevent infinite redirect loops for core endpoints
+        if (strcmp(req->uri, "/") == 0 || strcmp(req->uri, "/index.html") == 0 || strcmp(req->uri, "/ereader.html") == 0) {
+            httpd_resp_send_404(req);
+            return ESP_FAIL;
+        }
+
         // Instead of 404, redirect to root for captive portal functionality
         httpd_resp_set_status(req, "302 Temporary Redirect");
         httpd_resp_set_hdr(req, "Location", "/");
