@@ -1554,7 +1554,14 @@ void init_sd_card(void) {
     const char mount_point[] = MOUNT_POINT_SD;
     ESP_LOGI(TAG, "Initializing SD card");
 
+    // Enable internal pull-ups on SD card pins
+    gpio_set_pull_mode(PIN_NUM_MOSI, GPIO_PULLUP_ONLY);
+    gpio_set_pull_mode(PIN_NUM_MISO, GPIO_PULLUP_ONLY);
+    gpio_set_pull_mode(PIN_NUM_CLK, GPIO_PULLUP_ONLY);
+    gpio_set_pull_mode(PIN_NUM_CS, GPIO_PULLUP_ONLY);
+
     sdmmc_host_t host = SDSPI_HOST_DEFAULT();
+    host.max_freq_khz = SDMMC_FREQ_PROBING; // Use probing frequency for initialization
     spi_bus_config_t bus_cfg = {
         .mosi_io_num = PIN_NUM_MOSI,
         .miso_io_num = PIN_NUM_MISO,
