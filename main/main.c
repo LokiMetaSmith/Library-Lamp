@@ -1539,7 +1539,7 @@ void init_spiffs(void) {
 void init_sd_card(void) {
     esp_err_t ret;
     esp_vfs_fat_sdmmc_mount_config_t mount_config = {
-        .format_if_mount_failed = false,
+        .format_if_mount_failed = true,
         .max_files = 5,
         .allocation_unit_size = 16 * 1024
     };
@@ -1554,6 +1554,10 @@ void init_sd_card(void) {
         .sclk_io_num = PIN_NUM_CLK,
         .quadwp_io_num = -1,
         .quadhd_io_num = -1,
+        .data4_io_num = -1,
+        .data5_io_num = -1,
+        .data6_io_num = -1,
+        .data7_io_num = -1,
         .max_transfer_sz = 4000,
     };
     // Ensure SPI3 is used for SD card to avoid conflict with LoRa on SPI2
