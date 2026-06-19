@@ -16,6 +16,18 @@ static void sanitize(const char* in, char* out, int maxLen) {
     out[outIdx] = '\0';
 }
 
+static esp_err_t board_status_handler(httpd_req_t *req) {
+    cJSON *doc = cJSON_CreateObject();
+    cJSON_AddBoolToObject(doc, "full", msgCount >= MAX_MSGS);
+
+    char *json_str = cJSON_PrintUnformatted(doc);
+    httpd_resp_set_type(req, "application/json");
+    httpd_resp_send(req, json_str, strlen(json_str));
+    free(json_str);
+    cJSON_Delete(doc);
+    return ESP_OK;
+}
+
 static esp_err_t board_info_handler(httpd_req_t *req) {
     cJSON *doc = cJSON_CreateObject();
     cJSON_AddStringToObject(doc, "name", id_name);
@@ -224,7 +236,7 @@ static esp_err_t admin_delete_post_handler(httpd_req_t *req) {
 extern bool format_sd_card(void);
 
 static esp_err_t admin_format_sd_handler(httpd_req_t *req) {
-    if (!check_admin_token(req)) { httpd_resp_send_err(req, HTTPD_403_FORBIDDEN, "forbidden"); return ESP_FAIL; }
+    if (!bb_is_admin_request(req)) { httpd_resp_send_err(req, HTTPD_403_FORBIDDEN, "forbidden"); return ESP_FAIL; }
 
     if (format_sd_card()) {
         httpd_resp_send(req, "formatted", 9);
@@ -236,6 +248,9 @@ static esp_err_t admin_format_sd_handler(httpd_req_t *req) {
 }
 
 void register_bulletin_api_handlers(httpd_handle_t server) {
+    httpd_uri_t status_uri = { .uri = "/board/api/status", .method = HTTP_GET, .handler = board_status_handler, .user_ctx = NULL };
+    httpd_register_uri_handler(server, &status_uri);
+
     httpd_uri_t info_uri = { .uri = "/board/info", .method = HTTP_GET, .handler = board_info_handler, .user_ctx = NULL };
     httpd_register_uri_handler(server, &info_uri);
 
