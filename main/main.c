@@ -49,6 +49,7 @@
 #include "sdmmc_cmd.h"
 #include "cJSON.h"
 #include "lorawan.h"
+#include "bulletin_board.h"
 #include "bulletin_api.h"
 
 // --- Local Dependencies ---
@@ -991,6 +992,11 @@ static esp_err_t sleep_handler(httpd_req_t *req) {
 
 
 static esp_err_t set_led_color_handler(httpd_req_t *req) {
+    if (!bb_is_admin_request(req)) {
+        httpd_resp_send_err(req, HTTPD_403_FORBIDDEN, "Forbidden");
+        return ESP_FAIL;
+    }
+
     char content[100];
     int ret = httpd_req_recv(req, content, sizeof(content) - 1);
     if (ret <= 0) {
@@ -1754,6 +1760,28 @@ static void msc_event_cb(const msc_host_event_t *event, void *arg)
         // Mount the filesystem
         if (msc_host_vfs_register(device_handle, MOUNT_POINT_USB, &msc_mount_config, &vfs_handle) == ESP_OK) {
             ESP_LOGI(TAG, "MSC device mounted at %s", MOUNT_POINT_USB);
+
+            // Check for hardware auth key file
+            char key_file_path[128];
+            snprintf(key_file_path, sizeof(key_file_path), "%s/.library_admin.key", MOUNT_POINT_USB);
+            FILE *kf = fopen(key_file_path, "r");
+            if (kf) {
+                char key_buf[65] = {0};
+                size_t read_bytes = fread(key_buf, 1, 64, kf);
+                fclose(kf);
+                if (read_bytes > 0) {
+                    // trim trailing whitespace
+                    while (read_bytes > 0 && isspace((unsigned char)key_buf[read_bytes-1])) {
+                        key_buf[read_bytes-1] = '\0';
+                        read_bytes--;
+                    }
+                    if (bb_check_key(key_buf)) {
+                        g_hardware_key_authenticated = true;
+                        ESP_LOGI(TAG, "Hardware admin key authenticated via USB");
+                    }
+                }
+            }
+
             // Attempt to import from Calibre DB
             import_from_calibre_db(MOUNT_POINT_USB);
         } else {
@@ -1764,6 +1792,7 @@ static void msc_event_cb(const msc_host_event_t *event, void *arg)
     } else if (event->event == MSC_DEVICE_DISCONNECTED) {
         ESP_LOGI(TAG, "MSC device disconnected");
         ebook_reader_connected = false;
+        g_hardware_key_authenticated = false;
         g_led_state = LED_STATE_IDLE;
         // Unmount the filesystem
         msc_host_vfs_unregister(vfs_handle);

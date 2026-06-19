@@ -294,6 +294,37 @@ textarea.restore-area:focus { border-color: var(--accent-dark); }
 <script>
 let SESSION_TOKEN = '';
 
+// ── Hardware Auth Check ────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  fetch('/board/admin/auth/status')
+    .then(r => {
+        if (!r.ok) throw new Error('Not authenticated');
+        return r.json();
+    })
+    .then(data => {
+      if (data.authenticated) {
+        document.getElementById('gate').style.display  = 'none';
+        document.getElementById('panel').style.display = 'block';
+        loadAdminData();
+      }
+    })
+    .catch(e => console.log('Hardware auth not present.'));
+});
+
+function loadAdminData() {
+  // Load identity info
+  apiFetch(api('/board/admin/identity/get'))
+    .then(r => r.json())
+    .then(d => {
+      document.getElementById('idName').value = d.name || '';
+      document.getElementById('idIcon').value = d.icon || '';
+      document.getElementById('idTagline').value = d.tagline || '';
+      document.getElementById('idRules').value = d.rules || '';
+      document.getElementById('idFooter').value = d.footer || '';
+    });
+  loadPostList();
+}
+
 // ── Gate ────────────────────────────────────────────────────────────────────
 function tryLogin() {
   const val = document.getElementById('keyIn').value;
@@ -311,19 +342,7 @@ function tryLogin() {
     SESSION_TOKEN = token;
     document.getElementById('gate').style.display  = 'none';
     document.getElementById('panel').style.display = 'block';
-    
-    // Load identity info
-    apiFetch(api('/board/admin/identity/get'))
-      .then(r => r.json())
-      .then(d => {
-        document.getElementById('idName').value = d.name || '';
-        document.getElementById('idIcon').value = d.icon || '';
-        document.getElementById('idTagline').value = d.tagline || '';
-        document.getElementById('idRules').value = d.rules || '';
-        document.getElementById('idFooter').value = d.footer || '';
-      });
-
-    loadPostList();
+    loadAdminData();
   })
   .catch(() => {
     document.getElementById('gateErr').textContent = 'Incorrect key.';

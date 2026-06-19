@@ -24,6 +24,7 @@ char id_footer[101]  = "Powered locally — no internet required";
 char admin_key[65]   = "change_me";
 char session_token[33] = "";
 unsigned long token_issued_at = 0;
+bool g_hardware_key_authenticated = false;
 
 int msgCount = 0;
 uint16_t nextMsgId = 1;
