@@ -518,7 +518,7 @@ static esp_err_t static_file_handler(httpd_req_t *req) {
         ESP_LOGE(TAG, "File not found: %s", filepath);
 
         // Prevent infinite redirect loops for core endpoints
-        if (strcmp(req->uri, "/") == 0 || strcmp(req->uri, "/index.html") == 0 || strcmp(req->uri, "/ereader.html") == 0) {
+        if (strcmp(req->uri, "/") == 0 || strcmp(req->uri, "/index.html") == 0 || strcmp(req->uri, "/ereader.html") == 0 || strcmp(req->uri, "/favicon.ico") == 0) {
             httpd_resp_send_404(req);
             return ESP_FAIL;
         }
