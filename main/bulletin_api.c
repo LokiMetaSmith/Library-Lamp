@@ -221,6 +221,20 @@ static esp_err_t admin_delete_post_handler(httpd_req_t *req) {
     return ESP_FAIL;
 }
 
+extern bool format_sd_card(void);
+
+static esp_err_t admin_format_sd_handler(httpd_req_t *req) {
+    if (!check_admin_token(req)) { httpd_resp_send_err(req, HTTPD_403_FORBIDDEN, "forbidden"); return ESP_FAIL; }
+
+    if (format_sd_card()) {
+        httpd_resp_send(req, "formatted", 9);
+        return ESP_OK;
+    } else {
+        httpd_resp_send_500(req);
+        return ESP_FAIL;
+    }
+}
+
 void register_bulletin_api_handlers(httpd_handle_t server) {
     httpd_uri_t info_uri = { .uri = "/board/info", .method = HTTP_GET, .handler = board_info_handler, .user_ctx = NULL };
     httpd_register_uri_handler(server, &info_uri);
@@ -251,4 +265,7 @@ void register_bulletin_api_handlers(httpd_handle_t server) {
 
     httpd_uri_t admin_del_uri = { .uri = "/board/admin/delete/post", .method = HTTP_GET, .handler = admin_delete_post_handler, .user_ctx = NULL };
     httpd_register_uri_handler(server, &admin_del_uri);
+
+    httpd_uri_t admin_format_sd_uri = { .uri = "/board/admin/format-sd", .method = HTTP_POST, .handler = admin_format_sd_handler, .user_ctx = NULL };
+    httpd_register_uri_handler(server, &admin_format_sd_uri);
 }
