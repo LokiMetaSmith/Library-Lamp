@@ -22,11 +22,14 @@
         <h1>Wi-Fi Setup</h1>
         <p>Connect your E-Book Librarian to your local Wi-Fi network.</p>
         <form action="/save-credentials" method="POST">
-            <input type="text" id="ssid" name="ssid" placeholder="Wi-Fi Network Name (SSID)" required>
-            <input type="password" id="password" name="password" placeholder="Password">
+            <input type="text" id="ssid" name="ssid" aria-label="Wi-Fi Network Name (SSID)" placeholder="Wi-Fi Network Name (SSID)" required>
+            <input type="password" id="password" name="password" aria-label="Password" placeholder="Password">
             <button type="submit">Connect</button>
         </form>
         <div id="status"></div>
+        <div style="margin-top: 20px;">
+            <button type="button" onclick="window.location.href='/index.html'" style="background-color: #6c757d;">Back to Library</button>
+        </div>
     </div>
 </body>
 </html>
