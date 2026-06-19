@@ -50,9 +50,16 @@ This project is built using the **Espressif IoT Development Framework (ESP-IDF)*
     - Save and exit.
 
 4.  **Build, Flash, and Monitor:**
-    Connect your ESP32-S3 board and run the following command to build the project, upload it to the device, and view the serial output:
+    Connect your ESP32-S3 board. Because the web UI is stored on a separate filesystem (SPIFFS), you must flash both the application and the `storage` partition.
+
+    You can use the provided script on Linux/macOS:
     ```bash
-    idf.py build flash monitor
+    ./install_firmware.sh
+    ```
+
+    Or run the commands manually (required on Windows):
+    ```bash
+    idf.py build storage-flash flash monitor
     ```
 
 ## 💻 Usage

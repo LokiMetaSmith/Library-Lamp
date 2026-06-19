@@ -516,6 +516,13 @@ static esp_err_t static_file_handler(httpd_req_t *req) {
     struct stat path_stat;
     if (stat(filepath, &path_stat) == -1) {
         ESP_LOGE(TAG, "File not found: %s", filepath);
+
+        // Prevent infinite redirect loops for core endpoints
+        if (strcmp(req->uri, "/") == 0 || strcmp(req->uri, "/index.html") == 0 || strcmp(req->uri, "/ereader.html") == 0) {
+            httpd_resp_send_404(req);
+            return ESP_FAIL;
+        }
+
         // Instead of 404, redirect to root for captive portal functionality
         httpd_resp_set_status(req, "302 Temporary Redirect");
         httpd_resp_set_hdr(req, "Location", "/");
@@ -1539,7 +1546,7 @@ void init_spiffs(void) {
 void init_sd_card(void) {
     esp_err_t ret;
     esp_vfs_fat_sdmmc_mount_config_t mount_config = {
-        .format_if_mount_failed = false,
+        .format_if_mount_failed = true,
         .max_files = 5,
         .allocation_unit_size = 16 * 1024
     };
@@ -1554,6 +1561,10 @@ void init_sd_card(void) {
         .sclk_io_num = PIN_NUM_CLK,
         .quadwp_io_num = -1,
         .quadhd_io_num = -1,
+        .data4_io_num = -1,
+        .data5_io_num = -1,
+        .data6_io_num = -1,
+        .data7_io_num = -1,
         .max_transfer_sz = 4000,
     };
     // Ensure SPI3 is used for SD card to avoid conflict with LoRa on SPI2
