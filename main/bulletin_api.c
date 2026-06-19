@@ -136,7 +136,7 @@ static esp_err_t admin_auth_handler(httpd_req_t *req) {
 }
 
 static bool check_admin_token(httpd_req_t *req) {
-    char buf[128];
+    char buf[512];
     if (httpd_req_get_url_query_str(req, buf, sizeof(buf)) == ESP_OK) {
         char token[33];
         if (httpd_query_key_value(buf, "token", token, sizeof(token)) == ESP_OK) {
