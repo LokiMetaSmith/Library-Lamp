@@ -8,7 +8,7 @@ connectors:
   esp32s3_devkit:
     type: pin-header
     # Pins on the ESP32-S3-DevKitC-1 board used in this project
-    pins: [3V3, 5V, GND, IO4, IO5, IO18, IO19, IO20, IO23]
+    pins: [3V3, 5V, GND, IO0, IO11, IO12, IO13, IO14, IO48]
     pin_labels:
       GND: [GND.1, GND.2, GND.3] # For connecting multiple grounds
 
@@ -45,33 +45,33 @@ wires:
     color: [RD, BK] # Red for 5V, Black for Ground
 
   - connect:
-      - esp32s3_devkit: [IO20, GND.3]
+      - esp32s3_devkit: [IO0, GND.3]
       - button: [1, 2]
     color: [GN, BK] # Green for signal, Black for Ground
 
   # --- SD Card (SPI) Connections ---
   - connect:
-      - esp32s3_devkit: [IO5]
+      - esp32s3_devkit: [IO11]
       - sd_module: [CS]
     color: YL # Yellow
     
   - connect:
-      - esp32s3_devkit: [IO18]
+      - esp32s3_devkit: [IO12]
       - sd_module: [SCK]
     color: BU # Blue
 
   - connect:
-      - esp32s3_devkit: [IO19]
+      - esp32s3_devkit: [IO14]
       - sd_module: [DO] # MISO
     color: GN # Green
 
   - connect:
-      - esp32s3_devkit: [IO23]
+      - esp32s3_devkit: [IO13]
       - sd_module: [DI] # MOSI
     color: OG # Orange
     
   # --- LED Strip Connection ---
   - connect:
-      - esp32s3_devkit: [IO4]
+      - esp32s3_devkit: [IO48]
       - led_strip: ["Data In"]
     color: WT # White
