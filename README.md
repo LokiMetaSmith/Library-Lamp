@@ -57,7 +57,12 @@ This project is built using the **Espressif IoT Development Framework (ESP-IDF)*
     ./install_firmware.sh
     ```
 
-    Or run the commands manually (required on Windows):
+    Or use the provided PowerShell script on Windows:
+    ```powershell
+    .\install_firmware.ps1
+    ```
+
+    If you prefer, you can always run the commands manually:
     ```bash
     idf.py build storage-flash flash monitor
     ```
