@@ -26,6 +26,7 @@ extern char id_footer[101];
 extern char admin_key[65];
 extern char session_token[33];
 extern unsigned long token_issued_at;
+extern bool g_hardware_key_authenticated;
 
 extern int msgCount;
 extern BulletinMessage msgs[MAX_MSGS];
