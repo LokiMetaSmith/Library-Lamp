@@ -2155,6 +2155,9 @@ void app_main(void) {
     init_led_strip();
     xTaskCreate(led_status_task, "led_status_task", 2048, NULL, 5, NULL);
 
+    // Show setup (purple pulsing) while trying to initialize/connect
+    g_led_state = LED_STATE_SETUP;
+
     // Initialize BLE for configuration
     init_ble();
 
@@ -2173,7 +2176,7 @@ void app_main(void) {
     } else {
         // Configuration mode
         ESP_LOGI(TAG, "Starting AP mode services...");
-        g_led_state = LED_STATE_SETUP; // Set LED to setup mode
+        g_led_state = LED_STATE_IDLE; // Use standard idle mode in AP mode
         start_dns_server();
         ESP_LOGI(TAG, "AP mode and Captive Portal services are running. Connect to the Wi-Fi AP to configure or browse.");
     }
