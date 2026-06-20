@@ -1691,7 +1691,7 @@ void init_wifi(void) {
         ESP_ERROR_CHECK(esp_event_handler_instance_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &wifi_event_handler, NULL, NULL));
         ESP_ERROR_CHECK(esp_event_handler_instance_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &wifi_event_handler, NULL, NULL));
 
-        wifi_config_t wifi_config = { .sta = { .threshold.authmode = WIFI_AUTH_WPA_WPA2_PSK } };
+        wifi_config_t wifi_config = { .sta = { .threshold.authmode = WIFI_AUTH_WPA_PSK } };
         strlcpy((char*)wifi_config.sta.ssid, ssid, sizeof(wifi_config.sta.ssid));
         strlcpy((char*)wifi_config.sta.password, password, sizeof(wifi_config.sta.password));
 
