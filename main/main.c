@@ -90,6 +90,7 @@
 
 // NVS Storage Keys
 #define NVS_NAMESPACE "wifi_creds"
+#define NVS_KEY_PUBLIC_UPLOADS "pub_upload"
 #define NVS_KEY_SSID "ssid"
 #define NVS_KEY_PASS "password"
 #define NVS_KEY_LED_R "led_r"
@@ -169,6 +170,7 @@ static msc_host_device_handle_t device_handle = NULL;
 static msc_host_vfs_handle_t vfs_handle = NULL;
 static led_strip_handle_t g_led_strip;
 static bool g_wifi_configured = false;
+bool allow_public_uploads = false;
 bool g_usb_mounted = false;
 bool g_sd_card_initialized = false;
 sdmmc_card_t *g_sd_card_handle = NULL;
@@ -324,7 +326,8 @@ esp_err_t load_wifi_credentials(char *ssid, size_t ssid_len, char *password, siz
     nvs_handle_t my_handle;
     esp_err_t err;
 
-    err = nvs_open(NVS_NAMESPACE, NVS_READONLY, &my_handle);
+
+    err = nvs_open(NVS_NAMESPACE, NVS_READWRITE, &my_handle);
     if (err != ESP_OK) {
         if (err == ESP_ERR_NVS_NOT_FOUND) {
             ESP_LOGI(TAG, "NVS namespace '%s' not found. First boot?", NVS_NAMESPACE);
@@ -333,6 +336,12 @@ esp_err_t load_wifi_credentials(char *ssid, size_t ssid_len, char *password, siz
         }
         return err;
     }
+
+    uint8_t u_val = 0;
+    if (nvs_get_u8(my_handle, NVS_KEY_PUBLIC_UPLOADS, &u_val) == ESP_OK) {
+        allow_public_uploads = (u_val == 1);
+    }
+
 
     err = nvs_get_str(my_handle, NVS_KEY_SSID, ssid, &ssid_len);
     if (err != ESP_OK) {
@@ -613,8 +622,128 @@ void urldecode(char *dst, const char *src) {
 
 // --- Download File Handler ---
 
+
+static esp_err_t upload_handler(httpd_req_t *req) {
+    if (!allow_public_uploads && !bb_is_admin_request(req)) {
+        httpd_resp_send_err(req, HTTPD_403_FORBIDDEN, "Public uploads are disabled.");
+        return ESP_FAIL;
+    }
+
+    // Since multipart/form-data can be complex to parse perfectly without a library,
+    // and ebook files can be large, we'll implement a basic parser that works for our specific JS client.
+    // The client will send title, author, and file via FormData.
+
+    // A more robust approach for large files is receiving the whole body, but ESP32 memory is limited.
+    // We expect the client to send 'title', 'author', and 'file' using a simple custom JSON + Binary approach
+    // or we parse the multipart headers manually.
+
+    // Actually, to make things easy and robust, the frontend can send a JSON metadata packet first,
+    // or send the file directly in a POST, with title/author in URL query parameters!
+    // That avoids memory-intensive multipart parsing on the ESP32.
+
+    char buf[512];
+    char title[100] = "Unknown Title";
+    char author[100] = "Unknown Author";
+    char filename[100] = "upload.epub";
+
+    if (httpd_req_get_url_query_str(req, buf, sizeof(buf)) == ESP_OK) {
+        char param[100];
+        if (httpd_query_key_value(buf, "title", param, sizeof(param)) == ESP_OK) urldecode(title, param);
+        if (httpd_query_key_value(buf, "author", param, sizeof(param)) == ESP_OK) urldecode(author, param);
+        if (httpd_query_key_value(buf, "filename", param, sizeof(param)) == ESP_OK) urldecode(filename, param);
+    }
+
+    // Check for directory traversal
+    if (strstr(filename, "..") || strchr(filename, '/')) {
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid filename.");
+        return ESP_FAIL;
+    }
+
+    char filepath[256];
+    snprintf(filepath, sizeof(filepath), "%s/%s", MOUNT_POINT_SD, filename);
+
+    FILE *f = fopen(filepath, "w");
+    if (!f) {
+        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Failed to create file on SD card.");
+        return ESP_FAIL;
+    }
+
+    // Receive the file chunk by chunk
+    char *recv_buf = malloc(4096);
+    if (!recv_buf) {
+        fclose(f);
+        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Memory allocation failed.");
+        return ESP_FAIL;
+    }
+
+        int remaining = req->content_len;
+
+    while (remaining > 0) {
+        int ret = httpd_req_recv(req, recv_buf, MIN(remaining, 4096));
+        if (ret <= 0) {
+            if (ret == HTTPD_SOCK_ERR_TIMEOUT) {
+                continue;
+            }
+            fclose(f);
+            free(recv_buf);
+            remove(filepath); // delete incomplete file
+            return ESP_FAIL;
+        }
+        fwrite(recv_buf, 1, ret, f);
+        remaining -= ret;
+    }
+
+    fclose(f);
+    free(recv_buf);
+
+    // Update catalog.json
+    char catalog_path[256];
+    snprintf(catalog_path, sizeof(catalog_path), "%s/catalog.json", MOUNT_POINT_SD);
+    FILE *cat_f = fopen(catalog_path, "r");
+    cJSON *cat_json = NULL;
+
+    if (cat_f) {
+        fseek(cat_f, 0, SEEK_END);
+        long fsize = ftell(cat_f);
+        fseek(cat_f, 0, SEEK_SET);
+        if (fsize > 0) {
+            char *json_data = malloc(fsize + 1);
+            if (json_data) {
+                fread(json_data, 1, fsize, cat_f);
+                json_data[fsize] = 0;
+                cat_json = cJSON_Parse(json_data);
+                free(json_data);
+            }
+        }
+        fclose(cat_f);
+    }
+
+    if (!cat_json) cat_json = cJSON_CreateArray();
+
+    cJSON *new_book = cJSON_CreateObject();
+    cJSON_AddStringToObject(new_book, "name", filename);
+    cJSON_AddStringToObject(new_book, "title", title);
+    cJSON_AddStringToObject(new_book, "author", author);
+    cJSON_AddItemToArray(cat_json, new_book);
+
+    cat_f = fopen(catalog_path, "w");
+    if (cat_f) {
+        char *new_json_str = cJSON_PrintUnformatted(cat_json);
+        if (new_json_str) {
+            fwrite(new_json_str, 1, strlen(new_json_str), cat_f);
+            free(new_json_str);
+        }
+        fclose(cat_f);
+    }
+    cJSON_Delete(cat_json);
+
+    httpd_resp_set_type(req, "application/json");
+    httpd_resp_send(req, "{\"success\":true}", 16);
+    return ESP_OK;
+}
+
 static esp_err_t download_handler(httpd_req_t *req) {
-    char buf[256];
+    char buf[512];
     if (httpd_req_get_url_query_str(req, buf, sizeof(buf)) != ESP_OK) {
         httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Bad Request");
         return ESP_FAIL;
@@ -712,7 +841,25 @@ static esp_err_t status_handler(httpd_req_t *req) {
     cJSON_AddBoolToObject(root, "transfer_active", g_transfer_progress.active);
     cJSON_AddBoolToObject(root, "sd_mounted", g_sd_card_initialized);
     cJSON_AddBoolToObject(root, "usb_mounted", g_usb_mounted);
+
     cJSON_AddBoolToObject(root, "lora_initialized", lora_initialized);
+    cJSON_AddBoolToObject(root, "allow_public_uploads", allow_public_uploads);
+    cJSON_AddBoolToObject(root, "is_admin", bb_is_admin_request(req));
+
+
+
+    if (g_sd_card_initialized) {
+        uint64_t out_total_bytes, out_free_bytes;
+        if (esp_vfs_fat_info(MOUNT_POINT_SD, &out_total_bytes, &out_free_bytes) == ESP_OK) {
+            uint32_t total_mb = out_total_bytes / (1024 * 1024);
+            uint32_t free_mb = out_free_bytes / (1024 * 1024);
+            uint32_t used_mb = total_mb > free_mb ? total_mb - free_mb : 0;
+
+            cJSON_AddNumberToObject(root, "sd_total_mb", total_mb);
+            cJSON_AddNumberToObject(root, "sd_used_mb", used_mb);
+        }
+    }
+
     if (g_transfer_progress.active) {
         cJSON_AddStringToObject(root, "filename", g_transfer_progress.filename);
         cJSON_AddNumberToObject(root, "bytes_transferred", g_transfer_progress.bytes_transferred);
@@ -1054,7 +1201,49 @@ static esp_err_t set_led_color_handler(httpd_req_t *req) {
 }
 
 // --- WEB SERVER SETUP (MAIN APP) ---
-static httpd_handle_t start_webserver(void) {
+static esp_err_t admin_set_public_uploads_handler(httpd_req_t *req) {
+    if (!bb_is_admin_request(req)) {
+        httpd_resp_send_err(req, HTTPD_403_FORBIDDEN, "Forbidden");
+        return ESP_FAIL;
+    }
+
+    char content[100];
+    int ret = httpd_req_recv(req, content, sizeof(content) - 1);
+    if (ret <= 0) {
+        return ESP_FAIL;
+    }
+    content[ret] = '\0';
+
+    cJSON *json = cJSON_Parse(content);
+    if (!json) {
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid JSON");
+        return ESP_FAIL;
+    }
+
+    cJSON *enabled_item = cJSON_GetObjectItem(json, "enabled");
+    if (!cJSON_IsBool(enabled_item)) {
+        cJSON_Delete(json);
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid JSON");
+        return ESP_FAIL;
+    }
+
+    allow_public_uploads = cJSON_IsTrue(enabled_item);
+    cJSON_Delete(json);
+
+    nvs_handle_t my_handle;
+    esp_err_t err = nvs_open(NVS_NAMESPACE, NVS_READWRITE, &my_handle);
+    if (err == ESP_OK) {
+        nvs_set_u8(my_handle, NVS_KEY_PUBLIC_UPLOADS, allow_public_uploads ? 1 : 0);
+        nvs_commit(my_handle);
+        nvs_close(my_handle);
+    }
+
+    httpd_resp_set_type(req, "application/json");
+    httpd_resp_send(req, "{\"success\": true}", 17);
+    return ESP_OK;
+}
+
+httpd_handle_t start_webserver(void) {
     httpd_handle_t server = NULL;
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
     config.uri_match_fn = httpd_uri_match_wildcard;
@@ -1083,6 +1272,14 @@ static httpd_handle_t start_webserver(void) {
         httpd_register_uri_handler(server, &sleep_uri);
         httpd_uri_t download_uri = { "/download", HTTP_GET, download_handler, NULL };
         httpd_register_uri_handler(server, &download_uri);
+
+        httpd_uri_t upload_uri = { "/upload", HTTP_POST, upload_handler, NULL };
+        httpd_register_uri_handler(server, &upload_uri);
+
+
+        httpd_uri_t public_uploads_uri = { "/admin/set_public_uploads", HTTP_POST, admin_set_public_uploads_handler, NULL };
+        httpd_register_uri_handler(server, &public_uploads_uri);
+
 
         httpd_uri_t setup_uri = { "/setup", HTTP_GET, setup_get_handler, NULL };
         httpd_register_uri_handler(server, &setup_uri);

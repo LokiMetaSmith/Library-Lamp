@@ -25,7 +25,35 @@
         </header>
         <main class="app-main">
             <div class="library-section">
-                <h2>Local Library (SD Card)</h2>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <h2>Local Library (SD Card)</h2>
+                    <div class="storage-info" v-if="sdTotalMb > 0">
+                        {{ sdUsedMb }} MB used / {{ sdTotalMb }} MB total
+                    </div>
+                </div>
+
+                <div class="upload-section" v-if="allowPublicUploads || isAdmin" style="margin-bottom: 20px; padding: 15px; background-color: rgba(0,0,0,0.2); border-radius: 8px;">
+                    <h3 style="margin-top: 0;">Upload Book</h3>
+                    <form @submit.prevent="uploadBook" style="display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end;">
+                        <div>
+                            <label style="display: block; font-size: 0.9em; margin-bottom: 5px;">File</label>
+                            <input type="file" ref="fileInput" accept=".epub,.mobi,.pdf,.txt,.html" required>
+                        </div>
+                        <div>
+                            <label style="display: block; font-size: 0.9em; margin-bottom: 5px;">Title</label>
+                            <input type="text" v-model="uploadTitle" placeholder="Title" required>
+                        </div>
+                        <div>
+                            <label style="display: block; font-size: 0.9em; margin-bottom: 5px;">Author</label>
+                            <input type="text" v-model="uploadAuthor" placeholder="Author" required>
+                        </div>
+                        <button type="submit" :disabled="isUploading">
+                            {{ isUploading ? 'Uploading...' : 'Upload' }}
+                        </button>
+                    </form>
+                    <p class="error-message" v-if="uploadError">{{ uploadError }}</p>
+                </div>
+
                 <ul class="file-list">
                     <li v-for="file in localFiles" :key="file.name">
                         <div class="file-info">
