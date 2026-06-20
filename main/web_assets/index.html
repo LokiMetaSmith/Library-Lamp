@@ -66,6 +66,7 @@
                                 <div class="progress-bar" :style="{ width: transfer.progress + '%' }"></div>
                             </div>
                             <button @click="transferToEReader(file.name)" :disabled="!isEReaderConnected || transfer.active">Transfer to E-Reader</button>
+                            <a class="sleep-btn" style="text-decoration: none;" v-if="file.name.toLowerCase().endsWith('.epub')" :href="'/viewer.html?file=' + encodeURIComponent(file.name) + '&source=sd'">Read</a>
                             <button v-if="transfer.active && transfer.filename === file.name" @click="cancelTransfer" class="cancel-btn">Cancel</button>
                         </div>
                     </li>
