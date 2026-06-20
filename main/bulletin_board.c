@@ -234,9 +234,12 @@ void bb_add_message(const char* author, const char* type, const char* text, int 
     msgsDirty = true;
     bb_save_messages();
     
-    char lora_msg[512];
-    snprintf(lora_msg, sizeof(lora_msg), "MSG|%s|%s|%s", author, type, text);
-    lora_wan_broadcast(lora_msg);
+    char *lora_msg = (char *)malloc(512);
+    if (lora_msg) {
+        snprintf(lora_msg, 512, "MSG|%s|%s|%s", author, type, text);
+        lora_wan_broadcast(lora_msg);
+        free(lora_msg);
+    }
 }
 
 void bb_delete_message(uint16_t targetId) {
