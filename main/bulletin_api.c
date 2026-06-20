@@ -70,18 +70,27 @@ static esp_err_t board_messages_handler(httpd_req_t *req) {
 }
 
 static esp_err_t board_post_handler(httpd_req_t *req) {
-    char buf[1024];
     int ret, remaining = req->content_len;
-    if (remaining >= sizeof(buf)) {
+    if (remaining >= 1024) {
         httpd_resp_send_408(req);
         return ESP_FAIL;
     }
 
+    char *buf = (char *)malloc(1024);
+    if (!buf) {
+        httpd_resp_send_500(req);
+        return ESP_FAIL;
+    }
+
     ret = httpd_req_recv(req, buf, remaining);
-    if (ret <= 0) return ESP_FAIL;
+    if (ret <= 0) {
+        free(buf);
+        return ESP_FAIL;
+    }
     buf[ret] = '\0';
 
     cJSON *json = cJSON_Parse(buf);
+    free(buf);
     if (!json) {
         httpd_resp_send_500(req);
         return ESP_FAIL;
@@ -121,18 +130,27 @@ static esp_err_t board_post_handler(httpd_req_t *req) {
 }
 
 static esp_err_t admin_auth_handler(httpd_req_t *req) {
-    char buf[256];
     int ret, remaining = req->content_len;
-    if (remaining >= sizeof(buf)) {
+    if (remaining >= 256) {
         httpd_resp_send_408(req);
         return ESP_FAIL;
     }
 
+    char *buf = (char *)malloc(256);
+    if (!buf) {
+        httpd_resp_send_500(req);
+        return ESP_FAIL;
+    }
+
     ret = httpd_req_recv(req, buf, remaining);
-    if (ret <= 0) return ESP_FAIL;
+    if (ret <= 0) {
+        free(buf);
+        return ESP_FAIL;
+    }
     buf[ret] = '\0';
 
     cJSON *json = cJSON_Parse(buf);
+    free(buf);
     if (!json) { httpd_resp_send_500(req); return ESP_FAIL; }
 
     cJSON *j_key = cJSON_GetObjectItem(json, "key");
@@ -149,13 +167,17 @@ static esp_err_t admin_auth_handler(httpd_req_t *req) {
 
 bool bb_is_admin_request(httpd_req_t *req) {
     if (g_hardware_key_authenticated) return true;
-    char buf[512];
-    if (httpd_req_get_url_query_str(req, buf, sizeof(buf)) == ESP_OK) {
+    char *buf = (char *)malloc(512);
+    if (!buf) return false;
+
+    if (httpd_req_get_url_query_str(req, buf, 512) == ESP_OK) {
         char token[33];
         if (httpd_query_key_value(buf, "token", token, sizeof(token)) == ESP_OK) {
+            free(buf);
             return bb_is_token_valid(token);
         }
     }
+    free(buf);
     return false;
 }
 
@@ -176,8 +198,13 @@ static esp_err_t admin_identity_get_handler(httpd_req_t *req) {
 static esp_err_t admin_identity_set_handler(httpd_req_t *req) {
     if (!bb_is_admin_request(req)) { httpd_resp_send_err(req, HTTPD_403_FORBIDDEN, "forbidden"); return ESP_FAIL; }
     
-    char buf[512];
-    if (httpd_req_get_url_query_str(req, buf, sizeof(buf)) == ESP_OK) {
+    char *buf = (char *)malloc(512);
+    if (!buf) {
+        httpd_resp_send_500(req);
+        return ESP_FAIL;
+    }
+
+    if (httpd_req_get_url_query_str(req, buf, 512) == ESP_OK) {
         char temp[101];
         if (httpd_query_key_value(buf, "name", temp, sizeof(temp)) == ESP_OK) { urldecode(temp, temp); sanitize(temp, id_name, 49); }
         if (httpd_query_key_value(buf, "icon", temp, sizeof(temp)) == ESP_OK) { urldecode(temp, temp); sanitize(temp, id_icon, 9); }
@@ -185,9 +212,11 @@ static esp_err_t admin_identity_set_handler(httpd_req_t *req) {
         if (httpd_query_key_value(buf, "rules", temp, sizeof(temp)) == ESP_OK) { urldecode(temp, temp); sanitize(temp, id_rules, 101); }
         if (httpd_query_key_value(buf, "footer", temp, sizeof(temp)) == ESP_OK) { urldecode(temp, temp); sanitize(temp, id_footer, 101); }
         bb_save_identity();
+        free(buf);
         httpd_resp_send(req, "identity saved", 14);
         return ESP_OK;
     }
+    free(buf);
     httpd_resp_send_500(req);
     return ESP_FAIL;
 }
@@ -195,16 +224,23 @@ static esp_err_t admin_identity_set_handler(httpd_req_t *req) {
 static esp_err_t admin_setkey_handler(httpd_req_t *req) {
     if (!bb_is_admin_request(req)) { httpd_resp_send_err(req, HTTPD_403_FORBIDDEN, "forbidden"); return ESP_FAIL; }
     
-    char buf[128];
-    if (httpd_req_get_url_query_str(req, buf, sizeof(buf)) == ESP_OK) {
+    char *buf = (char *)malloc(128);
+    if (!buf) {
+        httpd_resp_send_500(req);
+        return ESP_FAIL;
+    }
+
+    if (httpd_req_get_url_query_str(req, buf, 128) == ESP_OK) {
         char temp[65];
         if (httpd_query_key_value(buf, "newkey", temp, sizeof(temp)) == ESP_OK) {
             strncpy(admin_key, temp, 64);
             bb_save_admin_key();
+            free(buf);
             httpd_resp_send(req, "key updated", 11);
             return ESP_OK;
         }
     }
+    free(buf);
     httpd_resp_send_500(req);
     return ESP_FAIL;
 }
@@ -219,16 +255,23 @@ static esp_err_t admin_clear_handler(httpd_req_t *req) {
 static esp_err_t admin_delete_post_handler(httpd_req_t *req) {
     if (!bb_is_admin_request(req)) { httpd_resp_send_err(req, HTTPD_403_FORBIDDEN, "forbidden"); return ESP_FAIL; }
     
-    char buf[128];
-    if (httpd_req_get_url_query_str(req, buf, sizeof(buf)) == ESP_OK) {
+    char *buf = (char *)malloc(128);
+    if (!buf) {
+        httpd_resp_send_500(req);
+        return ESP_FAIL;
+    }
+
+    if (httpd_req_get_url_query_str(req, buf, 128) == ESP_OK) {
         char temp[16];
         if (httpd_query_key_value(buf, "id", temp, sizeof(temp)) == ESP_OK) {
             uint16_t targetId = atoi(temp);
             bb_delete_message(targetId);
+            free(buf);
             httpd_resp_send(req, "deleted", 7);
             return ESP_OK;
         }
     }
+    free(buf);
     httpd_resp_send_500(req);
     return ESP_FAIL;
 }
