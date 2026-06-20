@@ -13,6 +13,12 @@ if ! command -v idf.py &> /dev/null; then
     exit 1
 fi
 
+echo "Setting target to ESP32-S3..."
+idf.py set-target esp32s3
+
+export SDKCONFIG="sdkconfig.esp32-s3-ebook-librarian"
+echo "Using custom configuration: $SDKCONFIG"
+
 echo "Building firmware..."
 idf.py build
 
