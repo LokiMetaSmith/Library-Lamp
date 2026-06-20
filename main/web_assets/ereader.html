@@ -187,6 +187,16 @@
 
                 li.appendChild(titleLink);
 
+                if (book.name.toLowerCase().endsWith('.epub')) {
+                    const readLink = document.createElement('a');
+                    readLink.href = `/viewer.html?file=${encodeURIComponent(book.name)}&source=sd`;
+                    readLink.className = 'admin-link';
+                    readLink.style.marginLeft = '10px';
+                    readLink.style.padding = '4px 8px';
+                    readLink.textContent = 'Read Online';
+                    li.appendChild(readLink);
+                }
+
                 if (book.author) {
                     const authorDiv = document.createElement('div');
                     authorDiv.className = 'book-author';

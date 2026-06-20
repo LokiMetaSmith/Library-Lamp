@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>E-Book Viewer</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        body { margin: 0; background: #2b211a; color: #e8dbce; font-family: "Georgia", serif; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+        .toolbar { padding: 10px; background: #3f3127; border-bottom: 1px solid #5a4634; display: flex; justify-content: space-between; align-items: center; }
+        .toolbar button, .toolbar a { background: #8c5a35; border: 1px solid #5a3820; color: #f5eedc; padding: 6px 12px; border-radius: 4px; cursor: pointer; text-decoration: none; font-size: 14px; }
+        .toolbar button:hover, .toolbar a:hover { background: #a06b43; }
+        #viewer { flex: 1; overflow: hidden; background: #fdf6e3; position: relative; width: 100%; max-width: 800px; margin: 0 auto; box-shadow: 0 0 15px rgba(0,0,0,0.5); }
+        .loading { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #8a7b6c; font-style: italic; display: none; z-index: 10; }
+    </style>
+</head>
+<body>
+    <div class="toolbar">
+        <a href="javascript:history.back()" id="backBtn">Back</a>
+        <div>
+            <button id="prevBtn" disabled>&#8592; Prev</button>
+            <button id="nextBtn" disabled>Next &#8594;</button>
+        </div>
+    </div>
+
+    <div id="viewer">
+        <div id="loading" class="loading">Loading book...</div>
+    </div>
+
+    <!-- Required Libraries for epub.js -->
+    <script src="/jszip.min.js"></script>
+    <script src="/epub.min.js"></script>
+
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const fileName = urlParams.get('file');
+        const source = urlParams.get('source') || 'sd';
+
+        if (!fileName || !fileName.endsWith('.epub')) {
+            document.getElementById('loading').textContent = "Invalid or missing EPUB file.";
+            document.getElementById('loading').style.display = 'block';
+        } else {
+            const downloadUrl = `/download?file=${encodeURIComponent(fileName)}&source=${encodeURIComponent(source)}`;
+            document.getElementById('loading').style.display = 'block';
+
+            // Initialize ePub.js
+            const book = ePub(downloadUrl);
+
+            // Render it in the viewer div
+            const rendition = book.renderTo("viewer", {
+                width: "100%",
+                height: "100%",
+                spread: "none"
+            });
+
+            // Display the first page
+            rendition.display().then(() => {
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('prevBtn').disabled = false;
+                document.getElementById('nextBtn').disabled = false;
+            }).catch(err => {
+                document.getElementById('loading').textContent = "Error loading book: " + err;
+            });
+
+            // Navigation controls
+            document.getElementById('prevBtn').addEventListener('click', () => rendition.prev());
+            document.getElementById('nextBtn').addEventListener('click', () => rendition.next());
+
+            // Keybindings for navigation
+            document.addEventListener("keyup", function(e) {
+                if (e.key === "ArrowLeft") rendition.prev();
+                if (e.key === "ArrowRight") rendition.next();
+            });
+        }
+    </script>
+</body>
+</html>
