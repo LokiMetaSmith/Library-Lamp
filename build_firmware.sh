@@ -1,39 +1,25 @@
 #!/usr/bin/env bash
 set -e
 
-VENV_DIR=".venv"
+echo "Setting up ESP32 Dev Environment and building firmware..."
 
-echo "Setting up ESP32 Dev Environment and PlatformIO..."
-
-# Create virtual environment if it doesn't exist
-if [ ! -d "$VENV_DIR" ]; then
-    echo "Creating virtual environment in $VENV_DIR..."
-    python3 -m venv "$VENV_DIR"
-fi
-
-# Ensure virtual environment python exists
-if [ ! -f "$VENV_DIR/bin/python" ] && [ ! -f "$VENV_DIR/Scripts/python" ]; then
-    echo "Virtual environment python not found!"
+# Check if idf.py is in the PATH
+if ! command -v idf.py &> /dev/null; then
+    echo "Error: idf.py could not be found."
+    echo "Please ensure you have set up the ESP-IDF environment."
+    echo "Run '. <path-to-esp-idf>/export.sh' or use the VS Code extension terminal."
     exit 1
 fi
 
-echo "Ensuring platformio is installed in the virtual environment..."
-if [ -f "$VENV_DIR/bin/python" ]; then
-    "$VENV_DIR/bin/python" -m pip install platformio -q
-else
-    "$VENV_DIR/Scripts/python" -m pip install platformio -q
-fi
+echo "Building firmware with ESP-IDF..."
 
-echo "Building firmware with PlatformIO..."
+# Set the target to esp32s3 to ensure dependencies and proper compilation for the USB OTG board
+idf.py set-target esp32s3
 
-# Set path to include venv binaries
-if [ -d "$VENV_DIR/bin" ]; then
-    export PATH="$PWD/$VENV_DIR/bin:$PATH"
-else
-    export PATH="$PWD/$VENV_DIR/Scripts:$PATH"
-fi
+# Ensure we use the correct custom sdkconfig for the ESP32-S3 custom board
+export SDKCONFIG="sdkconfig.esp32-s3-ebook-librarian"
 
-platformio run
+idf.py build
 
 if [ $? -ne 0 ]; then
     echo "Firmware compilation failed!"
