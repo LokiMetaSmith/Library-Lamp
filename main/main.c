@@ -1986,29 +1986,18 @@ static void led_status_task(void *pvParameters) {
 }
 
 void init_led_strip(void) {
-    ESP_LOGI(TAG, "Create RMT TX channel");
-    rmt_channel_handle_t led_chan = NULL;
-    rmt_tx_channel_config_t tx_chan_config = {
-        .clk_src = RMT_CLK_SRC_DEFAULT,
-        .gpio_num = LED_STRIP_GPIO,
-        .mem_block_symbols = 64, // Increase if needed
-        .resolution_hz = LED_STRIP_RMT_RES_HZ,
-        .trans_queue_depth = 4,
-    };
-    ESP_ERROR_CHECK(rmt_new_tx_channel(&tx_chan_config, &led_chan));
-
     ESP_LOGI(TAG, "Install WS2812 driver");
     led_strip_rmt_config_t rmt_config = {
         .resolution_hz = LED_STRIP_RMT_RES_HZ,
+        .clk_src = RMT_CLK_SRC_DEFAULT,
     };
     led_strip_config_t strip_config = {
         .max_leds = LED_STRIP_LED_NUMBERS,
         .strip_gpio_num = LED_STRIP_GPIO,
+        .led_model = LED_MODEL_WS2812,
+        .color_component_format = LED_STRIP_COLOR_COMPONENT_FMT_GRB,
     };
     ESP_ERROR_CHECK(led_strip_new_rmt_device(&strip_config, &rmt_config, &g_led_strip));
-
-    ESP_LOGI(TAG, "Enable RMT TX channel");
-    ESP_ERROR_CHECK(rmt_enable(led_chan));
 
     led_strip_clear(g_led_strip);
 }
