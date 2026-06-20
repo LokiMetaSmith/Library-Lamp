@@ -500,6 +500,13 @@ static esp_err_t save_credentials_post_handler(httpd_req_t *req) {
 // --- WEB SERVER HANDLERS (MAIN APP) ---
 static esp_err_t static_file_handler(httpd_req_t *req) {
 
+    // Prevent path traversal
+    if (strstr(req->uri, "..") != NULL) {
+        ESP_LOGE(TAG, "Path traversal attempt detected: %s", req->uri);
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid URI");
+        return ESP_FAIL;
+    }
+
     // If we're hitting /generate_204 or other known captive portal probe endpoints, redirect them to root
     if (strstr(req->uri, "generate_204") != NULL || strstr(req->uri, "hotspot-detect") != NULL) {
         httpd_resp_set_status(req, "302 Temporary Redirect");

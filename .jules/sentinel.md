@@ -8,3 +8,7 @@
 **Learning:** When using FreeRTOS, tasks are given a fixed stack size. Functions handling HTTP requests (such as `board_post_handler`) that declare large stack buffers (like `char buf[1024];`) can quickly exhaust the task stack, leading to a `LoadProhibited` Guru Meditation Error (Crash). This acts as a Denial of Service (DoS) vulnerability.
 
 **Action:** Increased the HTTP server task stack size (`config.stack_size = 8192;`) to provide a safer baseline for endpoints performing heavily recursive or stack-intensive operations like `cJSON` parsing and File I/O. Furthermore, migrated large string buffers in `bulletin_api.c` (e.g., `1024`, `512`, `256` bytes) and `bulletin_board.c` from the stack to the heap using `malloc()` and carefully implemented `free()` calls across all exit and error paths to prevent memory leaks.
+## 2026-06-20 - [Path Traversal in static file handler]
+**Vulnerability:** Unauthenticated path traversal in static_file_handler allowing arbitrary file read.
+**Learning:** The ESP-IDF VFS does not automatically sanitize directory traversal sequences like '..', requiring manual explicit checks.
+**Prevention:** Always sanitize or reject URIs containing '..' before appending them to base paths in custom VFS HTTP handlers.
