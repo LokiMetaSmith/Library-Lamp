@@ -290,6 +290,20 @@ textarea.restore-area:focus { border-color: var(--accent-dark); }
   </div>
 
   <div class="section">
+    <div class="section-head">Library Upload Settings</div>
+    <div class="section-body">
+      <div class="row" style="align-items: center; gap: 10px;">
+        <input type="checkbox" id="publicUploadsCheck" style="width: 20px; height: 20px;">
+        <label for="publicUploadsCheck" style="margin: 0;">Allow Public Book Uploads</label>
+      </div>
+      <div class="row">
+        <button class="btn" onclick="doSetPublicUploads()">Save Upload Settings</button>
+      </div>
+      <div class="feedback" id="uploadsFb"></div>
+    </div>
+  </div>
+
+  <div class="section">
     <div class="section-head">Storage Management</div>
     <div class="section-body">
       <div class="row">
@@ -333,6 +347,7 @@ function loadAdminData() {
       document.getElementById('idFooter').value = d.footer || '';
     });
   loadPostList();
+  loadUploadSettings();
 }
 
 // ── Gate ────────────────────────────────────────────────────────────────────
@@ -350,6 +365,7 @@ function tryLogin() {
   })
   .then(token => {
     SESSION_TOKEN = token;
+    localStorage.setItem('adminKey', val);
     document.getElementById('gate').style.display  = 'none';
     document.getElementById('panel').style.display = 'block';
     loadAdminData();
@@ -385,6 +401,33 @@ function fb(id, msg) {
   const el = document.getElementById(id);
   el.textContent = msg;
   setTimeout(() => { el.textContent = ''; }, 4000);
+}
+
+// ── Upload Settings ───────────────────────────────────────────────────────────
+function loadUploadSettings() {
+  fetch('/status')
+    .then(r => r.json())
+    .then(d => {
+      document.getElementById('publicUploadsCheck').checked = d.allow_public_uploads;
+    });
+}
+
+function doSetPublicUploads() {
+  const enabled = document.getElementById('publicUploadsCheck').checked;
+  fetch(api('/admin/set_public_uploads'), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ enabled })
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data.success) {
+      fb('uploadsFb', '✓ Upload settings saved');
+    } else {
+      fb('uploadsFb', '✗ Failed to save settings');
+    }
+  })
+  .catch(() => fb('uploadsFb', '✗ Request failed'));
 }
 
 // ── Change admin key ──────────────────────────────────────────────────────────

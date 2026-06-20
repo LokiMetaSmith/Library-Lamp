@@ -15,6 +15,14 @@ createApp({
                 error: ''
             },
             pollingInterval: null,
+            sdTotalMb: 0,
+            sdUsedMb: 0,
+            allowPublicUploads: false,
+            isAdmin: false,
+            uploadTitle: '',
+            uploadAuthor: '',
+            isUploading: false,
+            uploadError: ''
         }
     },
     computed: {
@@ -35,6 +43,12 @@ createApp({
                 if (!data.usb_mounted) errors.push("Warning: USB initialization failed.");
                 if (!data.lora_initialized) errors.push("Warning: LoRaWAN initialization failed.");
                 this.systemErrors = errors;
+
+                if (data.sd_total_mb !== undefined) this.sdTotalMb = data.sd_total_mb;
+                if (data.sd_used_mb !== undefined) this.sdUsedMb = data.sd_used_mb;
+                if (data.allow_public_uploads !== undefined) this.allowPublicUploads = data.allow_public_uploads;
+                if (data.is_admin !== undefined) this.isAdmin = data.is_admin;
+
                 if (data.transfer_active) {
                     this.transfer.active = true;
                     this.transfer.filename = data.filename;
@@ -106,6 +120,48 @@ createApp({
             } catch (error) {
                 console.error('Error cancelling transfer:', error);
                 this.transfer.error = 'Failed to send cancel request.';
+            }
+        },
+        async uploadBook() {
+            const fileInput = this.$refs.fileInput;
+            if (!fileInput.files.length) return;
+
+            const file = fileInput.files[0];
+            const title = this.uploadTitle || 'Unknown Title';
+            const author = this.uploadAuthor || 'Unknown Author';
+            const filename = file.name;
+
+            this.isUploading = true;
+            this.uploadError = '';
+
+            try {
+                // Construct query URL
+                let url = `/upload?title=${encodeURIComponent(title)}&author=${encodeURIComponent(author)}&filename=${encodeURIComponent(filename)}`;
+                const savedKey = localStorage.getItem('adminKey');
+                if (savedKey) {
+                    url += `&key=${encodeURIComponent(savedKey)}`;
+                }
+
+                const response = await fetch(url, {
+                    method: 'POST',
+                    body: file // Send file directly as body
+                });
+
+                if (response.ok) {
+                    this.uploadTitle = '';
+                    this.uploadAuthor = '';
+                    fileInput.value = '';
+                    this.fetchFileLists();
+                    this.fetchData(); // to update SD size
+                } else {
+                    const txt = await response.text();
+                    this.uploadError = `Upload failed: ${txt || response.statusText}`;
+                }
+            } catch (err) {
+                console.error(err);
+                this.uploadError = 'Network error during upload.';
+            } finally {
+                this.isUploading = false;
             }
         },
         async enterSleepMode() {
