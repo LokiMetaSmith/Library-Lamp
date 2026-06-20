@@ -195,6 +195,7 @@ body {
   align-self: flex-end;
 }
 .post-btn:hover { background: #a06b43; }
+.post-btn:disabled { opacity: 0.6; cursor: not-allowed; }
 
 /* ── Filter bar ── */
 .filter-bar {
@@ -588,16 +589,30 @@ async function doPost() {
   const t = document.getElementById('msgIn').value.trim();
   if (!t) return;
 
+  const btn = document.getElementById('postBtn');
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = 'POSTING...';
+  }
+
   localStorage.setItem('cn_name', n);
   document.getElementById('nameIn').value = n;
 
-  await fetch('/board/post', {
-    method: 'POST',
-    body: JSON.stringify({ author: n, type: currentType, text: t, expiry: currentExpiry })
-  });
+  try {
+    await fetch('/board/post', {
+      method: 'POST',
+      body: JSON.stringify({ author: n, type: currentType, text: t, expiry: currentExpiry })
+    });
 
-  document.getElementById('msgIn').value      = '';
-  document.getElementById('msgHint').textContent = '';
+    document.getElementById('msgIn').value      = '';
+    document.getElementById('msgHint').textContent = '';
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = 'POST';
+    }
+  }
+
   load();
   loadSystemStatus();
 }
