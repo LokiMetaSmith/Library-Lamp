@@ -834,6 +834,13 @@ static esp_err_t download_handler(httpd_req_t *req) {
     return ESP_OK;
 }
 
+
+static uint32_t cached_sd_total_mb = 0;
+static uint32_t cached_sd_used_mb = 0;
+static TickType_t last_sd_info_ticks = 0;
+static bool sd_info_cached = false;
+#define SD_INFO_CACHE_DURATION_MS 10000
+
 static esp_err_t status_handler(httpd_req_t *req) {
     httpd_resp_set_type(req, "application/json");
     cJSON *root = cJSON_CreateObject();
@@ -849,14 +856,21 @@ static esp_err_t status_handler(httpd_req_t *req) {
 
 
     if (g_sd_card_initialized) {
-        uint64_t out_total_bytes, out_free_bytes;
-        if (esp_vfs_fat_info(MOUNT_POINT_SD, &out_total_bytes, &out_free_bytes) == ESP_OK) {
-            uint32_t total_mb = out_total_bytes / (1024 * 1024);
-            uint32_t free_mb = out_free_bytes / (1024 * 1024);
-            uint32_t used_mb = total_mb > free_mb ? total_mb - free_mb : 0;
+        TickType_t now_ticks = xTaskGetTickCount();
+        if (!sd_info_cached || (now_ticks - last_sd_info_ticks) > pdMS_TO_TICKS(SD_INFO_CACHE_DURATION_MS) || g_transfer_progress.active) {
+            uint64_t out_total_bytes, out_free_bytes;
+            if (esp_vfs_fat_info(MOUNT_POINT_SD, &out_total_bytes, &out_free_bytes) == ESP_OK) {
+                cached_sd_total_mb = out_total_bytes / (1024 * 1024);
+                uint32_t free_mb = out_free_bytes / (1024 * 1024);
+                cached_sd_used_mb = cached_sd_total_mb > free_mb ? cached_sd_total_mb - free_mb : 0;
+                last_sd_info_ticks = now_ticks;
+                sd_info_cached = true;
+            }
+        }
 
-            cJSON_AddNumberToObject(root, "sd_total_mb", total_mb);
-            cJSON_AddNumberToObject(root, "sd_used_mb", used_mb);
+        if (sd_info_cached) {
+            cJSON_AddNumberToObject(root, "sd_total_mb", cached_sd_total_mb);
+            cJSON_AddNumberToObject(root, "sd_used_mb", cached_sd_used_mb);
         }
     }
 
