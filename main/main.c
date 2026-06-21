@@ -744,6 +744,13 @@ static esp_err_t upload_handler(httpd_req_t *req) {
     }
     cJSON_Delete(cat_json);
 
+    // Broadcast the availability over LoRaWAN now that the catalog is updated
+    #ifdef LORA_USE_SX1262
+    char lora_msg[128];
+    snprintf(lora_msg, sizeof(lora_msg), "Library active: catalog.json available.");
+    lora_wan_broadcast(lora_msg);
+    #endif
+
     httpd_resp_set_type(req, "application/json");
     httpd_resp_send(req, "{\"success\":true}", 16);
     return ESP_OK;
@@ -937,13 +944,6 @@ static esp_err_t list_files_handler(httpd_req_t *req) {
 
                 httpd_resp_set_type(req, "application/json");
                 httpd_resp_send(req, json_data, fsize);
-
-                // Also broadcast the availability over LoRaWAN
-                #ifdef LORA_USE_SX1262
-                char lora_msg[128];
-                snprintf(lora_msg, sizeof(lora_msg), "Library active: catalog.json available.");
-                lora_wan_broadcast(lora_msg);
-                #endif
 
                 free(json_data);
                 return ESP_OK;
