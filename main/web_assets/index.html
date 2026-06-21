@@ -9,10 +9,11 @@
 <body>
     <div id="app">
         <header class="app-header">
-        <div v-if="systemErrors.length > 0" class="system-banner">
-            <ul>
-                <li v-for="err in systemErrors" :key="err">{{ err }}</li>
-            </ul>
+        <div v-if="systemErrors.length > 0" class="system-banner error-banner">
+            <p v-for="err in systemErrors" :key="err">⚠️ {{ err }}</p>
+        </div>
+        <div v-if="systemStatus.length > 0" class="system-banner status-banner">
+            <p v-for="msg in systemStatus" :key="msg">🔄 {{ msg }}</p>
         </div>
             <h1>E-Book Librarian</h1>
             <div class="status-indicator" :class="statusClass"></div>
