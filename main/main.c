@@ -703,53 +703,22 @@ static esp_err_t upload_handler(httpd_req_t *req) {
     fclose(f);
     free(recv_buf);
 
-    // Update catalog.json
-    char catalog_path[256];
-    snprintf(catalog_path, sizeof(catalog_path), "%s/catalog.json", MOUNT_POINT_SD);
-    FILE *cat_f = fopen(catalog_path, "r");
-    cJSON *cat_json = NULL;
+    // Update catalog.json (ASYNC via FreeRTOS Task)
+    if (catalog_update_queue != NULL) {
+        catalog_update_msg_t msg;
+        strncpy(msg.filename, filename, sizeof(msg.filename) - 1);
+        msg.filename[sizeof(msg.filename) - 1] = '\0';
+        strncpy(msg.title, title, sizeof(msg.title) - 1);
+        msg.title[sizeof(msg.title) - 1] = '\0';
+        strncpy(msg.author, author, sizeof(msg.author) - 1);
+        msg.author[sizeof(msg.author) - 1] = '\0';
 
-    if (cat_f) {
-        fseek(cat_f, 0, SEEK_END);
-        long fsize = ftell(cat_f);
-        fseek(cat_f, 0, SEEK_SET);
-        if (fsize > 0) {
-            char *json_data = malloc(fsize + 1);
-            if (json_data) {
-                fread(json_data, 1, fsize, cat_f);
-                json_data[fsize] = 0;
-                cat_json = cJSON_Parse(json_data);
-                free(json_data);
-            }
+        if (xQueueSend(catalog_update_queue, &msg, pdMS_TO_TICKS(100)) != pdPASS) {
+            ESP_LOGE(TAG, "Failed to enqueue catalog update (queue full)");
         }
-        fclose(cat_f);
+    } else {
+         ESP_LOGE(TAG, "catalog_update_queue not initialized!");
     }
-
-    if (!cat_json) cat_json = cJSON_CreateArray();
-
-    cJSON *new_book = cJSON_CreateObject();
-    cJSON_AddStringToObject(new_book, "name", filename);
-    cJSON_AddStringToObject(new_book, "title", title);
-    cJSON_AddStringToObject(new_book, "author", author);
-    cJSON_AddItemToArray(cat_json, new_book);
-
-    cat_f = fopen(catalog_path, "w");
-    if (cat_f) {
-        char *new_json_str = cJSON_PrintUnformatted(cat_json);
-        if (new_json_str) {
-            fwrite(new_json_str, 1, strlen(new_json_str), cat_f);
-            free(new_json_str);
-        }
-        fclose(cat_f);
-    }
-    cJSON_Delete(cat_json);
-
-    // Broadcast the availability over LoRaWAN now that the catalog is updated
-    #ifdef LORA_USE_SX1262
-    char lora_msg[128];
-    snprintf(lora_msg, sizeof(lora_msg), "Library active: catalog.json available.");
-    lora_wan_broadcast(lora_msg);
-    #endif
 
     httpd_resp_set_type(req, "application/json");
     httpd_resp_send(req, "{\"success\":true}", 16);
@@ -866,6 +835,15 @@ static esp_err_t status_handler(httpd_req_t *req) {
     cJSON_AddBoolToObject(root, "lora_initialized", lora_initialized);
     cJSON_AddBoolToObject(root, "allow_public_uploads", allow_public_uploads);
     cJSON_AddBoolToObject(root, "is_admin", bb_is_admin_request(req));
+
+    // Background Task Status
+    cJSON_AddBoolToObject(root, "catalog_updating", catalog_updating);
+    #ifdef LORA_USE_SX1262
+    extern bool lora_scanning;
+    cJSON_AddBoolToObject(root, "lora_scanning", lora_scanning);
+    #else
+    cJSON_AddBoolToObject(root, "lora_scanning", false);
+    #endif
 
 
 
@@ -1013,7 +991,7 @@ static esp_err_t transfer_file_handler(httpd_req_t *req) {
         g_led_state = ebook_reader_connected ? LED_STATE_CONNECTED : LED_STATE_IDLE;
         return ESP_FAIL;
     }
-    content[ret] = '\0';
+    content[ret] = 0;
 
     cJSON *json = cJSON_Parse(content);
     if (!json) {
@@ -1195,7 +1173,7 @@ static esp_err_t set_led_color_handler(httpd_req_t *req) {
     if (ret <= 0) {
         return ESP_FAIL;
     }
-    content[ret] = '\0';
+    content[ret] = 0;
 
     cJSON *json = cJSON_Parse(content);
     if (!json) {
@@ -1233,7 +1211,7 @@ static esp_err_t admin_set_public_uploads_handler(httpd_req_t *req) {
     if (ret <= 0) {
         return ESP_FAIL;
     }
-    content[ret] = '\0';
+    content[ret] = 0;
 
     cJSON *json = cJSON_Parse(content);
     if (!json) {
@@ -2338,6 +2316,13 @@ void app_main(void) {
     ESP_ERROR_CHECK(ret);
 
     load_led_color_from_nvs();
+
+
+    // Initialize Catalog Update Queue and Task
+    catalog_update_queue = xQueueCreate(10, sizeof(catalog_update_msg_t));
+    if (catalog_update_queue != NULL) {
+        xTaskCreatePinnedToCore(catalog_update_task, "catalog_update_task", 4096, NULL, 5, NULL, 1);
+    }
 
     app_event_queue = xQueueCreate(10, sizeof(app_event_queue_t));
     app_event_queue_t evt_queue;

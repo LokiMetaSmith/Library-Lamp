@@ -7,7 +7,9 @@ createApp({
             ereaderFiles: [],
             isEReaderConnected: false,
             systemErrors: [],
+            systemStatus: [],
             status: 'idle', // idle, connected, transferring
+
             transfer: {
                 active: false,
                 filename: '',
@@ -43,6 +45,11 @@ createApp({
                 if (!data.usb_mounted) errors.push("Warning: USB initialization failed.");
                 if (!data.lora_initialized) errors.push("Warning: LoRaWAN initialization failed.");
                 this.systemErrors = errors;
+
+                const status = [];
+                if (data.catalog_updating) status.push("Updating Library Catalog...");
+                if (data.lora_scanning) status.push("Scanning for other Library-Lamps...");
+                this.systemStatus = status;
 
                 if (data.sd_total_mb !== undefined) this.sdTotalMb = data.sd_total_mb;
                 if (data.sd_used_mb !== undefined) this.sdUsedMb = data.sd_used_mb;

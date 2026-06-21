@@ -5,3 +5,7 @@
 ## 2024-08-01 - Synchronous Hardware Transmission in GET Handlers
 **Learning:** Placing synchronous hardware transmissions (like `lora_wan_broadcast`) inside frequent, view-only HTTP GET handlers (like `/list-files`) acts as a massive performance bottleneck. It unnecessarily blocks the HTTP thread for 500-1500ms on every UI refresh and causes severe spectrum pollution.
 **Action:** When inspecting API handlers, ensure that expensive hardware side-effects are only executed during mutating state changes (e.g., POST uploads) rather than during routine read operations.
+
+## 2024-06-21 - [Async Background Tasks]
+**Learning:** In ESP-IDF, synchronous actions that write to FAT filesystems (e.g. `esp_vfs_fat_sdmmc_...`) and transmit via LoRaWAN block the HTTP handler thread, delaying web responses. Using FreeRTOS Tasks with message Queues to offload long-running operations significantly improves the perceived performance of the web server.
+**Action:** Use `xQueueCreate` and `xTaskCreatePinnedToCore` to offload blocking tasks to a background thread.

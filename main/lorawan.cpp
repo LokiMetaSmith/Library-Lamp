@@ -5,6 +5,22 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
+#include "freertos/queue.h"
+
+// Queue for async transmissions
+QueueHandle_t loraTransmitQueue = NULL;
+bool lora_scanning = false;
+#define LORA_HEARTBEAT_INTERVAL_MS 60000 // 1 minute
+
+
+#include "freertos/queue.h"
+
+// Queue for async transmissions
+QueueHandle_t loraTransmitQueue = NULL;
+bool lora_scanning = false;
+#define LORA_HEARTBEAT_INTERVAL_MS 60000 // 1 minute
+
+
 static const char *TAG = "LORAWAN";
 
 // Global pointers for the HAL and Radio instance
@@ -58,6 +74,49 @@ void loraReceiveTask(void *pvParameters) {
     }
 }
 
+
+
+void loraTransmitTask(void *pvParameters) {
+    ESP_LOGI(TAG, "Starting LoRa transmit/heartbeat task...");
+    char msg[128];
+    TickType_t lastHeartbeat = xTaskGetTickCount();
+
+    while (1) {
+        // Wait for a message to transmit, or timeout after heartbeat interval
+        if (xQueueReceive(loraTransmitQueue, msg, pdMS_TO_TICKS(1000)) == pdPASS) {
+            ESP_LOGI(TAG, "Async broadcasting via LoRaWAN: %s", msg);
+            if (xSemaphoreTake(loraMutex, pdMS_TO_TICKS(1000)) == pdTRUE) {
+                lora_scanning = true;
+                int state = radio->transmit(msg);
+                if (state == RADIOLIB_ERR_NONE) {
+                    ESP_LOGI(TAG, "Broadcast success!");
+                } else {
+                    ESP_LOGE(TAG, "Broadcast failed, code %d", state);
+                }
+                lora_scanning = false;
+                radio->startReceive();
+                xSemaphoreGive(loraMutex);
+            } else {
+                ESP_LOGE(TAG, "Failed to acquire LoRa mutex for async broadcast");
+            }
+        }
+
+        // Periodic Heartbeat
+        if ((xTaskGetTickCount() - lastHeartbeat) > pdMS_TO_TICKS(LORA_HEARTBEAT_INTERVAL_MS)) {
+            if (xSemaphoreTake(loraMutex, pdMS_TO_TICKS(1000)) == pdTRUE) {
+                lora_scanning = true;
+                const char* heartbeat_msg = "HEARTBEAT: Library-Lamp Discovery";
+                ESP_LOGI(TAG, "Sending Discovery Heartbeat");
+                radio->transmit(heartbeat_msg);
+                lora_scanning = false;
+                radio->startReceive();
+                xSemaphoreGive(loraMutex);
+            }
+            lastHeartbeat = xTaskGetTickCount();
+        }
+    }
+}
+
 void lora_wan_init(void) {
     ESP_LOGI(TAG, "LoRaWAN initializing (SX1262 / RadioLib)");
 
@@ -66,6 +125,11 @@ void lora_wan_init(void) {
 
     // Create the mutex for thread safety
     loraMutex = xSemaphoreCreateMutex();
+
+    // Create transmission queue
+    loraTransmitQueue = xQueueCreate(5, 128);
+
+
 
     // Create the generic RadioLib module wrapper
     Module* mod = new Module(hal, LORA_CS_PIN, LORA_DIO1_PIN, LORA_RST_PIN, LORA_BUSY_PIN);
@@ -109,28 +173,12 @@ void lora_wan_init(void) {
 }
 
 void lora_wan_broadcast(const char *message) {
-    if (!lora_initialized) {
-        ESP_LOGE(TAG, "Radio not initialized!");
+    if (!lora_initialized || loraTransmitQueue == NULL) {
+        ESP_LOGE(TAG, "Radio not initialized or queue not created!");
         return;
     }
-
-    ESP_LOGI(TAG, "Broadcasting via LoRaWAN: %s", message);
-
-    // Acquire mutex before transmitting
-    if (xSemaphoreTake(loraMutex, pdMS_TO_TICKS(1000)) == pdTRUE) {
-        int state = radio->transmit(message);
-
-        if (state == RADIOLIB_ERR_NONE) {
-            ESP_LOGI(TAG, "Broadcast success!");
-        } else {
-            ESP_LOGE(TAG, "Broadcast failed, code %d", state);
-        }
-
-        // Restart RX mode
-        radio->startReceive();
-
-        xSemaphoreGive(loraMutex);
-    } else {
-        ESP_LOGE(TAG, "Failed to acquire LoRa mutex for broadcast");
+    ESP_LOGI(TAG, "Enqueueing LoRaWAN broadcast: %s", message);
+    if (xQueueSend(loraTransmitQueue, message, pdMS_TO_TICKS(100)) != pdPASS) {
+        ESP_LOGE(TAG, "Failed to enqueue LoRaWAN broadcast (queue full)");
     }
 }

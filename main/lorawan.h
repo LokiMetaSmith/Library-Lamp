@@ -58,6 +58,8 @@
 extern "C" {
 #endif
 
+extern bool lora_scanning;
+
 void lora_wan_init(void);
 void lora_wan_broadcast(const char *message);
 
