@@ -648,16 +648,22 @@ static esp_err_t upload_handler(httpd_req_t *req) {
     // or send the file directly in a POST, with title/author in URL query parameters!
     // That avoids memory-intensive multipart parsing on the ESP32.
 
-    char buf[512];
     char title[100] = "Unknown Title";
     char author[100] = "Unknown Author";
     char filename[100] = "upload.epub";
 
-    if (httpd_req_get_url_query_str(req, buf, sizeof(buf)) == ESP_OK) {
-        char param[100];
-        if (httpd_query_key_value(buf, "title", param, sizeof(param)) == ESP_OK) urldecode(title, param);
-        if (httpd_query_key_value(buf, "author", param, sizeof(param)) == ESP_OK) urldecode(author, param);
-        if (httpd_query_key_value(buf, "filename", param, sizeof(param)) == ESP_OK) urldecode(filename, param);
+    size_t query_len = httpd_req_get_url_query_len(req);
+    if (query_len > 0) {
+        char *buf = malloc(query_len + 1);
+        if (buf) {
+            if (httpd_req_get_url_query_str(req, buf, query_len + 1) == ESP_OK) {
+                char param[100];
+                if (httpd_query_key_value(buf, "title", param, sizeof(param)) == ESP_OK) urldecode(title, param);
+                if (httpd_query_key_value(buf, "author", param, sizeof(param)) == ESP_OK) urldecode(author, param);
+                if (httpd_query_key_value(buf, "filename", param, sizeof(param)) == ESP_OK) urldecode(filename, param);
+            }
+            free(buf);
+        }
     }
 
     // Check for directory traversal
@@ -750,8 +756,20 @@ static esp_err_t upload_handler(httpd_req_t *req) {
 }
 
 static esp_err_t download_handler(httpd_req_t *req) {
-    char buf[512];
-    if (httpd_req_get_url_query_str(req, buf, sizeof(buf)) != ESP_OK) {
+    size_t query_len = httpd_req_get_url_query_len(req);
+    if (query_len == 0) {
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Bad Request");
+        return ESP_FAIL;
+    }
+
+    char *buf = malloc(query_len + 1);
+    if (!buf) {
+        httpd_resp_send_500(req);
+        return ESP_FAIL;
+    }
+
+    if (httpd_req_get_url_query_str(req, buf, query_len + 1) != ESP_OK) {
+        free(buf);
         httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Bad Request");
         return ESP_FAIL;
     }
@@ -761,9 +779,11 @@ static esp_err_t download_handler(httpd_req_t *req) {
 
     if (httpd_query_key_value(buf, "file", file_param, sizeof(file_param)) != ESP_OK ||
         httpd_query_key_value(buf, "source", source_param, sizeof(source_param)) != ESP_OK) {
+        free(buf);
         httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Bad Request");
         return ESP_FAIL;
     }
+    free(buf);
 
     char decoded_file_param[128];
     urldecode(decoded_file_param, file_param);
@@ -894,17 +914,31 @@ static esp_err_t status_handler(httpd_req_t *req) {
 }
 
 static esp_err_t list_files_handler(httpd_req_t *req) {
-    char buf[128];
-    if (httpd_req_get_url_query_str(req, buf, sizeof(buf)) != ESP_OK) {
+    size_t query_len = httpd_req_get_url_query_len(req);
+    if (query_len == 0) {
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Bad Request");
+        return ESP_FAIL;
+    }
+
+    char *buf = malloc(query_len + 1);
+    if (!buf) {
+        httpd_resp_send_500(req);
+        return ESP_FAIL;
+    }
+
+    if (httpd_req_get_url_query_str(req, buf, query_len + 1) != ESP_OK) {
+        free(buf);
         httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Bad Request");
         return ESP_FAIL;
     }
 
     char param[32];
     if (httpd_query_key_value(buf, "type", param, sizeof(param)) != ESP_OK) {
+        free(buf);
         httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Bad Request");
         return ESP_FAIL;
     }
+    free(buf);
 
     const char *mount_path = (strcmp(param, "sd") == 0) ? MOUNT_POINT_SD : MOUNT_POINT_USB;
 

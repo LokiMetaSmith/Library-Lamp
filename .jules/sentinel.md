@@ -12,3 +12,8 @@
 **Vulnerability:** Unauthenticated path traversal in static_file_handler allowing arbitrary file read.
 **Learning:** The ESP-IDF VFS does not automatically sanitize directory traversal sequences like '..', requiring manual explicit checks.
 **Prevention:** Always sanitize or reject URIs containing '..' before appending them to base paths in custom VFS HTTP handlers.
+
+## 2025-02-14 - Prevent query string truncation DoS
+**Vulnerability:** Fixed-size buffers for query string extraction (Truncation Risk / DoS)
+**Learning:** ESP-IDF's `httpd_req_get_url_query_str` relies on the buffer size passed as an argument. If a fixed-size buffer is used (e.g., `char buf[512]`) and the client sends a query string longer than this buffer, the function returns `ESP_ERR_HTTPD_RESULT_TRUNC`. If this error isn't explicitly handled, or if the buffer truncates maliciously constructed input, it can bypass security checks, truncate data unexpectedly, or silently fail.
+**Prevention:** Always dynamically size the buffer for `httpd_req_get_url_query_str` using `size_t query_len = httpd_req_get_url_query_len(req);` and allocate memory as `malloc(query_len + 1)`. Ensure `free()` is called on all code paths.
