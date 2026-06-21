@@ -36,16 +36,16 @@
                     <h3 style="margin-top: 0;">Upload Book</h3>
                     <form @submit.prevent="uploadBook" style="display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end;">
                         <div>
-                            <label style="display: block; font-size: 0.9em; margin-bottom: 5px;">File</label>
-                            <input type="file" ref="fileInput" required>
+                            <label for="uploadFile" style="display: block; font-size: 0.9em; margin-bottom: 5px;">File</label>
+                            <input type="file" id="uploadFile" ref="fileInput" required>
                         </div>
                         <div>
-                            <label style="display: block; font-size: 0.9em; margin-bottom: 5px;">Title</label>
-                            <input type="text" v-model="uploadTitle" placeholder="Title" required>
+                            <label for="uploadTitle" style="display: block; font-size: 0.9em; margin-bottom: 5px;">Title</label>
+                            <input type="text" id="uploadTitle" v-model="uploadTitle" placeholder="Title" required>
                         </div>
                         <div>
-                            <label style="display: block; font-size: 0.9em; margin-bottom: 5px;">Author</label>
-                            <input type="text" v-model="uploadAuthor" placeholder="Author" required>
+                            <label for="uploadAuthor" style="display: block; font-size: 0.9em; margin-bottom: 5px;">Author</label>
+                            <input type="text" id="uploadAuthor" v-model="uploadAuthor" placeholder="Author" required>
                         </div>
                         <button type="submit" :disabled="isUploading">
                             {{ isUploading ? 'Uploading...' : 'Upload' }}
