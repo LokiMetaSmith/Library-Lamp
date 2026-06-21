@@ -167,10 +167,14 @@ static esp_err_t admin_auth_handler(httpd_req_t *req) {
 
 bool bb_is_admin_request(httpd_req_t *req) {
     if (g_hardware_key_authenticated) return true;
-    char *buf = (char *)malloc(512);
+
+    size_t query_len = httpd_req_get_url_query_len(req);
+    if (query_len == 0) return false;
+
+    char *buf = (char *)malloc(query_len + 1);
     if (!buf) return false;
 
-    if (httpd_req_get_url_query_str(req, buf, 512) == ESP_OK) {
+    if (httpd_req_get_url_query_str(req, buf, query_len + 1) == ESP_OK) {
         char token[33];
         if (httpd_query_key_value(buf, "token", token, sizeof(token)) == ESP_OK) {
             free(buf);
@@ -198,13 +202,19 @@ static esp_err_t admin_identity_get_handler(httpd_req_t *req) {
 static esp_err_t admin_identity_set_handler(httpd_req_t *req) {
     if (!bb_is_admin_request(req)) { httpd_resp_send_err(req, HTTPD_403_FORBIDDEN, "forbidden"); return ESP_FAIL; }
     
-    char *buf = (char *)malloc(512);
+    size_t query_len = httpd_req_get_url_query_len(req);
+    if (query_len == 0) {
+        httpd_resp_send_500(req);
+        return ESP_FAIL;
+    }
+
+    char *buf = (char *)malloc(query_len + 1);
     if (!buf) {
         httpd_resp_send_500(req);
         return ESP_FAIL;
     }
 
-    if (httpd_req_get_url_query_str(req, buf, 512) == ESP_OK) {
+    if (httpd_req_get_url_query_str(req, buf, query_len + 1) == ESP_OK) {
         char temp[101];
         if (httpd_query_key_value(buf, "name", temp, sizeof(temp)) == ESP_OK) { urldecode(temp, temp); sanitize(temp, id_name, 49); }
         if (httpd_query_key_value(buf, "icon", temp, sizeof(temp)) == ESP_OK) { urldecode(temp, temp); sanitize(temp, id_icon, 9); }
@@ -224,13 +234,19 @@ static esp_err_t admin_identity_set_handler(httpd_req_t *req) {
 static esp_err_t admin_setkey_handler(httpd_req_t *req) {
     if (!bb_is_admin_request(req)) { httpd_resp_send_err(req, HTTPD_403_FORBIDDEN, "forbidden"); return ESP_FAIL; }
     
-    char *buf = (char *)malloc(128);
+    size_t query_len = httpd_req_get_url_query_len(req);
+    if (query_len == 0) {
+        httpd_resp_send_500(req);
+        return ESP_FAIL;
+    }
+
+    char *buf = (char *)malloc(query_len + 1);
     if (!buf) {
         httpd_resp_send_500(req);
         return ESP_FAIL;
     }
 
-    if (httpd_req_get_url_query_str(req, buf, 128) == ESP_OK) {
+    if (httpd_req_get_url_query_str(req, buf, query_len + 1) == ESP_OK) {
         char temp[65];
         if (httpd_query_key_value(buf, "newkey", temp, sizeof(temp)) == ESP_OK) {
             strncpy(admin_key, temp, 64);
@@ -255,13 +271,19 @@ static esp_err_t admin_clear_handler(httpd_req_t *req) {
 static esp_err_t admin_delete_post_handler(httpd_req_t *req) {
     if (!bb_is_admin_request(req)) { httpd_resp_send_err(req, HTTPD_403_FORBIDDEN, "forbidden"); return ESP_FAIL; }
     
-    char *buf = (char *)malloc(128);
+    size_t query_len = httpd_req_get_url_query_len(req);
+    if (query_len == 0) {
+        httpd_resp_send_500(req);
+        return ESP_FAIL;
+    }
+
+    char *buf = (char *)malloc(query_len + 1);
     if (!buf) {
         httpd_resp_send_500(req);
         return ESP_FAIL;
     }
 
-    if (httpd_req_get_url_query_str(req, buf, 128) == ESP_OK) {
+    if (httpd_req_get_url_query_str(req, buf, query_len + 1) == ESP_OK) {
         char temp[16];
         if (httpd_query_key_value(buf, "id", temp, sizeof(temp)) == ESP_OK) {
             uint16_t targetId = atoi(temp);
