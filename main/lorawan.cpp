@@ -13,14 +13,6 @@ bool lora_scanning = false;
 #define LORA_HEARTBEAT_INTERVAL_MS 60000 // 1 minute
 
 
-#include "freertos/queue.h"
-
-// Queue for async transmissions
-QueueHandle_t loraTransmitQueue = NULL;
-bool lora_scanning = false;
-#define LORA_HEARTBEAT_INTERVAL_MS 60000 // 1 minute
-
-
 static const char *TAG = "LORAWAN";
 
 // Global pointers for the HAL and Radio instance

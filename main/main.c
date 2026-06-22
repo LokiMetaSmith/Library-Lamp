@@ -163,6 +163,77 @@ static SemaphoreHandle_t ws_mutex;
 extern void class_driver_client_deregister(void);
 
 
+
+// --- Async Background Queues & State ---
+QueueHandle_t catalog_update_queue = NULL;
+volatile bool catalog_updating = false;
+
+typedef struct {
+    char filename[100];
+    char title[100];
+    char author[100];
+} catalog_update_msg_t;
+
+// Background task to write to catalog.json
+void catalog_update_task(void *pvParameters) {
+    catalog_update_msg_t msg;
+    while (1) {
+        if (xQueueReceive(catalog_update_queue, &msg, portMAX_DELAY) == pdPASS) {
+            catalog_updating = true;
+            ESP_LOGI(TAG, "Background processing catalog update for: %s", msg.filename);
+
+            char catalog_path[256];
+            snprintf(catalog_path, sizeof(catalog_path), "%s/catalog.json", MOUNT_POINT_SD);
+            FILE *cat_f = fopen(catalog_path, "r");
+            cJSON *cat_json = NULL;
+
+            if (cat_f) {
+                fseek(cat_f, 0, SEEK_END);
+                long fsize = ftell(cat_f);
+                fseek(cat_f, 0, SEEK_SET);
+                if (fsize > 0) {
+                    char *json_data = malloc(fsize + 1);
+                    if (json_data) {
+                        fread(json_data, 1, fsize, cat_f);
+                        json_data[fsize] = 0;
+                        cat_json = cJSON_Parse(json_data);
+                        free(json_data);
+                    }
+                }
+                fclose(cat_f);
+            }
+
+            if (!cat_json) cat_json = cJSON_CreateArray();
+
+            cJSON *new_book = cJSON_CreateObject();
+            cJSON_AddStringToObject(new_book, "name", msg.filename);
+            cJSON_AddStringToObject(new_book, "title", msg.title);
+            cJSON_AddStringToObject(new_book, "author", msg.author);
+            cJSON_AddItemToArray(cat_json, new_book);
+
+            cat_f = fopen(catalog_path, "w");
+            if (cat_f) {
+                char *new_json_str = cJSON_PrintUnformatted(cat_json);
+                if (new_json_str) {
+                    fwrite(new_json_str, 1, strlen(new_json_str), cat_f);
+                    free(new_json_str);
+                }
+                fclose(cat_f);
+            }
+            cJSON_Delete(cat_json);
+
+            // Broadcast the availability over LoRaWAN now that the catalog is updated
+            #ifdef LORA_USE_SX1262
+            char lora_msg[128];
+            snprintf(lora_msg, sizeof(lora_msg), "Library active: catalog.json available.");
+            lora_wan_broadcast(lora_msg);
+            #endif
+
+            catalog_updating = false;
+        }
+    }
+}
+
 // --- GLOBALS ---
 static const char *TAG = "EBOOK_LIBRARIAN";
 static bool ebook_reader_connected = false;
