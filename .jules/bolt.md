@@ -1,3 +1,7 @@
 ## 2024-06-20 - [Avoid polling FAT filesystem metadata on ESP-IDF]
 **Learning:** Polling `esp_vfs_fat_info` recursively traverses the FAT cluster chain to calculate free space. When called every second by frontend UI polling (like `/status`), this causes significant SPI bus latency and locks the VFS, creating a bottleneck that starves other FreeRTOS tasks (like network serving or HTTP handlers).
 **Action:** When implementing status endpoints in ESP-IDF that report filesystem metrics, ALWAYS cache the result of `esp_vfs_fat_info` using `xTaskGetTickCount()` (e.g. for 10 seconds), only bypassing the cache when an active file transfer is known to be modifying the disk.
+
+## 2024-06-22 - [Combine HTTP polling endpoints in ESP-IDF]
+**Learning:** On ESP-IDF backend, executing concurrent HTTP polling requests via `Promise.all` directly to multiple different endpoints like `/audio/current` and `/audio/queue` creates significant overhead. The ESP-IDF `httpd` component is optimized for lower overhead when dealing with single endpoints rather than parallel request connections from the same client, which can cause connection pooling exhaustion and block main threads.
+**Action:** When creating frontend UI interfaces for ESP-IDF devices, always combine grouped polling status queries (e.g. audio status, network status, queue data) into a unified `/state` endpoint rather than dispatching parallel `fetch()` connections to separate endpoints.

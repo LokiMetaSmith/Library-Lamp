@@ -30,34 +30,35 @@ static void send_json_response(httpd_req_t *req, cJSON *root) {
     cJSON_Delete(root);
 }
 
-static esp_err_t audio_current_handler(httpd_req_t *req) {
+static esp_err_t audio_state_get_handler(httpd_req_t *req) {
     cJSON *root = cJSON_CreateObject();
 
+    // Add current track info
+    cJSON *current = cJSON_CreateObject();
     if (strlen(current_track) > 0) {
-        cJSON_AddStringToObject(root, "filename", current_track);
-        cJSON_AddBoolToObject(root, "playing", is_playing);
+        cJSON_AddStringToObject(current, "filename", current_track);
+        cJSON_AddBoolToObject(current, "playing", is_playing);
 
         float current_pos = track_position_sec;
         if (is_playing) {
             int64_t now = esp_timer_get_time();
             current_pos += (float)(now - track_start_time_us) / 1000000.0f;
         }
-        cJSON_AddNumberToObject(root, "position", current_pos);
+        cJSON_AddNumberToObject(current, "position", current_pos);
     } else {
-        cJSON_AddNullToObject(root, "filename");
-        cJSON_AddBoolToObject(root, "playing", false);
-        cJSON_AddNumberToObject(root, "position", 0.0);
+        cJSON_AddNullToObject(current, "filename");
+        cJSON_AddBoolToObject(current, "playing", false);
+        cJSON_AddNumberToObject(current, "position", 0.0);
     }
+    cJSON_AddItemToObject(root, "current", current);
 
-    send_json_response(req, root);
-    return ESP_OK;
-}
-
-static esp_err_t audio_queue_get_handler(httpd_req_t *req) {
-    cJSON *root = cJSON_CreateArray();
+    // Add queue info
+    cJSON *queue = cJSON_CreateArray();
     for (int i = 0; i < queue_count; i++) {
-        cJSON_AddItemToArray(root, cJSON_CreateString(audio_queue[i].filename));
+        cJSON_AddItemToArray(queue, cJSON_CreateString(audio_queue[i].filename));
     }
+    cJSON_AddItemToObject(root, "queue", queue);
+
     send_json_response(req, root);
     return ESP_OK;
 }
@@ -253,11 +254,8 @@ static esp_err_t audio_state_post_handler(httpd_req_t *req) {
 }
 
 void register_audio_api_handlers(httpd_handle_t server) {
-    httpd_uri_t get_current = { "/audio/current", HTTP_GET, audio_current_handler, NULL };
-    httpd_register_uri_handler(server, &get_current);
-
-    httpd_uri_t get_queue = { "/audio/queue", HTTP_GET, audio_queue_get_handler, NULL };
-    httpd_register_uri_handler(server, &get_queue);
+    httpd_uri_t get_state = { "/audio/state", HTTP_GET, audio_state_get_handler, NULL };
+    httpd_register_uri_handler(server, &get_state);
 
     httpd_uri_t post_queue = { "/audio/queue", HTTP_POST, audio_queue_post_handler, NULL };
     httpd_register_uri_handler(server, &post_queue);

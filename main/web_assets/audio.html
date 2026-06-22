@@ -112,13 +112,11 @@
             methods: {
                 async fetchState() {
                     try {
-                        const [stateRes, queueRes] = await Promise.all([
-                            fetch('/audio/current'),
-                            fetch('/audio/queue')
-                        ]);
+                        const res = await fetch('/audio/state');
+                        const data = await res.json();
 
-                        const stateData = await stateRes.json();
-                        this.queue = await queueRes.json();
+                        const stateData = data.current;
+                        this.queue = data.queue;
 
                         // Handle Track Change
                         if (stateData.filename !== this.currentTrack) {
