@@ -1737,10 +1737,14 @@ static void gatts_profile_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_
             ESP_LOGI(GATTS_TAG, "GATT_WRITE_EVT, conn_id %d, trans_id %lu, handle %d", param->write.conn_id, (unsigned long)param->write.trans_id, param->write.handle);
 
             if (param->write.handle == gatt_db_handle_table[IDX_CHAR_VAL_SSID]) {
-                strncpy(wifi_ssid, (char*)param->write.value, sizeof(wifi_ssid) - 1);
+                size_t len = param->write.len < sizeof(wifi_ssid) - 1 ? param->write.len : sizeof(wifi_ssid) - 1;
+                memcpy(wifi_ssid, param->write.value, len);
+                wifi_ssid[len] = '\0';
                 ESP_LOGI(GATTS_TAG, "SSID set to: %s", wifi_ssid);
             } else if (param->write.handle == gatt_db_handle_table[IDX_CHAR_VAL_PASS]) {
-                strncpy(wifi_password, (char*)param->write.value, sizeof(wifi_password) - 1);
+                size_t len = param->write.len < sizeof(wifi_password) - 1 ? param->write.len : sizeof(wifi_password) - 1;
+                memcpy(wifi_password, param->write.value, len);
+                wifi_password[len] = '\0';
                 ESP_LOGI(GATTS_TAG, "Password set."); // Don't log the password
             } else if (param->write.handle == gatt_db_handle_table[IDX_CHAR_VAL_SAVE]) {
                 if (param->write.len == 1 && param->write.value[0] == 1) {
