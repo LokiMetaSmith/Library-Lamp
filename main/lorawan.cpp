@@ -158,6 +158,17 @@ void lora_wan_init(void) {
             1
         );
 
+        // Start transmit/heartbeat task
+        xTaskCreatePinnedToCore(
+            loraTransmitTask,
+            "LoRaTransmit",
+            4096,
+            NULL,
+            5,
+            NULL,
+            1
+        );
+
     } else {
         ESP_LOGW(TAG, "SX1262 init failed (soft fail), code %d", state);
         lora_initialized = false;

@@ -9,3 +9,6 @@
 ## 2024-06-21 - [Async Background Tasks]
 **Learning:** In ESP-IDF, synchronous actions that write to FAT filesystems (e.g. `esp_vfs_fat_sdmmc_...`) and transmit via LoRaWAN block the HTTP handler thread, delaying web responses. Using FreeRTOS Tasks with message Queues to offload long-running operations significantly improves the perceived performance of the web server.
 **Action:** Use `xQueueCreate` and `xTaskCreatePinnedToCore` to offload blocking tasks to a background thread.
+## 2024-05-19 - Started LoRa Transmit Task
+ **Learning:** Long-running hardware operations, such as LoRaWAN transmissions, need to be decoupled from HTTP request handlers using dedicated FreeRTOS background tasks (e.g., `loraTransmitTask`) pinned to Core 1 to prevent blocking the web server. Ensure these tasks are actually started via `xTaskCreatePinnedToCore` during initialization.
+ **Action:** Added `xTaskCreatePinnedToCore` for `loraTransmitTask` in `main/lorawan.cpp` to correctly start the background LoRa transmission queue processing.
