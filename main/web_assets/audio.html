@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audio Radio - E-Book Librarian</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .audio-container { background: rgba(0,0,0,0.3); padding: 20px; border-radius: 8px; margin-bottom: 20px; text-align: center; }
+        .queue-container { background: rgba(0,0,0,0.2); padding: 20px; border-radius: 8px; }
+        .queue-item { display: flex; justify-content: space-between; padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.1); align-items: center;}
+        .queue-item:last-child { border-bottom: none; }
+        .library-section h3 { margin-top: 0; }
+        .btn-small { padding: 4px 8px; font-size: 0.8em; }
+        audio { width: 100%; margin-top: 15px; outline: none; }
+        .status-syncing { color: #f39c12; }
+        .status-playing { color: #2ecc71; }
+        .status-paused { color: #e74c3c; }
+        .now-playing { font-size: 1.2em; font-weight: bold; margin-bottom: 5px; color: #f5eedc; word-break: break-all; }
+        .sync-info { font-size: 0.9em; color: #8a7b6c; font-style: italic; }
+    </style>
+</head>
+<body>
+    <div id="audio-app">
+        <header class="app-header">
+            <h1>Audio Radio</h1>
+            <div style="display: flex; justify-content: flex-end; gap: 10px; padding-bottom: 10px;">
+                <button onclick="window.location.href='/index.html'">Back to Library</button>
+            </div>
+        </header>
+
+        <main class="app-main">
+            <div class="audio-container">
+                <h2>Now Playing</h2>
+                <div v-if="currentTrack">
+                    <div class="now-playing">{{ currentTrack }}</div>
+                    <div class="sync-info">
+                        Status: <span :class="statusClass">{{ statusText }}</span>
+                        <br>
+                        <small v-if="isDriver">(You are syncing the radio for others)</small>
+                    </div>
+
+                    <audio ref="audioPlayer" controls @play="onPlay" @pause="onPause" @seeked="onSeeked" @ended="onEnded">
+                        Your browser does not support the audio element.
+                    </audio>
+                    <button v-if="isDriver" @click="skipTrack" style="margin-top:10px;">Skip Track</button>
+                </div>
+                <div v-else>
+                    <p style="color: #8a7b6c; font-style: italic;">Nothing is currently playing. Add a track to the queue!</p>
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+                <div class="queue-container" style="flex: 1; min-width: 300px;">
+                    <h3>Up Next</h3>
+                    <div v-if="queue.length === 0" style="color: #8a7b6c; font-style: italic;">The queue is empty.</div>
+                    <div v-else>
+                        <div v-for="(track, index) in queue" :key="index" class="queue-item">
+                            <span>{{ index + 1 }}. {{ track }}</span>
+                            <button v-if="isAdmin" @click="removeFromQueue(index)" class="btn-small cancel-btn">Remove</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="library-section" style="flex: 1; min-width: 300px;">
+                    <h3>Available Audio Files (SD Card)</h3>
+                    <ul class="file-list">
+                        <li v-for="file in audioFiles" :key="file.name">
+                            <div class="file-info">
+                                <span class="file-title">{{ file.title || file.name }}</span>
+                            </div>
+                            <div class="transfer-controls">
+                                <button @click="addToQueue(file.name)">Add to Queue</button>
+                            </div>
+                        </li>
+                    </ul>
+                    <div v-if="audioFiles.length === 0" style="color: #8a7b6c; font-style: italic; padding: 10px;">
+                        No audio files (.mp3, .m4a, .wav) found in the library.
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="vue.global.js"></script>
+    <script>
+        const { createApp } = Vue
+
+        createApp({
+            data() {
+                return {
+                    currentTrack: null,
+                    isPlaying: false,
+                    serverPosition: 0,
+                    queue: [],
+                    audioFiles: [],
+                    isAdmin: false,
+                    pollingInterval: null,
+                    isDriver: false, // If true, this client sends state updates to the server
+                    ignoreNextEvent: false,
+                    syncThreshold: 2.0 // Seconds diff before forcing sync
+                }
+            },
+            computed: {
+                statusClass() {
+                    return this.isPlaying ? 'status-playing' : 'status-paused';
+                },
+                statusText() {
+                    return this.isPlaying ? 'Playing (Live Sync)' : 'Paused';
+                }
+            },
+            methods: {
+                async fetchState() {
+                    try {
+                        const [stateRes, queueRes] = await Promise.all([
+                            fetch('/audio/current'),
+                            fetch('/audio/queue')
+                        ]);
+
+                        const stateData = await stateRes.json();
+                        this.queue = await queueRes.json();
+
+                        // Handle Track Change
+                        if (stateData.filename !== this.currentTrack) {
+                            this.currentTrack = stateData.filename;
+                            if (this.currentTrack) {
+                                // Important: We use &source=sd assuming audio is played from SD
+                                const url = `/download?file=${encodeURIComponent(this.currentTrack)}&source=sd`;
+                                this.$nextTick(() => {
+                                    if (this.$refs.audioPlayer) {
+                                        this.ignoreNextEvent = true;
+                                        this.$refs.audioPlayer.src = url;
+                                        this.$refs.audioPlayer.currentTime = stateData.position;
+                                        if (stateData.playing) {
+                                            this.$refs.audioPlayer.play().catch(e => {
+                                                console.log("Autoplay prevented. User interaction required.");
+                                                this.isPlaying = false;
+                                                this.isDriver = false;
+                                            });
+                                        }
+                                    }
+                                });
+                            }
+                        } else if (this.currentTrack && this.$refs.audioPlayer && !this.isDriver) {
+                            // Sync Logic for non-drivers
+                            const audio = this.$refs.audioPlayer;
+
+                            // Check play state sync
+                            if (stateData.playing !== !audio.paused) {
+                                this.ignoreNextEvent = true;
+                                if (stateData.playing) audio.play().catch(e=>console.log(e));
+                                else audio.pause();
+                            }
+
+                            // Check position sync
+                            if (stateData.playing && Math.abs(audio.currentTime - stateData.position) > this.syncThreshold) {
+                                console.log("Syncing position...", audio.currentTime, "->", stateData.position);
+                                this.ignoreNextEvent = true;
+                                audio.currentTime = stateData.position;
+                            }
+                        }
+
+                        this.isPlaying = stateData.playing;
+                        this.serverPosition = stateData.position;
+
+                        // Also check admin status if not checked
+                        if (!this.isAdminChecked) {
+                            fetch('/status').then(r=>r.json()).then(d => {
+                                this.isAdmin = !!d.is_admin;
+                                this.isAdminChecked = true;
+                            });
+                        }
+                    } catch (error) {
+                        console.error('Error fetching audio state:', error);
+                    }
+                },
+                async fetchAudioFiles() {
+                    try {
+                        const res = await fetch('/list-files?type=sd');
+                        const files = await res.json();
+                        // Filter only audio
+                        this.audioFiles = files.filter(f =>
+                            f.name.toLowerCase().endsWith('.mp3') ||
+                            f.name.toLowerCase().endsWith('.m4a') ||
+                            f.name.toLowerCase().endsWith('.wav') ||
+                            f.name.toLowerCase().endsWith('.ogg')
+                        );
+                    } catch (error) {
+                        console.error('Error fetching files:', error);
+                    }
+                },
+                async apiCall(endpoint, method, body) {
+                    const headers = { 'Content-Type': 'application/json' };
+                    let url = endpoint;
+                    if (this.isAdmin) {
+                        const key = localStorage.getItem('adminKey');
+                        if (key) url += `?key=${encodeURIComponent(key)}`;
+                    }
+                    return fetch(url, { method, headers, body: JSON.stringify(body) });
+                },
+                async addToQueue(filename) {
+                    await fetch('/audio/queue', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ filename })
+                    });
+                    this.fetchState();
+                },
+                async removeFromQueue(index) {
+                    await this.apiCall('/audio/queue', 'DELETE', { index });
+                    this.fetchState();
+                },
+                async updateServerState(action) {
+                    if (this.ignoreNextEvent) {
+                        this.ignoreNextEvent = false;
+                        return;
+                    }
+                    this.isDriver = true;
+                    let position = 0;
+                    if (this.$refs.audioPlayer) position = this.$refs.audioPlayer.currentTime;
+
+                    await fetch('/audio/state', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ action, position })
+                    });
+                    this.fetchState();
+                },
+                onPlay() { this.updateServerState('play'); },
+                onPause() {
+                    if (this.$refs.audioPlayer && this.$refs.audioPlayer.currentTime >= this.$refs.audioPlayer.duration) return; // handled by ended
+                    this.updateServerState('pause');
+                },
+                onSeeked() { this.updateServerState('seek'); },
+                async onEnded() {
+                    console.log("Track ended. Requesting next.");
+                    this.isDriver = true;
+                    await fetch('/audio/state', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ action: 'next', position: 0 })
+                    });
+                    this.fetchState();
+                },
+                async skipTrack() {
+                    this.isDriver = true;
+                    await fetch('/audio/state', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ action: 'next', position: 0 })
+                    });
+                    this.fetchState();
+                }
+            },
+            mounted() {
+                this.fetchAudioFiles();
+                this.fetchState();
+                this.pollingInterval = setInterval(this.fetchState, 3000); // Poll for sync
+            },
+            beforeUnmount() {
+                clearInterval(this.pollingInterval);
+            }
+        }).mount('#audio-app')
+    </script>
+</body>
+</html>
