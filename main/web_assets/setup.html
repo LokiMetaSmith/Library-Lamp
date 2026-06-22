@@ -22,8 +22,14 @@
         <h1>Wi-Fi Setup</h1>
         <p>Connect your E-Book Librarian to your local Wi-Fi network.</p>
         <form action="/save-credentials" method="POST">
-            <input type="text" id="ssid" name="ssid" aria-label="Wi-Fi Network Name (SSID)" placeholder="Wi-Fi Network Name (SSID)" required>
-            <input type="password" id="password" name="password" aria-label="Password" placeholder="Password">
+            <div style="margin-bottom: 15px;">
+                <label for="ssid" style="display: block; text-align: left; margin-bottom: 5px; font-weight: bold; color: #555;">Wi-Fi Network Name (SSID)</label>
+                <input type="text" id="ssid" name="ssid" required style="margin-bottom: 0;">
+            </div>
+            <div style="margin-bottom: 20px;">
+                <label for="password" style="display: block; text-align: left; margin-bottom: 5px; font-weight: bold; color: #555;">Password</label>
+                <input type="password" id="password" name="password" style="margin-bottom: 0;">
+            </div>
             <button type="submit">Connect</button>
         </form>
         <div id="status"></div>
