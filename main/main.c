@@ -51,6 +51,7 @@
 #include "lorawan.h"
 #include "bulletin_board.h"
 #include "bulletin_api.h"
+#include "audio_api.h"
 
 // --- Local Dependencies ---
 #include "dns_server.h"
@@ -865,13 +866,19 @@ static esp_err_t download_handler(httpd_req_t *req) {
     else if (strstr(filepath, ".mobi")) type = "application/x-mobipocket-ebook";
     else if (strstr(filepath, ".pdf")) type = "application/pdf";
     else if (strstr(filepath, ".txt")) type = "text/plain";
+    else if (strstr(filepath, ".mp3")) type = "audio/mpeg";
+    else if (strstr(filepath, ".m4a")) type = "audio/mp4";
+    else if (strstr(filepath, ".wav")) type = "audio/wav";
+    else if (strstr(filepath, ".ogg")) type = "audio/ogg";
 
     httpd_resp_set_type(req, type);
+    httpd_resp_set_hdr(req, "Accept-Ranges", "bytes");
 
-    // Set Content-Disposition header to encourage downloading
-    char disposition_header[256];
-    snprintf(disposition_header, sizeof(disposition_header), "attachment; filename=\"%s\"", decoded_file_param);
-    httpd_resp_set_hdr(req, "Content-Disposition", disposition_header);
+    if (!strstr(type, "audio/")) {
+        char disposition_header[256];
+        snprintf(disposition_header, sizeof(disposition_header), "attachment; filename=\"%s\"", decoded_file_param);
+        httpd_resp_set_hdr(req, "Content-Disposition", disposition_header);
+    }
 
     FILE *fd = fopen(filepath, "rb");
     if (!fd) {
@@ -879,6 +886,34 @@ static esp_err_t download_handler(httpd_req_t *req) {
         httpd_resp_send_500(req);
         return ESP_FAIL;
     }
+
+    size_t file_size = path_stat.st_size;
+    size_t start_byte = 0;
+    size_t end_byte = file_size - 1;
+    bool is_range_req = false;
+
+    char range_header[64];
+    if (httpd_req_get_hdr_value_str(req, "Range", range_header, sizeof(range_header)) == ESP_OK) {
+        is_range_req = true;
+        ESP_LOGI(TAG, "Range requested: %s", range_header);
+        if (sscanf(range_header, "bytes=%zu-%zu", &start_byte, &end_byte) == 1) {
+            end_byte = file_size - 1; // Only start_byte was provided
+        }
+        if (start_byte >= file_size) {
+            httpd_resp_send_err(req, HTTPD_416_REQUESTED_RANGE_NOT_SATISFIABLE, "Requested Range Not Satisfiable");
+            fclose(fd);
+            return ESP_FAIL;
+        }
+        httpd_resp_set_status(req, "206 Partial Content");
+        char content_range[128];
+        snprintf(content_range, sizeof(content_range), "bytes %zu-%zu/%zu", start_byte, end_byte, file_size);
+        httpd_resp_set_hdr(req, "Content-Range", content_range);
+        fseek(fd, start_byte, SEEK_SET);
+    } else {
+        httpd_resp_set_status(req, "200 OK");
+    }
+
+    size_t content_length = end_byte - start_byte + 1;
 
     char *chunk = malloc(4096);
     if (!chunk) {
@@ -888,9 +923,11 @@ static esp_err_t download_handler(httpd_req_t *req) {
         return ESP_FAIL;
     }
 
+    size_t remaining = content_length;
     size_t chunk_size;
     do {
-        chunk_size = fread(chunk, 1, 4096, fd);
+        size_t to_read = (remaining > 4096) ? 4096 : remaining;
+        chunk_size = fread(chunk, 1, to_read, fd);
         if (chunk_size > 0) {
             if (httpd_resp_send_chunk(req, chunk, chunk_size) != ESP_OK) {
                 fclose(fd);
@@ -898,8 +935,9 @@ static esp_err_t download_handler(httpd_req_t *req) {
                 ESP_LOGE(TAG, "File download chunk sending failed!");
                 return ESP_FAIL;
             }
+            remaining -= chunk_size;
         }
-    } while (chunk_size > 0);
+    } while (chunk_size > 0 && remaining > 0);
 
     httpd_resp_send_chunk(req, NULL, 0); // End response
     fclose(fd);
@@ -1396,6 +1434,7 @@ httpd_handle_t start_webserver(void) {
 
         // Register bulletin board API endpoints
         register_bulletin_api_handlers(server);
+        register_audio_api_handlers(server);
 
         // Handler for all other URIs (serves static files)
         httpd_uri_t static_uri = { "/*", HTTP_GET, static_file_handler, NULL };

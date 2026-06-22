@@ -1,6 +1,6 @@
 
 # List of source files for this component.
-set(COMPONENT_SRCS "main.c" "dns_server.c" "lorawan.cpp" "bulletin_board.c" "bulletin_api.c")
+set(COMPONENT_SRCS "main.c" "dns_server.c" "lorawan.cpp" "bulletin_board.c" "bulletin_api.c" "audio_api.c")
 
 # List of directories to add to the include path.
 set(COMPONENT_ADD_INCLUDEDIRS ".")
