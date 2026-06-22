@@ -58,6 +58,11 @@ body {
   outline: none;
   margin-bottom: 10px;
 }
+#gate label {
+  font-size: 10px; letter-spacing: 1px;
+  text-transform: uppercase; color: var(--ink-muted);
+  display: block; margin-bottom: 5px;
+}
 #gate input:focus { border-color: var(--accent-dark); }
 #gate button {
   width: 100%;
@@ -202,8 +207,8 @@ textarea.restore-area:focus { border-color: var(--accent-dark); }
 <!-- Password gate -->
 <div id="gate">
   <h2>Admin Access</h2>
-  <input type="password" id="keyIn" aria-label="Admin Access Key" placeholder="Enter admin key"
-         autocomplete="off">
+  <label for="keyIn">Admin Access Key</label>
+  <input type="password" id="keyIn" autocomplete="off">
   <button onclick="tryLogin()">Unlock 🔑</button>
   <div class="error" id="gateErr"></div>
 </div>
