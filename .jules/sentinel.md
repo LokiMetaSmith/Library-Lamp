@@ -21,3 +21,8 @@
 **Vulnerability:** Found a buffer over-read (CWE-125) in BLE GATT write handler where `strncpy` was used on `param->write.value`, which is not guaranteed to be null-terminated.
 **Learning:** `strncpy(dest, src, max_len)` reads from `src` until a null-terminator or `max_len`. If `src` comes from an untrusted network packet (like BLE) without null-termination, it will read past the end of the packet until it finds a null byte, leading to memory disclosure.
 **Prevention:** When dealing with length-specified external buffers (like `param->write.len`), use `memcpy` constrained by both the destination buffer size and the incoming length, and then manually null-terminate.
+
+## 2024-05-20 - [Prevent access to sensitive key files]
+**Vulnerability:** Static file handler and download handler allowed downloading sensitive files (`adminkey.json` and `.library_admin.key`), exposing admin credentials.
+**Learning:** Wildcard file serving endpoints must explicitly filter out sensitive application configuration and key files.
+**Prevention:** Implement file extension and filename blocking for `.key` and `adminkey.json` across all file reading and writing handlers.
