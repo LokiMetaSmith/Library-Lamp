@@ -89,6 +89,12 @@ li:last-child {
     color: #a89f91;
     margin-top: 4px;
 }
+.empty-state {
+    color: #8a7b6c;
+    font-style: italic;
+    text-align: center;
+    padding: 10px;
+}
 button {
     background-color: #8c5a35;
     color: #f5eedc;
