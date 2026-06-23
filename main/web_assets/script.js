@@ -73,11 +73,11 @@ createApp({
         },
         async fetchFileLists() {
             try {
-                const [localRes, ereaderRes] = await Promise.all([
-                    fetch('/list-files?type=sd'),
-                    fetch('/list-files?type=usb')
-                ]);
+                // ⚡ Bolt: Fetch sequentially instead of Promise.all to avoid exhausting ESP-IDF connection pool
+                const localRes = await fetch('/list-files?type=sd');
                 this.localFiles = await localRes.json();
+
+                const ereaderRes = await fetch('/list-files?type=usb');
                 this.ereaderFiles = await ereaderRes.json();
             } catch (error) {
                 console.error('Error fetching file lists:', error);
