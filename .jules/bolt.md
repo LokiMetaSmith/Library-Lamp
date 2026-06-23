@@ -5,3 +5,7 @@
 ## 2024-06-22 - [Combine HTTP polling endpoints in ESP-IDF]
 **Learning:** On ESP-IDF backend, executing concurrent HTTP polling requests via `Promise.all` directly to multiple different endpoints like `/audio/current` and `/audio/queue` creates significant overhead. The ESP-IDF `httpd` component is optimized for lower overhead when dealing with single endpoints rather than parallel request connections from the same client, which can cause connection pooling exhaustion and block main threads.
 **Action:** When creating frontend UI interfaces for ESP-IDF devices, always combine grouped polling status queries (e.g. audio status, network status, queue data) into a unified `/state` endpoint rather than dispatching parallel `fetch()` connections to separate endpoints.
+
+## 2024-10-27 - [Avoid Promise.all overhead for API fetches]
+**Learning:** On ESP-IDF backend, executing concurrent HTTP polling requests via `Promise.all` directly to multiple different endpoints like `/list-files?type=sd` and `/list-files?type=usb` creates significant overhead. The ESP-IDF `httpd` component is optimized for lower overhead when dealing with single endpoints sequentially rather than parallel request connections from the same client, which can cause connection pooling exhaustion and block main threads.
+**Action:** When fetching data from multiple endpoints in the frontend for ESP-IDF devices, always fetch them sequentially rather than in parallel with `Promise.all`.
