@@ -165,6 +165,9 @@ extern void class_driver_client_deregister(void);
 
 
 
+// --- GLOBALS ---
+static const char *TAG = "EBOOK_LIBRARIAN";
+
 // --- Async Background Queues & State ---
 QueueHandle_t catalog_update_queue = NULL;
 volatile bool catalog_updating = false;
@@ -236,7 +239,6 @@ void catalog_update_task(void *pvParameters) {
 }
 
 // --- GLOBALS ---
-static const char *TAG = "EBOOK_LIBRARIAN";
 static bool ebook_reader_connected = false;
 static msc_host_device_handle_t device_handle = NULL;
 static msc_host_vfs_handle_t vfs_handle = NULL;
@@ -890,17 +892,16 @@ static esp_err_t download_handler(httpd_req_t *req) {
     size_t file_size = path_stat.st_size;
     size_t start_byte = 0;
     size_t end_byte = file_size - 1;
-    bool is_range_req = false;
 
     char range_header[64];
     if (httpd_req_get_hdr_value_str(req, "Range", range_header, sizeof(range_header)) == ESP_OK) {
-        is_range_req = true;
         ESP_LOGI(TAG, "Range requested: %s", range_header);
         if (sscanf(range_header, "bytes=%zu-%zu", &start_byte, &end_byte) == 1) {
             end_byte = file_size - 1; // Only start_byte was provided
         }
         if (start_byte >= file_size) {
-            httpd_resp_send_err(req, HTTPD_416_REQUESTED_RANGE_NOT_SATISFIABLE, "Requested Range Not Satisfiable");
+            httpd_resp_set_status(req, "416 Range Not Satisfiable");
+            httpd_resp_send(req, "Requested Range Not Satisfiable", HTTPD_RESP_USE_STRLEN);
             fclose(fd);
             return ESP_FAIL;
         }
