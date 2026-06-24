@@ -358,13 +358,13 @@ body {
     <div class="field field-cat">
       <label>Category</label>
       <div class="cat-btns">
-        <button class="cat-btn" onclick="setType('Notice',this)">📌 Notice</button>
-        <button class="cat-btn" onclick="setType('Offer', this)">🌱 Offer</button>
-        <button class="cat-btn" onclick="setType('Need',  this)">🤝 Need</button>
-        <button class="cat-btn" onclick="setType('Event', this)">📅 Event</button>
-        <button class="cat-btn" onclick="setType('Review', this)">📖 Review</button>
-        <button class="cat-btn" onclick="setType('Recomm',  this)">💡 Recomm.</button>
-        <button class="cat-btn" onclick="setType('Request', this)">🔍 Request</button>
+        <button class="cat-btn active-Notice" aria-pressed="true" onclick="setType('Notice',this)">📌 Notice</button>
+        <button class="cat-btn" aria-pressed="false" onclick="setType('Offer', this)">🌱 Offer</button>
+        <button class="cat-btn" aria-pressed="false" onclick="setType('Need',  this)">🤝 Need</button>
+        <button class="cat-btn" aria-pressed="false" onclick="setType('Event', this)">📅 Event</button>
+        <button class="cat-btn" aria-pressed="false" onclick="setType('Review', this)">📖 Review</button>
+        <button class="cat-btn" aria-pressed="false" onclick="setType('Recomm',  this)">💡 Recomm.</button>
+        <button class="cat-btn" aria-pressed="false" onclick="setType('Request', this)">🔍 Request</button>
       </div>
       <div class="char-hint"></div>
     </div>
@@ -381,26 +381,26 @@ body {
 
   <div class="expiry-row">
     <span class="expiry-label">Expires:</span>
-    <button class="exp-btn" onclick="setExpiry(24,  this)">1 day</button>
-    <button class="exp-btn" onclick="setExpiry(72,  this)">3 days</button>
-    <button class="exp-btn active" onclick="setExpiry(168, this)">1 week</button>
+    <button class="exp-btn" aria-pressed="false" onclick="setExpiry(24,  this)">1 day</button>
+    <button class="exp-btn" aria-pressed="false" onclick="setExpiry(72,  this)">3 days</button>
+    <button class="exp-btn active" aria-pressed="true" onclick="setExpiry(168, this)">1 week</button>
     <button class="post-btn" id="postBtn" onclick="doPost()">POST</button>
   </div>
 </div>
 
 <div class="filter-bar">
   <span class="filter-label">Show:</span>
-  <button class="ftab active" onclick="setFilter('',       this)">All</button>
-  <button class="ftab"        onclick="setFilter('Notice', this)">📌 Notice</button>
-  <button class="ftab"        onclick="setFilter('Offer',  this)">🌱 Offer</button>
-  <button class="ftab"        onclick="setFilter('Need',   this)">🤝 Need</button>
-  <button class="ftab"        onclick="setFilter('Event',  this)">📅 Event</button>
-  <button class="ftab"        onclick="setFilter('Review',  this)">📖 Review</button>
-  <button class="ftab"        onclick="setFilter('Recomm',   this)">💡 Recomm.</button>
-  <button class="ftab"        onclick="setFilter('Request',  this)">🔍 Request</button>
+  <button class="ftab active" aria-pressed="true" onclick="setFilter('',       this)">All</button>
+  <button class="ftab" aria-pressed="false" onclick="setFilter('Notice', this)">📌 Notice</button>
+  <button class="ftab" aria-pressed="false" onclick="setFilter('Offer',  this)">🌱 Offer</button>
+  <button class="ftab" aria-pressed="false" onclick="setFilter('Need',   this)">🤝 Need</button>
+  <button class="ftab" aria-pressed="false" onclick="setFilter('Event',  this)">📅 Event</button>
+  <button class="ftab" aria-pressed="false" onclick="setFilter('Review',  this)">📖 Review</button>
+  <button class="ftab" aria-pressed="false" onclick="setFilter('Recomm',   this)">💡 Recomm.</button>
+  <button class="ftab" aria-pressed="false" onclick="setFilter('Request',  this)">🔍 Request</button>
   <span class="sep"></span>
-  <button class="ftab active" id="sNew" onclick="setSort('new', this)">New</button>
-  <button class="ftab"        id="sExp" onclick="setSort('exp', this)">Expiring</button>
+  <button class="ftab active" id="sNew" aria-pressed="true" onclick="setSort('new', this)">New</button>
+  <button class="ftab"        id="sExp" aria-pressed="false" onclick="setSort('exp', this)">Expiring</button>
 </div>
 
 <div class="board" id="board"></div>
@@ -481,17 +481,24 @@ function setType(t, btn) {
   currentType = t;
   document.querySelectorAll('.cat-btn').forEach(b => {
     b.className = 'cat-btn';
+    b.setAttribute('aria-pressed', 'false');
   });
   btn.classList.add('active-' + t);
+  btn.setAttribute('aria-pressed', 'true');
 }
 // Set default active on load
 document.querySelector('.cat-btn').classList.add('active-Notice');
+document.querySelector('.cat-btn').setAttribute('aria-pressed', 'true');
 
 // ── Expiry selection ───────────────────────────
 function setExpiry(h, btn) {
   currentExpiry = h;
-  document.querySelectorAll('.exp-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.exp-btn').forEach(b => {
+    b.classList.remove('active');
+    b.setAttribute('aria-pressed', 'false');
+  });
   btn.classList.add('active');
+  btn.setAttribute('aria-pressed', 'true');
 }
 
 // ── Filter / sort ──────────────────────────────
@@ -500,15 +507,23 @@ function setFilter(f, btn) {
   document.querySelectorAll('.filter-bar .ftab').forEach(b => {
     if (b.id === 'sNew' || b.id === 'sExp') return;
     b.classList.remove('active');
+    b.setAttribute('aria-pressed', 'false');
   });
   btn.classList.add('active');
+  btn.setAttribute('aria-pressed', 'true');
   if (lastData.length) render(lastData);
 }
 
 function setSort(s, btn) {
   activeSort = s;
-  document.getElementById('sNew').classList.toggle('active', s === 'new');
-  document.getElementById('sExp').classList.toggle('active', s === 'exp');
+  const sNew = document.getElementById('sNew');
+  const sExp = document.getElementById('sExp');
+
+  sNew.classList.toggle('active', s === 'new');
+  sNew.setAttribute('aria-pressed', s === 'new' ? 'true' : 'false');
+
+  sExp.classList.toggle('active', s === 'exp');
+  sExp.setAttribute('aria-pressed', s === 'exp' ? 'true' : 'false');
 
   // ⚡ Bolt: Render locally instead of fetching from server to save 2 network requests
   if (lastData.length) render(lastData);
