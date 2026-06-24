@@ -13,3 +13,6 @@
 ## 2026-06-23 - Empty states in data lists
 **Learning:** Found an interaction improvement opportunity where lists displaying dynamic data (like `localFiles` and `ereaderFiles` in `index.html`) lacked empty states. When a user has no files, displaying nothing leaves them unsure if the application is broken, loading, or genuinely empty. Adding empty states using `v-if` with clear, helpful messaging removes ambiguity and matches the established UX pattern in other areas like `audio.html`.
 **Action:** When working on UI lists or data tables that can be empty, always ensure there is a clear, styled empty state providing context to the user.
+## 2026-06-24 - Accessibility for Toggle Buttons
+**Learning:** Found an interaction improvement opportunity in `board.html` where filtering, sorting, and category buttons visually indicated their active state via CSS classes (e.g., `active` or `active-Notice`), but this state wasn't communicated to screen readers. This leaves visually impaired users unaware of which filter or category is currently selected.
+**Action:** When creating toggle buttons or selectable tabs, always pair visual state classes with `aria-pressed="true"` or `aria-pressed="false"` attributes, and ensure these attributes are dynamically updated alongside the CSS classes in JavaScript logic.
