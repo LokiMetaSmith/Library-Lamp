@@ -412,21 +412,20 @@ body {
 
 <script>
 // First thing's first:
-function checkBoardStatus() {
-  fetch('/board/api/status')
-    .then(r => r.json())
-    .then(d => {
-      const banner = document.getElementById('fullBanner');
-      const btn    = document.getElementById('postBtn');
-      if (d.full) {
-        banner.style.display = 'block';
-        if (btn) btn.disabled = true;
-      } else {
-        banner.style.display = 'none';
-        if (btn) btn.disabled = false;
-      }
-    })
-    .catch(() => {});
+async function checkBoardStatus() {
+  try {
+    const r = await fetch('/board/api/status');
+    const d = await r.json();
+    const banner = document.getElementById('fullBanner');
+    const btn    = document.getElementById('postBtn');
+    if (d.full) {
+      banner.style.display = 'block';
+      if (btn) btn.disabled = true;
+    } else {
+      banner.style.display = 'none';
+      if (btn) btn.disabled = false;
+    }
+  } catch (e) {}
 }
 // ── XSS-safe escaping ──────────────────────────
 function esc(s) {
@@ -554,7 +553,7 @@ async function loadSystemStatus() {
 }
 async function load() {
   try {
-    checkBoardStatus();
+    await checkBoardStatus();
     const r  = await fetch('/board/messages');
     lastData = await r.json();
     render(lastData);
@@ -599,7 +598,7 @@ function render(data) {
 
 // ── Post ───────────────────────────────────────
 async function doPost() {
-  checkBoardStatus();
+  await checkBoardStatus();
   const n = document.getElementById('nameIn').value.trim() || 'neighbor';
   const t = document.getElementById('msgIn').value.trim();
   if (!t) return;
@@ -628,27 +627,32 @@ async function doPost() {
     }
   }
 
-  load();
-  loadSystemStatus();
+  await load();
+  await loadSystemStatus();
 }
 
 // ── Board info ─────────────────────────────────
-function loadInfo() {
-  fetch('/board/info').then(r => r.json()).then(d => {
+async function loadInfo() {
+  try {
+    const r = await fetch('/board/info');
+    const d = await r.json();
     document.getElementById('boardTitle').textContent   = d.icon + '  ' + d.name;
     document.getElementById('boardTagline').textContent = d.tagline;
     document.getElementById('boardRules').textContent   = d.rules;
     document.getElementById('boardFooter').textContent  = d.footer;
     document.getElementById('uptimeDisplay').textContent = d.uptime;
-  });
+  } catch (e) {}
 }
 
-setInterval(load,     60000);
-setInterval(loadInfo, 60000);
-load();
-  loadSystemStatus();
-loadInfo();
-checkBoardStatus();
+// ⚡ Bolt: Fetch board data sequentially to prevent connection pool exhaustion
+async function runPolling() {
+  await loadInfo();
+  await loadSystemStatus();
+  await load();
+}
+
+runPolling();
+setInterval(runPolling, 60000);
 </script>
 </body>
 </html>
