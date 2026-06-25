@@ -9,3 +9,7 @@
 ## 2024-10-27 - [Avoid Promise.all overhead for API fetches]
 **Learning:** On ESP-IDF backend, executing concurrent HTTP polling requests via `Promise.all` directly to multiple different endpoints like `/list-files?type=sd` and `/list-files?type=usb` creates significant overhead. The ESP-IDF `httpd` component is optimized for lower overhead when dealing with single endpoints sequentially rather than parallel request connections from the same client, which can cause connection pooling exhaustion and block main threads.
 **Action:** When fetching data from multiple endpoints in the frontend for ESP-IDF devices, always fetch them sequentially rather than in parallel with `Promise.all`.
+
+## 2024-11-20 - [Increase static file chunk size to 4KB on ESP-IDF]
+**Learning:** In ESP-IDF's `httpd` component, serving static files (like large HTML/JS/CSS assets from SPIFFS) using small chunks (e.g. 1024 bytes) incurs significant overhead due to the high number of context switches, VFS reads (`fread`), and `httpd_resp_send_chunk` calls.
+**Action:** Always use larger chunk sizes (e.g., 4096 bytes) for static file handlers on the ESP32 to improve file transfer speed and reduce CPU usage, ensuring the buffer is heap-allocated (`malloc`) to prevent FreeRTOS task stack overflows.

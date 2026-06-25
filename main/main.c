@@ -713,10 +713,10 @@ static esp_err_t static_file_handler(httpd_req_t *req) {
         return ESP_FAIL;
     }
 
-    char *chunk = malloc(1024);
+    char *chunk = malloc(4096);
     size_t chunk_size;
     do {
-        chunk_size = fread(chunk, 1, 1024, fd);
+        chunk_size = fread(chunk, 1, 4096, fd);
         if (chunk_size > 0) {
             if (httpd_resp_send_chunk(req, chunk, chunk_size) != ESP_OK) {
                 fclose(fd);
