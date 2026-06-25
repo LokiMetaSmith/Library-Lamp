@@ -210,7 +210,7 @@ textarea.restore-area:focus { border-color: var(--accent-dark); }
   <label for="keyIn">Admin Access Key</label>
   <input type="password" id="keyIn" autocomplete="off">
   <button onclick="tryLogin()">Unlock 🔑</button>
-  <div class="error" id="gateErr"></div>
+  <div class="error" id="gateErr" aria-live="assertive"></div>
 </div>
 
 <!-- Admin controls (hidden until authenticated) -->
@@ -232,7 +232,7 @@ textarea.restore-area:focus { border-color: var(--accent-dark); }
         </div>
         <button class="btn" onclick="doSetKey()">Change Key</button>
       </div>
-      <div class="feedback" id="keyFb"></div>
+      <div class="feedback" id="keyFb" aria-live="polite"></div>
     </div>
   </div>
 
@@ -264,7 +264,7 @@ textarea.restore-area:focus { border-color: var(--accent-dark); }
       <div class="row">
         <button class="btn" onclick="doIdentity()">Save Identity</button>
       </div>
-      <div class="feedback" id="idFb"></div>
+      <div class="feedback" id="idFb" aria-live="polite"></div>
     </div>
   </div>
 
@@ -275,7 +275,7 @@ textarea.restore-area:focus { border-color: var(--accent-dark); }
         <button class="btn" onclick="loadPostList()">Refresh List</button>
         <button class="btn danger" onclick="confirmClear()">Clear All Posts</button>
       </div>
-      <div id="postListFb" class="feedback"></div>
+      <div id="postListFb" class="feedback" aria-live="polite"></div>
       <div id="postList"></div>
     </div>
   </div>
@@ -290,7 +290,7 @@ textarea.restore-area:focus { border-color: var(--accent-dark); }
         </div>
         <button class="btn" onclick="doSetLampColor()">Set Lamp Color</button>
       </div>
-      <div class="feedback" id="lampFb"></div>
+      <div class="feedback" id="lampFb" aria-live="polite"></div>
     </div>
   </div>
 
@@ -304,7 +304,7 @@ textarea.restore-area:focus { border-color: var(--accent-dark); }
       <div class="row">
         <button class="btn" onclick="doSetPublicUploads()">Save Upload Settings</button>
       </div>
-      <div class="feedback" id="uploadsFb"></div>
+      <div class="feedback" id="uploadsFb" aria-live="polite"></div>
     </div>
   </div>
 
@@ -314,7 +314,7 @@ textarea.restore-area:focus { border-color: var(--accent-dark); }
       <div class="row">
         <button class="btn danger" onclick="confirmFormatSD()">Format SD Card</button>
       </div>
-      <div class="feedback" id="storageFb"></div>
+      <div class="feedback" id="storageFb" aria-live="polite"></div>
     </div>
   </div>
 
