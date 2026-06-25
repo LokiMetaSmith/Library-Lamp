@@ -113,6 +113,34 @@ createApp({
                 // The polling will handle the final state update and file list refresh
             }
         },
+
+        async deleteFile(filename, source) {
+            if (!confirm(`Are you sure you want to delete ${filename}?`)) return;
+
+            let url = '/delete-file';
+            const savedKey = localStorage.getItem('adminKey');
+            if (savedKey) {
+                url += `?key=${encodeURIComponent(savedKey)}`;
+            }
+
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ filename, source })
+                });
+
+                if (response.ok) {
+                    this.fetchFileLists();
+                } else {
+                    const err = await response.text();
+                    alert(`Delete failed: ${err}`);
+                }
+            } catch (error) {
+                console.error('Delete error:', error);
+                alert('An error occurred while deleting the file.');
+            }
+        },
         transferToEReader(filename) {
             this.performTransfer('sd', 'usb', filename);
         },
