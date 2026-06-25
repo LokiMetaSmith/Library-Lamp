@@ -515,6 +515,64 @@ static esp_err_t copy_file(const char *source_path, const char *dest_path, trans
 
 // --- WEB SERVER HANDLERS (CAPTIVE PORTAL) ---
 // Handler to serve the setup page
+
+static esp_err_t delete_file_handler(httpd_req_t *req) {
+    if (!bb_is_admin_request(req)) {
+        httpd_resp_send_err(req, HTTPD_403_FORBIDDEN, "Forbidden");
+        return ESP_FAIL;
+    }
+
+    char content[256];
+    int ret = httpd_req_recv(req, content, sizeof(content) - 1);
+    if (ret <= 0) {
+        return ESP_FAIL;
+    }
+    content[ret] = 0;
+
+    cJSON *json = cJSON_Parse(content);
+    if (!json) {
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Bad Request");
+        return ESP_FAIL;
+    }
+
+    cJSON *j_source = cJSON_GetObjectItem(json, "source");
+    cJSON *j_filename = cJSON_GetObjectItem(json, "filename");
+
+    if (!j_source || !j_source->valuestring || !j_filename || !j_filename->valuestring) {
+        cJSON_Delete(json);
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Bad Request");
+        return ESP_FAIL;
+    }
+
+    const char *source = j_source->valuestring;
+    const char *filename = j_filename->valuestring;
+
+    if (strstr(filename, "..") != NULL || strchr(filename, '/') != NULL) {
+        cJSON_Delete(json);
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid Filename");
+        return ESP_FAIL;
+    }
+
+    if (strstr(filename, "adminkey.json") != NULL || strstr(filename, ".key") != NULL) {
+        cJSON_Delete(json);
+        httpd_resp_send_err(req, HTTPD_403_FORBIDDEN, "Forbidden");
+        return ESP_FAIL;
+    }
+
+    char filepath[256];
+    snprintf(filepath, sizeof(filepath), "%s/%s", (strcmp(source, "sd") == 0) ? MOUNT_POINT_SD : MOUNT_POINT_USB, filename);
+    cJSON_Delete(json);
+
+    if (remove(filepath) == 0) {
+        httpd_resp_set_type(req, "application/json");
+        httpd_resp_send(req, "{\"success\": true}", 17);
+        return ESP_OK;
+    } else {
+        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Failed to delete file");
+        return ESP_FAIL;
+    }
+}
+
 static esp_err_t setup_get_handler(httpd_req_t *req) {
     ESP_LOGI(TAG, "Serving setup page");
     httpd_resp_set_type(req, "text/html");
@@ -1432,6 +1490,10 @@ httpd_handle_t start_webserver(void) {
 
         httpd_uri_t transfer_uri = { "/transfer-file", HTTP_POST, transfer_file_handler, NULL };
         httpd_register_uri_handler(server, &transfer_uri);
+
+        httpd_uri_t delete_file_uri = { "/delete-file", HTTP_POST, delete_file_handler, NULL };
+        httpd_register_uri_handler(server, &delete_file_uri);
+
 
         httpd_uri_t progress_uri = { "/transfer-progress", HTTP_GET, transfer_progress_handler, NULL };
         httpd_register_uri_handler(server, &progress_uri);
