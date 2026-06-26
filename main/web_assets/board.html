@@ -329,7 +329,7 @@ body {
 <body>
 
 <header class="site-header">
-  <div id="systemBanner" style="display:none;background:#ffcc00;color:#333;padding:10px;margin:0 24px 15px 24px;border-radius:5px;border:1px solid #e6b800;">
+  <div id="systemBanner" aria-live="assertive" style="display:none;background:#ffcc00;color:#333;padding:10px;margin:0 24px 15px 24px;border-radius:5px;border:1px solid #e6b800;">
     <ul id="systemErrorsList" style="margin:0;padding-left:20px;"></ul>
   </div>
   <div class="header-title-block">
@@ -341,7 +341,7 @@ body {
     <div id="postCount">— posts</div>
   </div>
 </header>
-<div id="fullBanner" style="display:none;background:#a30000;color:#fff;
+<div id="fullBanner" aria-live="assertive" style="display:none;background:#a30000;color:#fff;
      text-align:center;padding:10px 16px;font-weight:600">
   📋 This board is currently full. Check back once some posts have expired. 📋
 </div>
@@ -352,7 +352,7 @@ body {
       <label for="nameIn">Your Name</label>
       <input id="nameIn" maxlength="24" placeholder="neighbor"
              autocomplete="off" spellcheck="false">
-      <div class="char-hint" id="nameHint"></div>
+      <div class="char-hint" id="nameHint" aria-live="polite"></div>
     </div>
 
     <div class="field field-cat">
@@ -374,7 +374,7 @@ body {
       <textarea id="msgIn" maxlength="300"
                 placeholder="What's on the board?"
                 spellcheck="false"></textarea>
-      <div class="char-hint" id="msgHint"></div>
+      <div class="char-hint" id="msgHint" aria-live="polite"></div>
     </div>
 
   </div>

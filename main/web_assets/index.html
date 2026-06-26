@@ -9,11 +9,15 @@
 <body>
     <div id="app">
         <header class="app-header">
-        <div v-if="systemErrors.length > 0" class="system-banner error-banner">
-            <p v-for="err in systemErrors" :key="err">⚠️ {{ err }}</p>
+        <div aria-live="assertive">
+            <div v-if="systemErrors.length > 0" class="system-banner error-banner">
+                <p v-for="err in systemErrors" :key="err">⚠️ {{ err }}</p>
+            </div>
         </div>
-        <div v-if="systemStatus.length > 0" class="system-banner status-banner">
-            <p v-for="msg in systemStatus" :key="msg">🔄 {{ msg }}</p>
+        <div aria-live="polite">
+            <div v-if="systemStatus.length > 0" class="system-banner status-banner">
+                <p v-for="msg in systemStatus" :key="msg">🔄 {{ msg }}</p>
+            </div>
         </div>
             <h1>E-Book Librarian</h1>
             <div class="status-indicator" :class="statusClass"></div>
@@ -53,7 +57,9 @@
                             {{ isUploading ? 'Uploading...' : 'Upload' }}
                         </button>
                     </form>
-                    <p class="error-message" v-if="uploadError">{{ uploadError }}</p>
+                    <div aria-live="assertive">
+                        <p class="error-message" v-if="uploadError">{{ uploadError }}</p>
+                    </div>
                 </div>
 
                 <ul class="file-list">
@@ -108,7 +114,9 @@
             </div>
         </main>
         <footer class="app-footer">
-            <p class="error-message" v-if="transfer.error">{{ transfer.error }}</p>
+            <div aria-live="assertive">
+                <p class="error-message" v-if="transfer.error">{{ transfer.error }}</p>
+            </div>
             <div class="footer-actions">
                 <button @click="enterSleepMode" class="sleep-btn">Enter Sleep Mode</button>
             </div>
