@@ -270,30 +270,44 @@ static esp_err_t admin_clear_handler(httpd_req_t *req) {
 
 static esp_err_t admin_delete_post_handler(httpd_req_t *req) {
     if (!bb_is_admin_request(req)) { httpd_resp_send_err(req, HTTPD_403_FORBIDDEN, "forbidden"); return ESP_FAIL; }
-    
-    size_t query_len = httpd_req_get_url_query_len(req);
-    if (query_len == 0) {
-        httpd_resp_send_500(req);
+
+    size_t remaining = req->content_len;
+    int ret;
+    if (remaining >= 256 || remaining == 0) {
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "invalid payload length");
         return ESP_FAIL;
     }
 
-    char *buf = (char *)malloc(query_len + 1);
+    char *buf = (char *)malloc(remaining + 1);
     if (!buf) {
         httpd_resp_send_500(req);
         return ESP_FAIL;
     }
 
-    if (httpd_req_get_url_query_str(req, buf, query_len + 1) == ESP_OK) {
-        char temp[16];
-        if (httpd_query_key_value(buf, "id", temp, sizeof(temp)) == ESP_OK) {
-            uint16_t targetId = atoi(temp);
-            bb_delete_message(targetId);
-            free(buf);
-            httpd_resp_send(req, "deleted", 7);
-            return ESP_OK;
-        }
+    ret = httpd_req_recv(req, buf, remaining);
+    if (ret <= 0) {
+        free(buf);
+        return ESP_FAIL;
     }
+    buf[ret] = '\0';
+
+    cJSON *json = cJSON_Parse(buf);
     free(buf);
+    if (!json) {
+        httpd_resp_send_500(req);
+        return ESP_FAIL;
+    }
+
+    cJSON *j_id = cJSON_GetObjectItem(json, "id");
+    if (j_id && cJSON_IsNumber(j_id)) {
+        uint16_t targetId = j_id->valueint;
+        bb_delete_message(targetId);
+        cJSON_Delete(json);
+        httpd_resp_send(req, "deleted", 7);
+        return ESP_OK;
+    }
+
+    cJSON_Delete(json);
     httpd_resp_send_500(req);
     return ESP_FAIL;
 }
@@ -340,10 +354,10 @@ void register_bulletin_api_handlers(httpd_handle_t server) {
     httpd_uri_t admin_setkey_uri = { .uri = "/board/admin/setkey", .method = HTTP_GET, .handler = admin_setkey_handler, .user_ctx = NULL };
     httpd_register_uri_handler(server, &admin_setkey_uri);
 
-    httpd_uri_t admin_clear_uri = { .uri = "/board/admin/clear", .method = HTTP_GET, .handler = admin_clear_handler, .user_ctx = NULL };
+    httpd_uri_t admin_clear_uri = { .uri = "/board/admin/clear", .method = HTTP_POST, .handler = admin_clear_handler, .user_ctx = NULL };
     httpd_register_uri_handler(server, &admin_clear_uri);
 
-    httpd_uri_t admin_del_uri = { .uri = "/board/admin/delete/post", .method = HTTP_GET, .handler = admin_delete_post_handler, .user_ctx = NULL };
+    httpd_uri_t admin_del_uri = { .uri = "/board/admin/delete/post", .method = HTTP_POST, .handler = admin_delete_post_handler, .user_ctx = NULL };
     httpd_register_uri_handler(server, &admin_del_uri);
 
     httpd_uri_t admin_format_sd_uri = { .uri = "/board/admin/format-sd", .method = HTTP_POST, .handler = admin_format_sd_handler, .user_ctx = NULL };
