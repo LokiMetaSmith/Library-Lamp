@@ -13,3 +13,7 @@
 ## 2024-11-20 - [Increase static file chunk size to 4KB on ESP-IDF]
 **Learning:** In ESP-IDF's `httpd` component, serving static files (like large HTML/JS/CSS assets from SPIFFS) using small chunks (e.g. 1024 bytes) incurs significant overhead due to the high number of context switches, VFS reads (`fread`), and `httpd_resp_send_chunk` calls.
 **Action:** Always use larger chunk sizes (e.g., 4096 bytes) for static file handlers on the ESP32 to improve file transfer speed and reduce CPU usage, ensuring the buffer is heap-allocated (`malloc`) to prevent FreeRTOS task stack overflows.
+
+## 2024-11-21 - [Avoid bypassing VFS cache during file transfers on ESP-IDF]
+**Learning:** Polling `esp_vfs_fat_info` repeatedly during active file transfers (e.g., by bypassing the cache condition when `g_transfer_progress.active` is true) recursively traverses the FAT cluster chain and locks the VFS. This significantly slows down active file VFS operations like the transfer itself, drastically decreasing SPI bus availability and file transfer speeds.
+**Action:** Even when a file transfer is active, rely on the time-based cache for `esp_vfs_fat_info` to prevent starving the SPI bus and throttling the transfer process itself.

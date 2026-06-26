@@ -1057,7 +1057,8 @@ static esp_err_t status_handler(httpd_req_t *req) {
 
     if (g_sd_card_initialized) {
         TickType_t now_ticks = xTaskGetTickCount();
-        if (!sd_info_cached || (now_ticks - last_sd_info_ticks) > pdMS_TO_TICKS(SD_INFO_CACHE_DURATION_MS) || g_transfer_progress.active) {
+        // ⚡ Bolt: Removed `|| g_transfer_progress.active` to prevent `esp_vfs_fat_info` from locking VFS during transfers
+        if (!sd_info_cached || (now_ticks - last_sd_info_ticks) > pdMS_TO_TICKS(SD_INFO_CACHE_DURATION_MS)) {
             uint64_t out_total_bytes, out_free_bytes;
             if (esp_vfs_fat_info(MOUNT_POINT_SD, &out_total_bytes, &out_free_bytes) == ESP_OK) {
                 cached_sd_total_mb = out_total_bytes / (1024 * 1024);
