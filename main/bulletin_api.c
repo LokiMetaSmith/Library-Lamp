@@ -70,7 +70,8 @@ static esp_err_t board_messages_handler(httpd_req_t *req) {
 }
 
 static esp_err_t board_post_handler(httpd_req_t *req) {
-    int ret, remaining = req->content_len;
+    int ret;
+    size_t remaining = req->content_len;
     if (remaining >= 1024) {
         httpd_resp_send_408(req);
         return ESP_FAIL;
@@ -130,7 +131,8 @@ static esp_err_t board_post_handler(httpd_req_t *req) {
 }
 
 static esp_err_t admin_auth_handler(httpd_req_t *req) {
-    int ret, remaining = req->content_len;
+    int ret;
+    size_t remaining = req->content_len;
     if (remaining >= 256) {
         httpd_resp_send_408(req);
         return ESP_FAIL;

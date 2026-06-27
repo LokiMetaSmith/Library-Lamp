@@ -65,7 +65,8 @@ static esp_err_t audio_state_get_handler(httpd_req_t *req) {
 
 static esp_err_t audio_queue_post_handler(httpd_req_t *req) {
     char buf[256];
-    int ret, remaining = req->content_len;
+    int ret;
+    size_t remaining = req->content_len;
 
     if (remaining >= sizeof(buf)) {
         httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Body too large");
@@ -134,7 +135,8 @@ static esp_err_t audio_queue_delete_handler(httpd_req_t *req) {
     }
 
     char buf[256];
-    int ret, remaining = req->content_len;
+    int ret;
+    size_t remaining = req->content_len;
 
     if (remaining >= sizeof(buf)) {
         httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Body too large");
@@ -178,7 +180,8 @@ static esp_err_t audio_queue_delete_handler(httpd_req_t *req) {
 
 static esp_err_t audio_state_post_handler(httpd_req_t *req) {
     char buf[512];
-    int ret, remaining = req->content_len;
+    int ret;
+    size_t remaining = req->content_len;
 
     if (remaining >= sizeof(buf)) {
         httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Body too large");

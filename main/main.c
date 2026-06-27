@@ -583,7 +583,8 @@ static esp_err_t setup_get_handler(httpd_req_t *req) {
 // Handler to save credentials and restart
 static esp_err_t save_credentials_post_handler(httpd_req_t *req) {
     char buf[128];
-    int ret, remaining = req->content_len;
+    int ret;
+    size_t remaining = req->content_len;
 
     if (remaining > sizeof(buf) -1) {
         ESP_LOGE(TAG, "Content too long");
@@ -834,7 +835,7 @@ static esp_err_t upload_handler(httpd_req_t *req) {
         return ESP_FAIL;
     }
 
-        int remaining = req->content_len;
+        size_t remaining = req->content_len;
 
     while (remaining > 0) {
         int ret = httpd_req_recv(req, recv_buf, MIN(remaining, 4096));
