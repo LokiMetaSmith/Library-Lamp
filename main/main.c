@@ -523,6 +523,10 @@ static esp_err_t delete_file_handler(httpd_req_t *req) {
     }
 
     char content[256];
+    if (req->content_len >= sizeof(content)) {
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Payload too large");
+        return ESP_FAIL;
+    }
     int ret = httpd_req_recv(req, content, sizeof(content) - 1);
     if (ret <= 0) {
         return ESP_FAIL;
@@ -1210,6 +1214,10 @@ static esp_err_t transfer_file_handler(httpd_req_t *req) {
     }
 
     char content[256];
+    if (req->content_len >= sizeof(content)) {
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Payload too large");
+        return ESP_FAIL;
+    }
     int ret = httpd_req_recv(req, content, sizeof(content) - 1);
     if (ret <= 0) {
         g_led_state = ebook_reader_connected ? LED_STATE_CONNECTED : LED_STATE_IDLE;
@@ -1401,6 +1409,10 @@ static esp_err_t set_led_color_handler(httpd_req_t *req) {
     }
 
     char content[100];
+    if (req->content_len >= sizeof(content)) {
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Payload too large");
+        return ESP_FAIL;
+    }
     int ret = httpd_req_recv(req, content, sizeof(content) - 1);
     if (ret <= 0) {
         return ESP_FAIL;
@@ -1439,6 +1451,10 @@ static esp_err_t admin_set_public_uploads_handler(httpd_req_t *req) {
     }
 
     char content[100];
+    if (req->content_len >= sizeof(content)) {
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Payload too large");
+        return ESP_FAIL;
+    }
     int ret = httpd_req_recv(req, content, sizeof(content) - 1);
     if (ret <= 0) {
         return ESP_FAIL;
