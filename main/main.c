@@ -1134,23 +1134,28 @@ static esp_err_t list_files_handler(httpd_req_t *req) {
         snprintf(catalog_path, sizeof(catalog_path), "%s/catalog.json", mount_path);
         FILE *f = fopen(catalog_path, "r");
         if (f) {
-            fseek(f, 0, SEEK_END);
-            long fsize = ftell(f);
-            fseek(f, 0, SEEK_SET);
-
-            char *json_data = malloc(fsize + 1);
-            if (json_data) {
-                fread(json_data, 1, fsize, f);
-                json_data[fsize] = '\0';
-                fclose(f);
-
-                httpd_resp_set_type(req, "application/json");
-                httpd_resp_send(req, json_data, fsize);
-
-                free(json_data);
-                return ESP_OK;
+            httpd_resp_set_type(req, "application/json");
+            // ⚡ Bolt: Stream large catalog.json in 4KB chunks instead of loading entirely into RAM with malloc()
+            // This prevents OOM crashes on ESP32 by turning O(N) heap usage into O(1), and improves TTFB.
+            char *chunk = malloc(4096);
+            if (chunk) {
+                size_t chunk_size;
+                do {
+                    chunk_size = fread(chunk, 1, 4096, f);
+                    if (chunk_size > 0) {
+                        if (httpd_resp_send_chunk(req, chunk, chunk_size) != ESP_OK) {
+                            ESP_LOGE(TAG, "Failed to send catalog.json chunk");
+                            break;
+                        }
+                    }
+                } while (chunk_size == 4096);
+                httpd_resp_send_chunk(req, NULL, 0); // End chunked response
+                free(chunk);
+            } else {
+                httpd_resp_send_500(req);
             }
             fclose(f);
+            return ESP_OK;
         }
     }
 

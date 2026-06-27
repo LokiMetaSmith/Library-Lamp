@@ -17,3 +17,7 @@
 ## 2024-11-21 - [Avoid bypassing VFS cache during file transfers on ESP-IDF]
 **Learning:** Polling `esp_vfs_fat_info` repeatedly during active file transfers (e.g., by bypassing the cache condition when `g_transfer_progress.active` is true) recursively traverses the FAT cluster chain and locks the VFS. This significantly slows down active file VFS operations like the transfer itself, drastically decreasing SPI bus availability and file transfer speeds.
 **Action:** Even when a file transfer is active, rely on the time-based cache for `esp_vfs_fat_info` to prevent starving the SPI bus and throttling the transfer process itself.
+
+## 2024-06-27 - [Stream large JSON files instead of loading into RAM on ESP32]
+**Learning:** Loading large dynamically generated files like `catalog.json` entirely into RAM using `malloc(fsize + 1)` and `httpd_resp_send()` causes huge memory spikes and can crash the ESP32 due to heap exhaustion when the library grows.
+**Action:** Always serve large files using `httpd_resp_send_chunk` with a fixed-size buffer (e.g. 4KB), even for API endpoints returning JSON, as the browser's `fetch` API transparently handles chunked transfer encoding without requiring frontend changes.
