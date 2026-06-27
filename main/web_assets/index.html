@@ -53,7 +53,7 @@
                             <label for="uploadAuthor" style="display: block; font-size: 0.9em; margin-bottom: 5px;">Author</label>
                             <input type="text" id="uploadAuthor" v-model="uploadAuthor" placeholder="Author" required>
                         </div>
-                        <button type="submit" :disabled="isUploading">
+                        <button type="submit" :disabled="isUploading" :title="isUploading ? 'Upload in progress...' : 'Upload book'">
                             {{ isUploading ? 'Uploading...' : 'Upload' }}
                         </button>
                     </form>
@@ -64,7 +64,8 @@
 
                 <ul class="file-list">
                     <li v-if="localFiles.length === 0" class="empty-state">
-                        No books found in the library.
+                        No books found in the library. <br>
+                        <span v-if="allowPublicUploads || isAdmin" style="font-size: 0.9em; margin-top: 5px; display: inline-block;">Upload a book above to get started!</span>
                     </li>
                     <li v-for="file in localFiles" :key="file.name">
                         <div class="file-info">
@@ -76,7 +77,7 @@
                             <div class="progress-container" v-if="transfer.active && transfer.filename === file.name">
                                 <div class="progress-bar" :style="{ width: transfer.progress + '%' }"></div>
                             </div>
-                            <button @click="transferToEReader(file.name)" :disabled="!isEReaderConnected || transfer.active">Transfer to E-Reader</button>
+                            <button @click="transferToEReader(file.name)" :disabled="!isEReaderConnected || transfer.active" :title="transfer.active ? 'A transfer is currently in progress' : (!isEReaderConnected ? 'Connect an E-Reader to transfer books' : 'Transfer to E-Reader')">Transfer to E-Reader</button>
                             <a class="sleep-btn" style="text-decoration: none;" v-if="file.name.toLowerCase().endsWith('.epub')" :href="'/viewer.html?file=' + encodeURIComponent(file.name) + '&source=sd'">Read</a>
                             <button v-if="isAdmin" @click="deleteFile(file.name, 'sd')" class="btn danger" style="background-color: #c94b4b; color: white;">Delete</button>
                             <button v-if="transfer.active && transfer.filename === file.name" @click="cancelTransfer" class="cancel-btn">Cancel</button>
@@ -89,7 +90,8 @@
                 <div v-if="isEReaderConnected">
                     <ul class="file-list">
                         <li v-if="ereaderFiles.length === 0" class="empty-state">
-                            No books found on the e-reader.
+                            No books found on the e-reader. <br>
+                            <span style="font-size: 0.9em; margin-top: 5px; display: inline-block;">Transfer a book from your local library to start reading!</span>
                         </li>
                         <li v-for="file in ereaderFiles" :key="file.name">
                             <div class="file-info">
@@ -101,7 +103,7 @@
                                 <div class="progress-container" v-if="transfer.active && transfer.filename === file.name">
                                     <div class="progress-bar" :style="{ width: transfer.progress + '%' }"></div>
                                 </div>
-                                <button @click="transferToLibrary(file.name)" :disabled="transfer.active">Transfer to Library</button>
+                                <button @click="transferToLibrary(file.name)" :disabled="transfer.active" :title="transfer.active ? 'A transfer is currently in progress' : 'Transfer to Library'">Transfer to Library</button>
                                 <button v-if="isAdmin" @click="deleteFile(file.name, 'usb')" class="btn danger" style="background-color: #c94b4b; color: white;">Delete</button>
                                 <button v-if="transfer.active && transfer.filename === file.name" @click="cancelTransfer" class="cancel-btn">Cancel</button>
                             </div>
