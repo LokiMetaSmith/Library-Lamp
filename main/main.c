@@ -542,7 +542,7 @@ static esp_err_t delete_file_handler(httpd_req_t *req) {
     cJSON *j_source = cJSON_GetObjectItem(json, "source");
     cJSON *j_filename = cJSON_GetObjectItem(json, "filename");
 
-    if (!j_source || !j_source->valuestring || !j_filename || !j_filename->valuestring) {
+    if (!j_source || !cJSON_IsString(j_source) || !j_filename || !cJSON_IsString(j_filename)) {
         cJSON_Delete(json);
         httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Bad Request");
         return ESP_FAIL;
@@ -1241,9 +1241,9 @@ static esp_err_t transfer_file_handler(httpd_req_t *req) {
     cJSON *j_destination = cJSON_GetObjectItem(json, "destination");
     cJSON *j_filename = cJSON_GetObjectItem(json, "filename");
 
-    if (!j_source || !j_source->valuestring ||
-        !j_destination || !j_destination->valuestring ||
-        !j_filename || !j_filename->valuestring) {
+    if (!j_source || !cJSON_IsString(j_source) ||
+        !j_destination || !cJSON_IsString(j_destination) ||
+        !j_filename || !cJSON_IsString(j_filename)) {
         cJSON_Delete(json);
         httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Bad Request");
         g_led_state = ebook_reader_connected ? LED_STATE_CONNECTED : LED_STATE_IDLE;
@@ -1434,7 +1434,7 @@ static esp_err_t set_led_color_handler(httpd_req_t *req) {
     cJSON *g_item = cJSON_GetObjectItem(json, "g");
     cJSON *b_item = cJSON_GetObjectItem(json, "b");
 
-    if (r_item && g_item && b_item) {
+    if (r_item && cJSON_IsNumber(r_item) && g_item && cJSON_IsNumber(g_item) && b_item && cJSON_IsNumber(b_item)) {
         g_led_color_r = r_item->valueint;
         g_led_color_g = g_item->valueint;
         g_led_color_b = b_item->valueint;
