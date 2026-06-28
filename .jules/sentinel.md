@@ -1,19 +1,4 @@
-## 2024-05-24 - File Deletion Endpoint
-
-**Vulnerability:** A missing file deletion endpoint preventing secure administrative management of files via the frontend UI.
-**Learning:** ESP-IDF VFS does not automatically protect against directory traversal (`..` or `/`) or sensitive file paths (`.key`, `adminkey.json`). These checks must be manually implemented in every file-handling endpoint before performing destructive actions like `remove()`. Destructive endpoints are safer implemented via POST and JSON bodies to avoid accidental triggering via query param logging.
-**Prevention:** Always combine `bb_is_admin_request()` checks with stringent path traversal input sanitization and restrict destructive methods to `POST` in ESP-IDF API routes.
-
-## 2024-06-25 - Prevent CSRF by using POST for destructive actions
-**Vulnerability:** The `admin_delete_post_handler` and `admin_clear_handler` endpoints in `main/bulletin_api.c` previously used `HTTP_GET` for destructive actions (deleting and clearing data) and took parameters via the query string.
-**Learning:** Using `GET` for state-modifying actions violates REST principles and introduces security risks, such as exposing sensitive parameters in logs and enabling Cross-Site Request Forgery (CSRF). CSRF allows attackers to execute unintended actions if an authenticated user visits a malicious link. Additionally, when using `req->content_len` use `size_t` rather than `int` to avoid integer overflow which could cause heap buffer overflows.
-**Prevention:** Always use `HTTP_POST`, `HTTP_PUT`, or `HTTP_DELETE` for operations that alter application state. Pass sensitive parameters or data in the request body (e.g., as a JSON payload) rather than the query string. And ensure safe types when working with request bodies lengths.
-## 2025-02-12 - Integer Overflow in HTTP Handlers
-**Vulnerability:** `req->content_len` was being assigned to an `int` instead of a `size_t` in `audio_api.c`, `bulletin_api.c`, and `main.c`.
-**Learning:** Using an `int` to store `req->content_len` can lead to integer overflow and heap buffer overflow vulnerabilities when allocating dynamic memory for payloads in ESP-IDF.
-**Prevention:** Always store `req->content_len` in a `size_t` variable when handling ESP-IDF HTTP requests.
-
-## 2024-06-27 - Buffer Overflow Vulnerability in JSON Parsing Handlers
-**Vulnerability:** Several HTTP POST handlers (e.g., `delete_file_handler`, `transfer_file_handler`, `set_led_color_handler`, `admin_set_public_uploads_handler` in `main/main.c`) assume the request body size (`req->content_len`) fits within a small statically sized buffer (e.g., `char content[256];`), and call `httpd_req_recv` without first verifying if the `req->content_len` is larger than the buffer. They also improperly handle the case where `httpd_req_recv` returns the number of bytes read and then appending a null terminator `content[ret] = 0;`, which will cause an out-of-bounds write if `ret` is equal to the buffer size.
-**Learning:** `httpd_req_recv` writes up to the specified size. If a client sends a payload equal to or larger than the buffer size, `httpd_req_recv` will fill the buffer. When the code subsequently attempts to null-terminate the string with `content[ret] = '\0'`, it writes out of bounds if `ret == sizeof(content)`. Furthermore, passing `sizeof(content) - 1` prevents `httpd_req_recv` from overflowing, but some handlers do not check `req->content_len` first to prevent partial reads or to reject excessively large payloads cleanly.
-**Prevention:** Always verify `req->content_len` is smaller than the static buffer before calling `httpd_req_recv`. If the payload is too large, return an HTTP 400 or 413 error immediately. When using `httpd_req_recv` with a fixed-size buffer, cap the receive size to `sizeof(buffer) - 1` and safely null terminate the buffer at the end of the read bytes.
+## 2026-06-28 - Prevent DoS from unverified cJSON object items
+**Vulnerability:** HTTP endpoints parse JSON requests using `cJSON_Parse` and directly access properties like `->valueint` on pointers returned by `cJSON_GetObjectItem` without checking their type (e.g., using `cJSON_IsNumber`).
+**Learning:** In ESP-IDF, if `cJSON_GetObjectItem` returns a cJSON object of a different type, accessing fields like `->valuestring` or `->valueint` can lead to invalid memory access or Denial of Service (DoS) crashes if an attacker sends an unexpected JSON structure.
+**Prevention:** Always verify the type of the returned item using functions like `cJSON_IsString()`, `cJSON_IsNumber()`, or `cJSON_IsBool()` before accessing its internal data.
