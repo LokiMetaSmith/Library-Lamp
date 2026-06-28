@@ -16,3 +16,6 @@
 ## 2026-06-24 - Accessibility for Toggle Buttons
 **Learning:** Found an interaction improvement opportunity in `board.html` where filtering, sorting, and category buttons visually indicated their active state via CSS classes (e.g., `active` or `active-Notice`), but this state wasn't communicated to screen readers. This leaves visually impaired users unaware of which filter or category is currently selected.
 **Action:** When creating toggle buttons or selectable tabs, always pair visual state classes with `aria-pressed="true"` or `aria-pressed="false"` attributes, and ensure these attributes are dynamically updated alongside the CSS classes in JavaScript logic.
+## 2024-06-25 - Empty states in data lists (Audio player)
+**Learning:** Continued the established pattern of implementing explicit empty states for dynamic lists. The audio player UI (`audio.html`) displayed raw text when the queue or library was empty instead of utilizing the `empty-state` class that provides consistent spacing and coloring. Furthermore, the empty library state lacked a call-to-action (CTA) guiding users to the main page to upload files.
+**Action:** Always ensure that when `v-if="items.length === 0"` is used, the containing element has `class="empty-state"`, and contains a helpful CTA when applicable.

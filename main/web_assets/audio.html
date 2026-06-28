@@ -53,7 +53,9 @@
             <div style="display: flex; gap: 20px; flex-wrap: wrap;">
                 <div class="queue-container" style="flex: 1; min-width: 300px;">
                     <h3>Up Next</h3>
-                    <div v-if="queue.length === 0" style="color: #8a7b6c; font-style: italic;">The queue is empty.</div>
+                    <div v-if="queue.length === 0" class="empty-state">
+                        The queue is empty. Add a track from the library below!
+                    </div>
                     <div v-else>
                         <div v-for="(track, index) in queue" :key="index" class="queue-item">
                             <span>{{ index + 1 }}. {{ track }}</span>
@@ -74,8 +76,9 @@
                             </div>
                         </li>
                     </ul>
-                    <div v-if="audioFiles.length === 0" style="color: #8a7b6c; font-style: italic; padding: 10px;">
-                        No audio files (.mp3, .m4a, .wav) found in the library.
+                    <div v-if="audioFiles.length === 0" class="empty-state">
+                        No audio files (.mp3, .m4a, .wav) found in the library.<br>
+                        <span style="font-size: 0.9em; margin-top: 5px; display: inline-block;">Go to the <a href="/" style="color: inherit; text-decoration: underline;">main library</a> to upload audio files.</span>
                     </div>
                 </div>
             </div>
