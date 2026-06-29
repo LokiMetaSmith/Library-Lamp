@@ -21,3 +21,7 @@
 ## 2024-06-27 - [Stream large JSON files instead of loading into RAM on ESP32]
 **Learning:** Loading large dynamically generated files like `catalog.json` entirely into RAM using `malloc(fsize + 1)` and `httpd_resp_send()` causes huge memory spikes and can crash the ESP32 due to heap exhaustion when the library grows.
 **Action:** Always serve large files using `httpd_resp_send_chunk` with a fixed-size buffer (e.g. 4KB), even for API endpoints returning JSON, as the browser's `fetch` API transparently handles chunked transfer encoding without requiring frontend changes.
+
+## 2024-11-23 - [Replace O(N) strncpy with memmove]
+**Learning:** In C/ESP-IDF backend code, using a `for` loop with `strncpy` to shift array elements (like an audio queue) is O(N) time complexity and incurs unnecessary overhead by traversing each string to pad with zeroes.
+**Action:** Always replace `for` loops that manually copy adjacent structures or strings with a single `memmove` operation to shift the entire block in memory. This is vastly faster and safer.
