@@ -1179,19 +1179,10 @@ static esp_err_t list_files_handler(httpd_req_t *req) {
                 cJSON *file_obj = cJSON_CreateObject();
                 cJSON_AddStringToObject(file_obj, "name", dir->d_name);
 
-                // For EPUBs, try to parse metadata
+                // For EPUBs, miniz not available yet, just use filename
                 if (strstr(dir->d_name, ".epub")) {
-                    char full_path[512];
-                    snprintf(full_path, sizeof(full_path), "%s/%s", mount_path, dir->d_name);
-
-                    // miniz not available
-                    if (strstr(dir->d_name, ".epub")) {
-                        cJSON_AddStringToObject(file_obj, "title", dir->d_name);
-                        cJSON_AddStringToObject(file_obj, "author", "Unknown Author");
-                    } else {
-                        cJSON_AddStringToObject(file_obj, "title", dir->d_name);
-                        cJSON_AddStringToObject(file_obj, "author", "Unknown");
-                    }
+                    cJSON_AddStringToObject(file_obj, "title", dir->d_name);
+                    cJSON_AddStringToObject(file_obj, "author", "Unknown Author");
                 } else {
                     // For other file types, just use the filename
                     cJSON_AddStringToObject(file_obj, "title", dir->d_name);
