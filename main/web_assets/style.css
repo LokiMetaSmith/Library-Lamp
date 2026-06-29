@@ -238,3 +238,9 @@ a:hover {
     color: #0a84ff;
     border-left: 4px solid #0a84ff;
 }
+
+/* Accessibility: Improve keyboard navigation focus states */
+:focus-visible {
+    outline: 2px solid #ffcc80;
+    outline-offset: 2px;
+}
