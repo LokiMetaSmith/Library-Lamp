@@ -420,10 +420,16 @@ async function checkBoardStatus() {
     const btn    = document.getElementById('postBtn');
     if (d.full) {
       banner.style.display = 'block';
-      if (btn) btn.disabled = true;
+      if (btn) {
+        btn.disabled = true;
+        btn.title = "The board is currently full. Check back later.";
+      }
     } else {
       banner.style.display = 'none';
-      if (btn) btn.disabled = false;
+      if (btn) {
+        btn.disabled = false;
+        btn.removeAttribute('title');
+      }
     }
   } catch (e) {}
 }
@@ -607,6 +613,7 @@ async function doPost() {
   if (btn) {
     btn.disabled = true;
     btn.textContent = 'POSTING...';
+    btn.title = "Post is currently being submitted...";
   }
 
   localStorage.setItem('cn_name', n);
@@ -624,6 +631,7 @@ async function doPost() {
     if (btn) {
       btn.disabled = false;
       btn.textContent = 'POST';
+      btn.removeAttribute('title');
     }
   }
 
