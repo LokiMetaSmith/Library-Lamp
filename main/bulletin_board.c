@@ -47,15 +47,15 @@ void bb_load_identity(void) {
     cJSON *json = cJSON_Parse(string);
     if (json) {
         cJSON *item = cJSON_GetObjectItem(json, "name");
-        if (item && item->valuestring) strncpy(id_name, item->valuestring, sizeof(id_name)-1);
+        if (item && cJSON_IsString(item) && item->valuestring) strncpy(id_name, item->valuestring, sizeof(id_name)-1);
         item = cJSON_GetObjectItem(json, "icon");
-        if (item && item->valuestring) strncpy(id_icon, item->valuestring, sizeof(id_icon)-1);
+        if (item && cJSON_IsString(item) && item->valuestring) strncpy(id_icon, item->valuestring, sizeof(id_icon)-1);
         item = cJSON_GetObjectItem(json, "tagline");
-        if (item && item->valuestring) strncpy(id_tagline, item->valuestring, sizeof(id_tagline)-1);
+        if (item && cJSON_IsString(item) && item->valuestring) strncpy(id_tagline, item->valuestring, sizeof(id_tagline)-1);
         item = cJSON_GetObjectItem(json, "rules");
-        if (item && item->valuestring) strncpy(id_rules, item->valuestring, sizeof(id_rules)-1);
+        if (item && cJSON_IsString(item) && item->valuestring) strncpy(id_rules, item->valuestring, sizeof(id_rules)-1);
         item = cJSON_GetObjectItem(json, "footer");
-        if (item && item->valuestring) strncpy(id_footer, item->valuestring, sizeof(id_footer)-1);
+        if (item && cJSON_IsString(item) && item->valuestring) strncpy(id_footer, item->valuestring, sizeof(id_footer)-1);
         cJSON_Delete(json);
     }
     free(string);
@@ -93,7 +93,7 @@ void bb_load_admin_key(void) {
     cJSON *json = cJSON_Parse(string);
     if (json) {
         cJSON *item = cJSON_GetObjectItem(json, "key");
-        if (item && item->valuestring) strncpy(admin_key, item->valuestring, sizeof(admin_key)-1);
+        if (item && cJSON_IsString(item) && item->valuestring) strncpy(admin_key, item->valuestring, sizeof(admin_key)-1);
         cJSON_Delete(json);
     }
     free(string);
@@ -165,19 +165,19 @@ void bb_load_messages(void) {
             if (!item) continue;
             
             cJSON *cid = cJSON_GetObjectItem(item, "id");
-            msgs[msgCount].id = cid ? cid->valueint : nextMsgId;
+            msgs[msgCount].id = (cid && cJSON_IsNumber(cid)) ? cid->valueint : nextMsgId;
             
             cJSON *cauthor = cJSON_GetObjectItem(item, "author");
-            if (cauthor && cauthor->valuestring) strncpy(msgs[msgCount].author, cauthor->valuestring, sizeof(msgs[0].author)-1);
+            if (cauthor && cJSON_IsString(cauthor) && cauthor->valuestring) strncpy(msgs[msgCount].author, cauthor->valuestring, sizeof(msgs[0].author)-1);
             
             cJSON *ctype = cJSON_GetObjectItem(item, "type");
-            if (ctype && ctype->valuestring) strncpy(msgs[msgCount].type, ctype->valuestring, sizeof(msgs[0].type)-1);
+            if (ctype && cJSON_IsString(ctype) && ctype->valuestring) strncpy(msgs[msgCount].type, ctype->valuestring, sizeof(msgs[0].type)-1);
             
             cJSON *ctext = cJSON_GetObjectItem(item, "text");
-            if (ctext && ctext->valuestring) strncpy(msgs[msgCount].text, ctext->valuestring, sizeof(msgs[0].text)-1);
+            if (ctext && cJSON_IsString(ctext) && ctext->valuestring) strncpy(msgs[msgCount].text, ctext->valuestring, sizeof(msgs[0].text)-1);
             
             cJSON *cexp = cJSON_GetObjectItem(item, "expires");
-            msgs[msgCount].expires = cexp ? cexp->valuedouble : 0;
+            msgs[msgCount].expires = (cexp && cJSON_IsNumber(cexp)) ? cexp->valuedouble : 0;
             
             if (msgs[msgCount].id >= nextMsgId) nextMsgId = msgs[msgCount].id + 1;
             msgCount++;
