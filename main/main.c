@@ -705,9 +705,12 @@ static esp_err_t static_file_handler(httpd_req_t *req) {
 
     // Set content type based on file extension
     const char *type = "text/plain";
-    if (strstr(filepath, ".html")) type = "text/html";
-    else if (strstr(filepath, ".css")) type = "text/css";
-    else if (strstr(filepath, ".js")) type = "application/javascript";
+    const char *ext = strrchr(filepath, '.');
+    if (ext) {
+        if (strcasecmp(ext, ".html") == 0) type = "text/html";
+        else if (strcasecmp(ext, ".css") == 0) type = "text/css";
+        else if (strcasecmp(ext, ".js") == 0) type = "application/javascript";
+    }
     httpd_resp_set_type(req, type);
 
     // Open and send file
@@ -947,14 +950,17 @@ static esp_err_t download_handler(httpd_req_t *req) {
 
     // Determine content type based on extension
     const char *type = "application/octet-stream";
-    if (strstr(filepath, ".epub")) type = "application/epub+zip";
-    else if (strstr(filepath, ".mobi")) type = "application/x-mobipocket-ebook";
-    else if (strstr(filepath, ".pdf")) type = "application/pdf";
-    else if (strstr(filepath, ".txt")) type = "text/plain";
-    else if (strstr(filepath, ".mp3")) type = "audio/mpeg";
-    else if (strstr(filepath, ".m4a")) type = "audio/mp4";
-    else if (strstr(filepath, ".wav")) type = "audio/wav";
-    else if (strstr(filepath, ".ogg")) type = "audio/ogg";
+    const char *ext = strrchr(filepath, '.');
+    if (ext) {
+        if (strcasecmp(ext, ".epub") == 0) type = "application/epub+zip";
+        else if (strcasecmp(ext, ".mobi") == 0) type = "application/x-mobipocket-ebook";
+        else if (strcasecmp(ext, ".pdf") == 0) type = "application/pdf";
+        else if (strcasecmp(ext, ".txt") == 0) type = "text/plain";
+        else if (strcasecmp(ext, ".mp3") == 0) type = "audio/mpeg";
+        else if (strcasecmp(ext, ".m4a") == 0) type = "audio/mp4";
+        else if (strcasecmp(ext, ".wav") == 0) type = "audio/wav";
+        else if (strcasecmp(ext, ".ogg") == 0) type = "audio/ogg";
+    }
 
     httpd_resp_set_type(req, type);
     httpd_resp_set_hdr(req, "Accept-Ranges", "bytes");
@@ -1175,12 +1181,14 @@ static esp_err_t list_files_handler(httpd_req_t *req) {
     struct dirent *dir;
     while ((dir = readdir(d)) != NULL) {
         if (dir->d_type == DT_REG) { // If it's a regular file
-            if (strstr(dir->d_name, ".epub") || strstr(dir->d_name, ".mobi") || strstr(dir->d_name, ".pdf") || strstr(dir->d_name, ".txt")) {
+            const char *ext = strrchr(dir->d_name, '.');
+            if (ext && (strcasecmp(ext, ".epub") == 0 || strcasecmp(ext, ".mobi") == 0 ||
+                        strcasecmp(ext, ".pdf") == 0 || strcasecmp(ext, ".txt") == 0)) {
                 cJSON *file_obj = cJSON_CreateObject();
                 cJSON_AddStringToObject(file_obj, "name", dir->d_name);
 
                 // For EPUBs, miniz not available yet, just use filename
-                if (strstr(dir->d_name, ".epub")) {
+                if (strcasecmp(ext, ".epub") == 0) {
                     cJSON_AddStringToObject(file_obj, "title", dir->d_name);
                     cJSON_AddStringToObject(file_obj, "author", "Unknown Author");
                 } else {
