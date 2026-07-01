@@ -77,10 +77,10 @@
                             <div class="progress-container" v-if="transfer.active && transfer.filename === file.name">
                                 <div class="progress-bar" :style="{ width: transfer.progress + '%' }"></div>
                             </div>
-                            <button @click="transferToEReader(file.name)" :disabled="!isEReaderConnected || transfer.active" :title="transfer.active ? 'A transfer is currently in progress' : (!isEReaderConnected ? 'Connect an E-Reader to transfer books' : 'Transfer to E-Reader')">Transfer to E-Reader</button>
-                            <a class="sleep-btn" style="text-decoration: none;" v-if="file.name.toLowerCase().endsWith('.epub')" :href="'/viewer.html?file=' + encodeURIComponent(file.name) + '&source=sd'">Read</a>
-                            <button v-if="isAdmin" @click="deleteFile(file.name, 'sd')" class="btn danger" style="background-color: #c94b4b; color: white;">Delete</button>
-                            <button v-if="transfer.active && transfer.filename === file.name" @click="cancelTransfer" class="cancel-btn">Cancel</button>
+                            <button @click="transferToEReader(file.name)" :disabled="!isEReaderConnected || transfer.active" :title="transfer.active ? 'A transfer is currently in progress' : (!isEReaderConnected ? 'Connect an E-Reader to transfer books' : 'Transfer to E-Reader')" :aria-label="'Transfer ' + file.title + ' to E-Reader'">Transfer to E-Reader</button>
+                            <a class="sleep-btn" style="text-decoration: none;" v-if="file.name.toLowerCase().endsWith('.epub')" :href="'/viewer.html?file=' + encodeURIComponent(file.name) + '&source=sd'" :aria-label="'Read ' + file.title">Read</a>
+                            <button v-if="isAdmin" @click="deleteFile(file.name, 'sd')" class="btn danger" style="background-color: #c94b4b; color: white;" :aria-label="'Delete ' + file.title">Delete</button>
+                            <button v-if="transfer.active && transfer.filename === file.name" @click="cancelTransfer" class="cancel-btn" :aria-label="'Cancel transfer for ' + file.title">Cancel</button>
                         </div>
                     </li>
                 </ul>
@@ -103,9 +103,9 @@
                                 <div class="progress-container" v-if="transfer.active && transfer.filename === file.name">
                                     <div class="progress-bar" :style="{ width: transfer.progress + '%' }"></div>
                                 </div>
-                                <button @click="transferToLibrary(file.name)" :disabled="transfer.active" :title="transfer.active ? 'A transfer is currently in progress' : 'Transfer to Library'">Transfer to Library</button>
-                                <button v-if="isAdmin" @click="deleteFile(file.name, 'usb')" class="btn danger" style="background-color: #c94b4b; color: white;">Delete</button>
-                                <button v-if="transfer.active && transfer.filename === file.name" @click="cancelTransfer" class="cancel-btn">Cancel</button>
+                                <button @click="transferToLibrary(file.name)" :disabled="transfer.active" :title="transfer.active ? 'A transfer is currently in progress' : 'Transfer to Library'" :aria-label="'Transfer ' + file.title + ' to Library'">Transfer to Library</button>
+                                <button v-if="isAdmin" @click="deleteFile(file.name, 'usb')" class="btn danger" style="background-color: #c94b4b; color: white;" :aria-label="'Delete ' + file.title">Delete</button>
+                                <button v-if="transfer.active && transfer.filename === file.name" @click="cancelTransfer" class="cancel-btn" :aria-label="'Cancel transfer for ' + file.title">Cancel</button>
                             </div>
                         </li>
                     </ul>
