@@ -29,3 +29,6 @@
 ## 2024-05-19 - O(1) File Extension Checking
 **Learning:** In C, `strstr(filename, ".ext")` performs an O(N*M) sequential substring search across the entire string, which is slow for directories with many files and causes bugs by incorrectly matching substrings in the middle of a filename (e.g., `book.epub.bak`).
 **Action:** Always use `strrchr(filename, '.')` to jump directly to the extension and `strcasecmp` to check it in O(1) time for file validation.
+## 2024-10-24 - Add Cache-Control for static assets
+**Learning:** ESP32 web servers suffer significantly when repeatedly serving large static assets (like `vue.global.js` at 164KB) because the device's CPU, SPIFFS read speed, and network stack are heavily constrained. Browsers will re-request these files on every navigation without an explicit Cache-Control header.
+**Action:** Always include a `Cache-Control` header (e.g. `public, max-age=31536000`) for large static dependencies in embedded web servers to allow the browser to skip the network request entirely, drastically improving page load times and reducing server load.
