@@ -1,37 +1,57 @@
+:root {
+  --bg:            #352920;
+  --surface:       #3f3127;
+  --surface2:      #4a382a;
+  --border:        #5a4634;
+  --border-light:  #7a5f47;
+  --ink:           #e8dbce;
+  --ink-muted:     #d1bfae;
+  --accent:        #ffcc80;
+  --accent-dark:   #8c5a35;
+  --accent-light:  #f5eedc;
+  --radius:        12px;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
 body {
-    font-family: "Georgia", "Times New Roman", serif;
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
     margin: 0;
-    background-color: #352920;
-    color: #e8dbce;
+    padding: 0;
+    background-color: var(--bg);
+    color: var(--ink);
+    min-height: 100vh;
 }
 .container {
     max-width: 900px;
     margin: 20px auto;
     padding: 20px;
-    background-color: #4a382a;
-    border-radius: 12px;
+    background-color: var(--surface2);
+    border-radius: var(--radius);
     box-shadow: 0 4px 15px rgba(0,0,0,0.5), 0 0 20px rgba(255, 180, 100, 0.15);
-    border: 1px solid #5a4634;
+    border: 1px solid var(--border);
 }
 h1 {
-    color: #ffcc80;
+    color: var(--accent);
     text-align: center;
-    border-bottom: 2px solid #5a4634;
+    border-bottom: 2px solid var(--border);
     padding-bottom: 10px;
     text-shadow: 0 0 10px rgba(255, 204, 128, 0.4);
+    margin-top: 0;
 }
 h2 {
-    color: #e8dbce;
+    color: var(--ink);
 }
 .app-header {
     max-width: 900px;
     margin: 20px auto;
     padding: 20px;
-    background-color: #4a382a;
-    border-radius: 12px;
+    background-color: var(--surface2);
+    border-radius: var(--radius);
     box-shadow: 0 4px 15px rgba(0,0,0,0.5), 0 0 20px rgba(255, 180, 100, 0.15);
-    border: 1px solid #5a4634;
+    border: 1px solid var(--border);
     text-align: center;
+    position: relative;
 }
 .app-main {
     max-width: 900px;
@@ -43,10 +63,10 @@ h2 {
 .library-section, .ereader-section {
     flex: 1;
     min-width: 300px;
-    background: #4a382a;
+    background: var(--surface2);
     padding: 20px;
-    border-radius: 12px;
-    border: 1px solid #5a4634;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
     box-shadow: 0 4px 15px rgba(0,0,0,0.5), 0 0 20px rgba(255, 180, 100, 0.15);
 }
 ul {
@@ -57,12 +77,12 @@ ul {
 }
 li {
     padding: 12px;
-    border-bottom: 1px solid #5a4634;
+    border-bottom: 1px solid var(--border);
     display: flex;
     flex-direction: column;
     gap: 10px;
     word-break: break-all;
-    background-color: #352920;
+    background-color: var(--bg);
     margin-bottom: 8px;
     border-radius: 8px;
 }
@@ -77,12 +97,13 @@ li:last-child {
 .file-title {
     font-weight: bold;
     font-size: 1.1em;
-    color: #ffcc80;
+    color: var(--accent);
+    text-decoration: none;
 }
 .file-author {
     font-style: italic;
     font-size: 0.9em;
-    color: #d1bfae;
+    color: var(--ink-muted);
 }
 .file-notes {
     font-size: 0.85em;
@@ -95,26 +116,28 @@ li:last-child {
     text-align: center;
     padding: 10px;
 }
-button {
-    background-color: #8c5a35;
-    color: #f5eedc;
-    border: 1px solid #5a3820;
+button, .btn, .admin-link {
+    background-color: var(--accent-dark);
+    color: var(--accent-light);
+    border: 1px solid var(--border);
     padding: 10px 15px;
     border-radius: 6px;
     cursor: pointer;
     font-size: 1em;
     transition: background-color 0.2s, box-shadow 0.2s;
     box-shadow: inset 0 1px 0 rgba(255,255,255,0.1), 0 1px 2px rgba(0,0,0,0.3);
+    text-decoration: none;
+    display: inline-block;
 }
-button:hover:not(:disabled) {
+button:hover:not(:disabled), .btn:hover, .admin-link:hover {
     background-color: #a06b43;
     box-shadow: inset 0 1px 0 rgba(255,255,255,0.2), 0 0 8px rgba(255, 204, 128, 0.4);
 }
 button:disabled {
-    background-color: #5a4634;
+    background-color: var(--border);
     color: #8a7b6c;
     cursor: not-allowed;
-    border-color: #4a382a;
+    border-color: var(--surface2);
     box-shadow: none;
 }
 .transfer-controls {
@@ -127,10 +150,10 @@ button:disabled {
 .progress-container {
     flex-grow: 1;
     height: 12px;
-    background-color: #2b211a;
+    background-color: #1a1410;
     border-radius: 6px;
     overflow: hidden;
-    border: 1px solid #5a4634;
+    border: 1px solid var(--border);
 }
 .progress-bar {
     height: 100%;
@@ -150,12 +173,12 @@ button.cancel-btn:hover {
 .app-footer {
     max-width: 900px;
     margin: 20px auto;
-    background-color: #4a382a;
-    color: #e8dbce;
+    background-color: var(--surface2);
+    color: var(--ink);
     padding: 15px 25px;
     text-align: center;
-    border-radius: 12px;
-    border: 1px solid #5a4634;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
     box-shadow: 0 4px 15px rgba(0,0,0,0.5);
 }
 .error-message {
@@ -217,7 +240,7 @@ a:hover {
     width: 10px;
 }
 ::-webkit-scrollbar-track {
-    background: #2b211a;
+    background: #1a1410;
     border-radius: 5px;
 }
 ::-webkit-scrollbar-thumb {
@@ -241,6 +264,65 @@ a:hover {
 
 /* Accessibility: Improve keyboard navigation focus states */
 :focus-visible {
-    outline: 2px solid #ffcc80;
+    outline: 2px solid var(--accent);
     outline-offset: 2px;
+}
+
+/* Hamburger Menu Styles */
+.nav-menu {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    z-index: 1000;
+}
+
+.menu-btn {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--accent);
+    font-size: 24px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+}
+
+.menu-btn:hover {
+    background: var(--border);
+}
+
+.menu-content {
+    display: none;
+    position: absolute;
+    top: 50px;
+    left: 0;
+    background-color: var(--surface2);
+    min-width: 220px;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.7);
+    border-radius: 8px;
+    border: 1px solid var(--border-light);
+    overflow: hidden;
+    text-align: left;
+}
+
+.menu-content.show {
+    display: block;
+}
+
+.menu-content a {
+    color: var(--ink);
+    padding: 15px 20px;
+    text-decoration: none;
+    display: block;
+    font-size: 1.1em;
+    border-bottom: 1px solid var(--border);
+}
+
+.menu-content a:last-child {
+    border-bottom: none;
+}
+
+.menu-content a:hover {
+    background-color: var(--surface);
+    color: var(--accent);
 }
