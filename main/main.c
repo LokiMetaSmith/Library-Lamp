@@ -710,8 +710,14 @@ static esp_err_t static_file_handler(httpd_req_t *req) {
         if (strcasecmp(ext, ".html") == 0) type = "text/html";
         else if (strcasecmp(ext, ".css") == 0) type = "text/css";
         else if (strcasecmp(ext, ".js") == 0) type = "application/javascript";
+        else if (strcasecmp(ext, ".ico") == 0) type = "image/x-icon";
     }
     httpd_resp_set_type(req, type);
+
+    // Add Cache-Control for static assets
+    if (ext && (strcasecmp(ext, ".css") == 0 || strcasecmp(ext, ".js") == 0 || strcasecmp(ext, ".ico") == 0)) {
+        httpd_resp_set_hdr(req, "Cache-Control", "public, max-age=31536000, immutable");
+    }
 
     // Open and send file
     FILE *fd = fopen(filepath, "r");
