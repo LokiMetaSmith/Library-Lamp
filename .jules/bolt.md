@@ -25,3 +25,7 @@
 ## 2024-11-23 - [Replace O(N) strncpy with memmove]
 **Learning:** In C/ESP-IDF backend code, using a `for` loop with `strncpy` to shift array elements (like an audio queue) is O(N) time complexity and incurs unnecessary overhead by traversing each string to pad with zeroes.
 **Action:** Always replace `for` loops that manually copy adjacent structures or strings with a single `memmove` operation to shift the entire block in memory. This is vastly faster and safer.
+
+## 2024-05-19 - O(1) File Extension Checking
+**Learning:** In C, `strstr(filename, ".ext")` performs an O(N*M) sequential substring search across the entire string, which is slow for directories with many files and causes bugs by incorrectly matching substrings in the middle of a filename (e.g., `book.epub.bak`).
+**Action:** Always use `strrchr(filename, '.')` to jump directly to the extension and `strcasecmp` to check it in O(1) time for file validation.
