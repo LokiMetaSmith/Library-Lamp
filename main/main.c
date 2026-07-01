@@ -557,7 +557,7 @@ static esp_err_t delete_file_handler(httpd_req_t *req) {
         return ESP_FAIL;
     }
 
-    if (strstr(filename, "adminkey.json") != NULL || strstr(filename, ".key") != NULL) {
+    if (strcasestr(filename, "adminkey.json") != NULL || strcasestr(filename, ".key") != NULL) {
         cJSON_Delete(json);
         httpd_resp_send_err(req, HTTPD_403_FORBIDDEN, "Forbidden");
         return ESP_FAIL;
@@ -645,7 +645,7 @@ static esp_err_t static_file_handler(httpd_req_t *req) {
     }
 
     // Prevent access to sensitive files
-    if (strstr(req->uri, "adminkey.json") != NULL || strstr(req->uri, ".key") != NULL) {
+    if (strcasestr(req->uri, "adminkey.json") != NULL || strcasestr(req->uri, ".key") != NULL) {
         ESP_LOGE(TAG, "Attempted access to protected file: %s", req->uri);
         httpd_resp_send_err(req, HTTPD_403_FORBIDDEN, "Forbidden");
         return ESP_FAIL;
@@ -826,7 +826,7 @@ static esp_err_t upload_handler(httpd_req_t *req) {
     }
 
     // Prevent overwriting sensitive files
-    if (strstr(filename, "adminkey.json") != NULL || strstr(filename, ".key") != NULL) {
+    if (strcasestr(filename, "adminkey.json") != NULL || strcasestr(filename, ".key") != NULL) {
         httpd_resp_send_err(req, HTTPD_403_FORBIDDEN, "Forbidden");
         return ESP_FAIL;
     }
@@ -935,13 +935,13 @@ static esp_err_t download_handler(httpd_req_t *req) {
     snprintf(filepath, sizeof(filepath), "%s/%s", mount_path, decoded_file_param);
 
     // Basic path traversal prevention
-    if (strstr(decoded_file_param, "..") != NULL) {
+    if (strstr(decoded_file_param, "..") != NULL || strchr(decoded_file_param, '/') != NULL || strchr(decoded_file_param, '\\') != NULL) {
         httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid Filename");
         return ESP_FAIL;
     }
 
     // Prevent access to sensitive files
-    if (strstr(decoded_file_param, "adminkey.json") != NULL || strstr(decoded_file_param, ".key") != NULL) {
+    if (strcasestr(decoded_file_param, "adminkey.json") != NULL || strcasestr(decoded_file_param, ".key") != NULL) {
         ESP_LOGE(TAG, "Attempted access to protected file: %s", decoded_file_param);
         httpd_resp_send_err(req, HTTPD_403_FORBIDDEN, "Forbidden");
         return ESP_FAIL;
@@ -1268,7 +1268,7 @@ static esp_err_t transfer_file_handler(httpd_req_t *req) {
     }
 
     // Prevent transferring sensitive files
-    if (strstr(filename, "adminkey.json") != NULL || strstr(filename, ".key") != NULL) {
+    if (strcasestr(filename, "adminkey.json") != NULL || strcasestr(filename, ".key") != NULL) {
         cJSON_Delete(json);
         httpd_resp_send_err(req, HTTPD_403_FORBIDDEN, "Forbidden");
         g_led_state = ebook_reader_connected ? LED_STATE_CONNECTED : LED_STATE_IDLE;
