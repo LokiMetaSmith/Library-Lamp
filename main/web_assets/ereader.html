@@ -3,23 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>E-Book Library</title>
+    <title>Mobile Download View</title>
+    <link rel="stylesheet" href="style.css">
     <style>
         body {
-            font-family: "Georgia", "Times New Roman", serif;
-            margin: 0;
-            padding: 10px;
-            background: #2b211a;
-            color: #e8dbce;
+            padding-top: 10px;
         }
         h1 {
-            text-align: center;
-            font-size: 1.8em;
-            color: #ffcc80;
-            text-shadow: 0 0 10px rgba(255, 204, 128, 0.4);
-            border-bottom: 2px solid #5a4634;
-            padding-bottom: 10px;
-            margin-bottom: 20px;
+            border: none;
+            margin-top: 40px;
         }
         .book-list {
             list-style: none;
@@ -31,38 +23,15 @@
         .book-item {
             margin-bottom: 15px;
             padding: 15px;
-            background-color: #3f3127;
-            border: 1px solid #5a4634;
-            border-radius: 8px;
+            background-color: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
             box-shadow: 0 4px 10px rgba(0,0,0,0.5), 0 0 15px rgba(255, 180, 100, 0.1);
-        }
-        .book-title {
-            font-size: 1.3em;
-            font-weight: bold;
-            margin-bottom: 5px;
-            display: block;
-            text-decoration: none;
-            color: #ffcc80;
-        }
-        .book-title:hover {
-            color: #ffe0b2;
-            text-shadow: 0 0 5px rgba(255, 204, 128, 0.5);
-        }
-        .book-author {
-            font-size: 1em;
-            color: #d1bfae;
-            font-style: italic;
-        }
-        .book-notes {
-            font-size: 0.9em;
-            color: #a89f91;
-            margin-top: 8px;
-            line-height: 1.4;
         }
         .loading {
             text-align: center;
             font-style: italic;
-            color: #ffcc80;
+            color: var(--accent);
         }
         .error {
             color: #ff8a80;
@@ -78,30 +47,26 @@
             margin-top: 40px;
             text-align: center;
             font-size: 0.9em;
-            color: #8a7b6c;
+            color: var(--ink-muted);
             padding-bottom: 20px;
-        }
-        .admin-link {
-            display: inline-block;
-            margin-top: 15px;
-            padding: 8px 16px;
-            background: #8c5a35;
-            border: 1px solid #5a3820;
-            text-decoration: none;
-            color: #f5eedc;
-            border-radius: 6px;
-            box-shadow: inset 0 1px 0 rgba(255,255,255,0.1), 0 1px 2px rgba(0,0,0,0.3);
-            transition: background-color 0.2s;
-        }
-        .admin-link:hover {
-            background-color: #a06b43;
-            box-shadow: inset 0 1px 0 rgba(255,255,255,0.2), 0 0 8px rgba(255, 204, 128, 0.4);
         }
     </style>
 </head>
 <body>
 
-    <h1>E-Book Library</h1>
+    <header class="app-header" style="max-width: 600px; border: none; box-shadow: none; background: transparent; padding: 0;">
+        <div class="nav-menu">
+            <button class="menu-btn" onclick="toggleMenu()" aria-label="Toggle Menu" aria-expanded="false" aria-controls="menuContent">☰</button>
+            <div class="menu-content" id="menuContent">
+                <a href="/">Home (USB Transfer View)</a>
+                <a href="/ereader.html">Mobile Download View</a>
+                <a href="/audio.html">Audio Radio</a>
+                <a href="/board.html">Bulletin Board</a>
+                <a href="/about.html">About</a>
+            </div>
+        </div>
+        <h1>Mobile Download View</h1>
+    </header>
 
 <div id="systemBanner" style="display:none;background:#8a6a24;color:#f5eedc;padding:10px;margin: 0 auto 20px auto;border-radius:5px;border:1px solid #a88532;font-size:0.9em;max-width:600px;box-shadow: 0 0 10px rgba(255, 200, 50, 0.2);">
     <ul id="systemErrorsList" style="margin:0;padding-left:20px;"></ul>
@@ -113,15 +78,29 @@
         <!-- Books will be inserted here -->
     </ul>
 
-    <div class="footer">
-        Direct Download Interface<br>
-        <a href="/" class="admin-link">Switch to Admin View</a>
-    </div>
-
     <script>
+        function toggleMenu() {
+            const menu = document.getElementById('menuContent');
+            const btn = document.querySelector('.menu-btn');
+            const isExpanded = btn.getAttribute('aria-expanded') === 'true';
+            menu.classList.toggle('show');
+            btn.setAttribute('aria-expanded', !isExpanded);
+        }
+        window.onclick = function(event) {
+            if (!event.target.matches('.menu-btn')) {
+                var dropdowns = document.getElementsByClassName("menu-content");
+                for (var i = 0; i < dropdowns.length; i++) {
+                    if (dropdowns[i].classList.contains('show')) {
+                        dropdowns[i].classList.remove('show');
+                        document.querySelector('.menu-btn').setAttribute('aria-expanded', 'false');
+                    }
+                }
+            }
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
             fetchBooks();
-        loadSystemStatus();
+            loadSystemStatus();
         });
 
         async function loadSystemStatus() {
@@ -168,7 +147,7 @@
             loadingElement.style.display = 'none';
 
             if (books.length === 0) {
-                listElement.innerHTML = '<li class="book-item" style="text-align: center; color: #a89f91;">No books found in the library.</li>';
+                listElement.innerHTML = '<li class="book-item" style="text-align: center; color: var(--ink-muted);">No books found in the library.</li>';
                 return;
             }
 
@@ -184,6 +163,12 @@
                 titleLink.textContent = book.title;
                 // Link directly to the download endpoint
                 titleLink.href = `/download?file=${encodeURIComponent(book.name)}&source=sd`;
+                titleLink.style.display = 'block';
+                titleLink.style.marginBottom = '5px';
+                titleLink.style.textDecoration = 'none';
+                titleLink.style.fontSize = '1.3em';
+                titleLink.style.fontWeight = 'bold';
+                titleLink.style.color = 'var(--accent)';
 
                 li.appendChild(titleLink);
 
@@ -201,6 +186,8 @@
                     const authorDiv = document.createElement('div');
                     authorDiv.className = 'book-author';
                     authorDiv.textContent = `by ${book.author}`;
+                    authorDiv.style.fontStyle = 'italic';
+                    authorDiv.style.color = 'var(--ink-muted)';
                     li.appendChild(authorDiv);
                 }
 
@@ -208,6 +195,9 @@
                     const notesDiv = document.createElement('div');
                     notesDiv.className = 'book-notes';
                     notesDiv.textContent = book.notes;
+                    notesDiv.style.fontSize = '0.9em';
+                    notesDiv.style.color = 'var(--border-light)';
+                    notesDiv.style.marginTop = '8px';
                     li.appendChild(notesDiv);
                 }
 

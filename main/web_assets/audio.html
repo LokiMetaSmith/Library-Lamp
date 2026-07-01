@@ -23,10 +23,17 @@
 <body>
     <div id="audio-app">
         <header class="app-header">
-            <h1>Audio Radio</h1>
-            <div style="display: flex; justify-content: flex-end; gap: 10px; padding-bottom: 10px;">
-                <button onclick="window.location.href='/index.html'">Back to Library</button>
+            <div class="nav-menu">
+                <button class="menu-btn" onclick="toggleMenu()" aria-label="Toggle Menu" aria-expanded="false" aria-controls="menuContent">☰</button>
+                <div class="menu-content" id="menuContent">
+                    <a href="/">Home (USB Transfer View)</a>
+                    <a href="/ereader.html">Mobile Download View</a>
+                    <a href="/audio.html">Audio Radio</a>
+                    <a href="/board.html">Bulletin Board</a>
+                    <a href="/about.html">About</a>
+                </div>
             </div>
+            <h1>Audio Radio</h1>
         </header>
 
         <main class="app-main">
@@ -87,6 +94,25 @@
 
     <script src="vue.global.js"></script>
     <script>
+        function toggleMenu() {
+            const menu = document.getElementById('menuContent');
+            const btn = document.querySelector('.menu-btn');
+            const isExpanded = btn.getAttribute('aria-expanded') === 'true';
+            menu.classList.toggle('show');
+            btn.setAttribute('aria-expanded', !isExpanded);
+        }
+        window.onclick = function(event) {
+            if (!event.target.matches('.menu-btn')) {
+                var dropdowns = document.getElementsByClassName("menu-content");
+                for (var i = 0; i < dropdowns.length; i++) {
+                    if (dropdowns[i].classList.contains('show')) {
+                        dropdowns[i].classList.remove('show');
+                        document.querySelector('.menu-btn').setAttribute('aria-expanded', 'false');
+                    }
+                }
+            }
+        }
+
         const { createApp } = Vue
 
         createApp({
