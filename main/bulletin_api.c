@@ -103,17 +103,17 @@ static esp_err_t board_post_handler(httpd_req_t *req) {
     cJSON *j_expiry = cJSON_GetObjectItem(json, "expiry");
 
     char author[25] = "neighbor";
-    if (j_author && j_author->valuestring) sanitize(j_author->valuestring, author, 25);
+    if (j_author && cJSON_IsString(j_author) && j_author->valuestring) sanitize(j_author->valuestring, author, 25);
     
     char type[16] = "Notice";
-    if (j_type && j_type->valuestring) {
+    if (j_type && cJSON_IsString(j_type) && j_type->valuestring) {
         if (strcmp(j_type->valuestring, "Offer") == 0 || strcmp(j_type->valuestring, "Need") == 0 || strcmp(j_type->valuestring, "Event") == 0) {
             strncpy(type, j_type->valuestring, 15);
         }
     }
 
     char text[301] = "";
-    if (j_text && j_text->valuestring) sanitize(j_text->valuestring, text, 301);
+    if (j_text && cJSON_IsString(j_text) && j_text->valuestring) sanitize(j_text->valuestring, text, 301);
 
     int expiry = 72;
     if (j_expiry && cJSON_IsNumber(j_expiry)) expiry = j_expiry->valueint;
@@ -156,7 +156,7 @@ static esp_err_t admin_auth_handler(httpd_req_t *req) {
     if (!json) { httpd_resp_send_500(req); return ESP_FAIL; }
 
     cJSON *j_key = cJSON_GetObjectItem(json, "key");
-    if (j_key && j_key->valuestring && bb_check_key(j_key->valuestring)) {
+    if (j_key && cJSON_IsString(j_key) && j_key->valuestring && bb_check_key(j_key->valuestring)) {
         char token[33];
         bb_generate_token(token);
         httpd_resp_send(req, token, strlen(token));
