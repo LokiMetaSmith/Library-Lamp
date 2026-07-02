@@ -50,7 +50,7 @@
                     <audio ref="audioPlayer" controls @play="onPlay" @pause="onPause" @seeked="onSeeked" @ended="onEnded">
                         Your browser does not support the audio element.
                     </audio>
-                    <button v-if="isDriver" @click="skipTrack" style="margin-top:10px;">Skip Track</button>
+                    <button v-if="isDriver" @click="skipTrack" :aria-label="'Skip ' + currentTrack" style="margin-top:10px;">Skip Track</button>
                 </div>
                 <div v-else>
                     <p style="color: #8a7b6c; font-style: italic;">Nothing is currently playing. Add a track to the queue!</p>
@@ -66,7 +66,7 @@
                     <div v-else>
                         <div v-for="(track, index) in queue" :key="index" class="queue-item">
                             <span>{{ index + 1 }}. {{ track }}</span>
-                            <button v-if="isAdmin" @click="removeFromQueue(index)" class="btn-small cancel-btn">Remove</button>
+                            <button v-if="isAdmin" @click="removeFromQueue(index)" :aria-label="'Remove ' + track + ' from queue'" class="btn-small cancel-btn">Remove</button>
                         </div>
                     </div>
                 </div>
@@ -79,7 +79,7 @@
                                 <span class="file-title">{{ file.title || file.name }}</span>
                             </div>
                             <div class="transfer-controls">
-                                <button @click="addToQueue(file.name)">Add to Queue</button>
+                                <button @click="addToQueue(file.name)" :aria-label="'Add ' + (file.title || file.name) + ' to queue'">Add to Queue</button>
                             </div>
                         </li>
                     </ul>
