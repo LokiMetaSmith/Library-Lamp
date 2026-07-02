@@ -15,6 +15,13 @@ def test_ux():
     assert ":aria-label=\"'Delete ' + file.title\"" in content, "Missing Delete aria-label"
     assert ":aria-label=\"'Cancel transfer for ' + file.title\"" in content, "Missing Cancel transfer aria-label"
 
+    with open('main/web_assets/audio.html', 'r') as f:
+        audio_content = f.read()
+
+    assert ":aria-label=\"'Remove ' + track + ' from queue'\"" in audio_content, "Missing Remove from queue aria-label"
+    assert ":aria-label=\"'Add ' + (file.title || file.name) + ' to queue'\"" in audio_content, "Missing Add to queue aria-label"
+    assert ":aria-label=\"'Skip ' + currentTrack\"" in audio_content, "Missing Skip Track aria-label"
+
     with open('main/web_assets/style.css', 'r') as f:
         css_content = f.read()
 
