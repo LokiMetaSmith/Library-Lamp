@@ -32,3 +32,7 @@
 ## 2024-10-24 - Add Cache-Control for static assets
 **Learning:** ESP32 web servers suffer significantly when repeatedly serving large static assets (like `vue.global.js` at 164KB) because the device's CPU, SPIFFS read speed, and network stack are heavily constrained. Browsers will re-request these files on every navigation without an explicit Cache-Control header.
 **Action:** Always include a `Cache-Control` header (e.g. `public, max-age=31536000`) for large static dependencies in embedded web servers to allow the browser to skip the network request entirely, drastically improving page load times and reducing server load.
+
+## 2024-05-18 - Consolidate Polled Endpoints to Prevent Connection Exhaustion
+**Learning:** In ESP-IDF web servers, using parallel fetches (`Promise.all`) or sequential fetch chains to multiple endpoints exhausts the connection limit, causing `no slots left for registering handler` or high latency. Previously, `list-files?type=sd` and `list-files?type=usb` were fetched sequentially to avoid the parallel limitation, but this introduced "waterfall" latency on the frontend.
+**Action:** When a frontend needs data from multiple backend sources on load, combine them into a single consolidated endpoint (e.g. `type=all`) that streams a combined JSON response using `httpd_resp_send_chunk`. This solves both the connection exhaustion issue and the frontend fetch latency penalty.
