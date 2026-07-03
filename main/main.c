@@ -1131,6 +1131,151 @@ static esp_err_t list_files_handler(httpd_req_t *req) {
     }
     free(buf);
 
+    if (strcmp(param, "all") == 0) {
+        httpd_resp_set_type(req, "application/json");
+        httpd_resp_send_chunk(req, "{\"sd\":", 6);
+
+        if (g_sd_card_initialized) {
+            char catalog_path[256];
+            snprintf(catalog_path, sizeof(catalog_path), "%s/catalog.json", MOUNT_POINT_SD);
+            FILE *f = fopen(catalog_path, "r");
+            if (f) {
+                char *chunk = malloc(4096);
+                if (chunk) {
+                    size_t chunk_size;
+                    do {
+                        chunk_size = fread(chunk, 1, 4096, f);
+                        if (chunk_size > 0) {
+                            if (httpd_resp_send_chunk(req, chunk, chunk_size) != ESP_OK) {
+                                break;
+                            }
+                        }
+                    } while (chunk_size == 4096);
+                    free(chunk);
+                }
+                fclose(f);
+            } else {
+                httpd_resp_send_chunk(req, "[]", 2);
+            }
+        } else {
+            httpd_resp_send_chunk(req, "[]", 2);
+        }
+
+        httpd_resp_send_chunk(req, ",\"usb\":", 7);
+
+        if (ebook_reader_connected) {
+            DIR *d = opendir(MOUNT_POINT_USB);
+            if (d) {
+                cJSON *usb_array = cJSON_CreateArray();
+                struct dirent *dir;
+                while ((dir = readdir(d)) != NULL) {
+                    if (dir->d_type == DT_REG) {
+                        const char *ext = strrchr(dir->d_name, '.');
+                        if (ext && (strcasecmp(ext, ".epub") == 0 || strcasecmp(ext, ".mobi") == 0 ||
+                                    strcasecmp(ext, ".pdf") == 0 || strcasecmp(ext, ".txt") == 0)) {
+                            cJSON *file_obj = cJSON_CreateObject();
+                            cJSON_AddStringToObject(file_obj, "name", dir->d_name);
+                            if (strcasecmp(ext, ".epub") == 0) {
+                                cJSON_AddStringToObject(file_obj, "title", dir->d_name);
+                                cJSON_AddStringToObject(file_obj, "author", "Unknown Author");
+                            } else {
+                                cJSON_AddStringToObject(file_obj, "title", dir->d_name);
+                                cJSON_AddStringToObject(file_obj, "author", "");
+                            }
+                            cJSON_AddItemToArray(usb_array, file_obj);
+                        }
+                    }
+                }
+                closedir(d);
+                char *usb_str = cJSON_PrintUnformatted(usb_array);
+                httpd_resp_send_chunk(req, usb_str, strlen(usb_str));
+                free(usb_str);
+                cJSON_Delete(usb_array);
+            } else {
+                httpd_resp_send_chunk(req, "[]", 2);
+            }
+        } else {
+            httpd_resp_send_chunk(req, "[]", 2);
+        }
+
+        httpd_resp_send_chunk(req, "}", 1);
+        httpd_resp_send_chunk(req, NULL, 0);
+        return ESP_OK;
+    }
+
+
+    if (strcmp(param, "all") == 0) {
+        httpd_resp_set_type(req, "application/json");
+        httpd_resp_send_chunk(req, "{\"sd\":", 6);
+
+        if (g_sd_card_initialized) {
+            char catalog_path[256];
+            snprintf(catalog_path, sizeof(catalog_path), "%s/catalog.json", MOUNT_POINT_SD);
+            FILE *f = fopen(catalog_path, "r");
+            if (f) {
+                char *chunk = malloc(4096);
+                if (chunk) {
+                    size_t chunk_size;
+                    do {
+                        chunk_size = fread(chunk, 1, 4096, f);
+                        if (chunk_size > 0) {
+                            if (httpd_resp_send_chunk(req, chunk, chunk_size) != ESP_OK) {
+                                break;
+                            }
+                        }
+                    } while (chunk_size == 4096);
+                    free(chunk);
+                }
+                fclose(f);
+            } else {
+                httpd_resp_send_chunk(req, "[]", 2);
+            }
+        } else {
+            httpd_resp_send_chunk(req, "[]", 2);
+        }
+
+        httpd_resp_send_chunk(req, ",\"usb\":", 7);
+
+        if (ebook_reader_connected) {
+            DIR *d = opendir(MOUNT_POINT_USB);
+            if (d) {
+                cJSON *usb_array = cJSON_CreateArray();
+                struct dirent *dir;
+                while ((dir = readdir(d)) != NULL) {
+                    if (dir->d_type == DT_REG) {
+                        const char *ext = strrchr(dir->d_name, '.');
+                        if (ext && (strcasecmp(ext, ".epub") == 0 || strcasecmp(ext, ".mobi") == 0 ||
+                                    strcasecmp(ext, ".pdf") == 0 || strcasecmp(ext, ".txt") == 0)) {
+                            cJSON *file_obj = cJSON_CreateObject();
+                            cJSON_AddStringToObject(file_obj, "name", dir->d_name);
+                            if (strcasecmp(ext, ".epub") == 0) {
+                                cJSON_AddStringToObject(file_obj, "title", dir->d_name);
+                                cJSON_AddStringToObject(file_obj, "author", "Unknown Author");
+                            } else {
+                                cJSON_AddStringToObject(file_obj, "title", dir->d_name);
+                                cJSON_AddStringToObject(file_obj, "author", "");
+                            }
+                            cJSON_AddItemToArray(usb_array, file_obj);
+                        }
+                    }
+                }
+                closedir(d);
+                char *usb_str = cJSON_PrintUnformatted(usb_array);
+                httpd_resp_send_chunk(req, usb_str, strlen(usb_str));
+                free(usb_str);
+                cJSON_Delete(usb_array);
+            } else {
+                httpd_resp_send_chunk(req, "[]", 2);
+            }
+        } else {
+            httpd_resp_send_chunk(req, "[]", 2);
+        }
+
+        httpd_resp_send_chunk(req, "}", 1);
+        httpd_resp_send_chunk(req, NULL, 0);
+        return ESP_OK;
+    }
+
     const char *mount_path = (strcmp(param, "sd") == 0) ? MOUNT_POINT_SD : MOUNT_POINT_USB;
 
     if (strcmp(param, "sd") == 0 && !g_sd_card_initialized) {
