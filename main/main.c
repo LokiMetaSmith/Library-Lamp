@@ -551,7 +551,7 @@ static esp_err_t delete_file_handler(httpd_req_t *req) {
     const char *source = j_source->valuestring;
     const char *filename = j_filename->valuestring;
 
-    if (strstr(filename, "..") != NULL || strchr(filename, '/') != NULL) {
+    if (strstr(filename, "..") != NULL || strchr(filename, '/') != NULL || strchr(filename, '\\') != NULL) {
         cJSON_Delete(json);
         httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid Filename");
         return ESP_FAIL;
@@ -820,7 +820,7 @@ static esp_err_t upload_handler(httpd_req_t *req) {
     }
 
     // Check for directory traversal
-    if (strstr(filename, "..") || strchr(filename, '/')) {
+    if (strstr(filename, "..") != NULL || strchr(filename, '/') != NULL || strchr(filename, '\\') != NULL) {
         httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid filename.");
         return ESP_FAIL;
     }
@@ -1260,7 +1260,7 @@ static esp_err_t transfer_file_handler(httpd_req_t *req) {
     const char *filename = j_filename->valuestring;
 
     // Basic path traversal prevention
-    if (strstr(filename, "..") != NULL) {
+    if (strstr(filename, "..") != NULL || strchr(filename, '/') != NULL || strchr(filename, '\\') != NULL) {
         cJSON_Delete(json);
         httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid Filename");
         g_led_state = ebook_reader_connected ? LED_STATE_CONNECTED : LED_STATE_IDLE;
