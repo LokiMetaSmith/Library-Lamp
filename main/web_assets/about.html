@@ -64,6 +64,16 @@
             }
         }
 
+        // ── XSS-safe escaping ──────────────────────────
+        function esc(s) {
+            return String(s)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
         // Try to load custom about text from SD Card
         document.addEventListener('DOMContentLoaded', async () => {
             try {
@@ -72,8 +82,8 @@
                 if (response.ok) {
                     const text = await response.text();
                     const contentDiv = document.getElementById('about-content');
-                    // Simple text to HTML conversion (newlines to <br>)
-                    contentDiv.innerHTML = text.replace(/\n/g, '<br>');
+                    // Simple text to HTML conversion (newlines to <br>) with XSS protection
+                    contentDiv.innerHTML = esc(text).replace(/\n/g, '<br>');
                 }
             } catch (e) {
                 // Ignore error, fallback to default text
