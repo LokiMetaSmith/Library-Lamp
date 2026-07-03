@@ -147,7 +147,7 @@
             loadingElement.style.display = 'none';
 
             if (books.length === 0) {
-                listElement.innerHTML = '<li class="book-item" style="text-align: center; color: var(--ink-muted);">No books found in the library.</li>';
+                listElement.innerHTML = '<li class="empty-state">No books found in the library.<br><span style="font-size: 0.9em; margin-top: 5px; display: inline-block;">Go to the <a href="/" style="color: inherit; text-decoration: underline;">main library</a> to upload books.</span></li>';
                 return;
             }
 
@@ -178,6 +178,7 @@
                     readLink.className = 'admin-link';
                     readLink.style.marginLeft = '10px';
                     readLink.style.padding = '4px 8px';
+                    readLink.setAttribute('aria-label', `Read ${book.title} online`);
                     readLink.textContent = 'Read Online';
                     li.appendChild(readLink);
                 }
