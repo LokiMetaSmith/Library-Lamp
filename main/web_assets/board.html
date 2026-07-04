@@ -406,26 +406,22 @@ body {
 
 <script>
 // First thing's first:
-async function checkBoardStatus() {
-  try {
-    const r = await fetch('/board/api/status');
-    const d = await r.json();
-    const banner = document.getElementById('fullBanner');
-    const btn    = document.getElementById('postBtn');
-    if (d.full) {
-      banner.style.display = 'block';
-      if (btn) {
-        btn.disabled = true;
-        btn.title = "The board is currently full. Check back later.";
-      }
-    } else {
-      banner.style.display = 'none';
-      if (btn) {
-        btn.disabled = false;
-        btn.removeAttribute('title');
-      }
+function updateBoardStatus(d) {
+  const banner = document.getElementById('fullBanner');
+  const btn    = document.getElementById('postBtn');
+  if (d.full) {
+    banner.style.display = 'block';
+    if (btn) {
+      btn.disabled = true;
+      btn.title = "The board is currently full. Check back later.";
     }
-  } catch (e) {}
+  } else {
+    banner.style.display = 'none';
+    if (btn) {
+      btn.disabled = false;
+      btn.removeAttribute('title');
+    }
+  }
 }
 // ── XSS-safe escaping ──────────────────────────
 function esc(s) {
@@ -551,16 +547,7 @@ async function loadSystemStatus() {
     console.error("Failed to load status", e);
   }
 }
-async function load() {
-  try {
-    await checkBoardStatus();
-    const r  = await fetch('/board/messages');
-    lastData = await r.json();
-    render(lastData);
-  } catch (_) {
-    console.error('Connection lost');
-  }
-}
+
 
 function render(data) {
   let filtered = activeFilter ? data.filter(m => m.type === activeFilter) : data;
@@ -598,7 +585,6 @@ function render(data) {
 
 // ── Post ───────────────────────────────────────
 async function doPost() {
-  await checkBoardStatus();
   const n = document.getElementById('nameIn').value.trim() || 'neighbor';
   const t = document.getElementById('msgIn').value.trim();
   if (!t) return;
@@ -629,28 +615,35 @@ async function doPost() {
     }
   }
 
-  await load();
-  await loadSystemStatus();
+  await runPolling();
 }
 
 // ── Board info ─────────────────────────────────
-async function loadInfo() {
-  try {
-    const r = await fetch('/board/info');
-    const d = await r.json();
-    document.getElementById('boardTitle').textContent   = d.icon + '  ' + d.name;
-    document.getElementById('boardTagline').textContent = d.tagline;
-    document.getElementById('boardRules').textContent   = d.rules;
-    document.getElementById('boardFooter').textContent  = d.footer;
-    document.getElementById('uptimeDisplay').textContent = d.uptime;
-  } catch (e) {}
-}
-
 // ⚡ Bolt: Fetch board data sequentially to prevent connection pool exhaustion
+// Board data is fetched from a single combined endpoint to prevent fetch waterfall latency
 async function runPolling() {
-  await loadInfo();
+  try {
+    const r = await fetch('/board/all');
+    const d = await r.json();
+
+    // update info
+    document.getElementById('boardTitle').textContent   = d.info.icon + '  ' + d.info.name;
+    document.getElementById('boardTagline').textContent = d.info.tagline;
+    document.getElementById('boardRules').textContent   = d.info.rules;
+    document.getElementById('boardFooter').textContent  = d.info.footer;
+    document.getElementById('uptimeDisplay').textContent = d.info.uptime;
+
+    // update status
+    updateBoardStatus(d.status);
+
+    // update messages
+    lastData = d.messages;
+    render(lastData);
+  } catch (e) {
+    console.error('Failed to load board data', e);
+  }
+
   await loadSystemStatus();
-  await load();
 }
 
 runPolling();
