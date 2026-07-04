@@ -14,12 +14,15 @@ For more detailed information, please refer to the `README.md`.
 
 ## Hardware Stack
 
-A full list of components is available in `BOM.md`.
+A full list of components and design files are available in `hardware/`.
 
 *   **MCU:** ESP32-S3 Development Board with USB OTG (e.g., ESP32-S3-USB-OTG)
 *   **Storage:** MicroSD Card Module with a MicroSD card (exFAT formatted for >32GB).
 *   **Visuals:** WS2812B (NeoPixel) RGB LED Strip for status indication.
 *   **Interfacing:** USB OTG adapter/cable to connect to e-readers.
+*   **BOM:** `hardware/electronics/BOM.md`
+*   **Wiring:** `hardware/electronics/wiring_diagram.yml`
+*   **CAD:** `hardware/cad/enclosure_template.scad`
 
 ## Software Architecture
 
@@ -36,12 +39,16 @@ A full list of components is available in `BOM.md`.
 
 *   `main/`: Contains the main application source code (`main.c`).
 *   `main/web_assets/`: Contains the HTML, CSS, and JS for the web UI.
-*   `main/idf_component.yml`: Manifest for managed dependencies.
 *   `components/`: For local components like `sqlite3`.
+*   `scripts/`: Automation, build, and deployment scripts.
+*   `tests/`: Unit and end-to-end tests.
+*   `tools/`: Asset generation and utility scripts.
+*   `hardware/`: Hardware design and electronics documentation.
+*   `docs/`: Project documentation and roadmaps.
 *   `partitions.csv`: Defines the flash memory layout.
-*   `sdkconfig`: Project configuration file.
+*   `sdkconfig.esp32-s3-ebook-librarian`: Project configuration file.
 *   `CMakeLists.txt`: Top-level build script for ESP-IDF.
-*   `agent.md`: This file.
+*   `agents.md`: This file.
 
 ## Environment Setup
 
@@ -66,22 +73,38 @@ This project requires the ESP-IDF toolchain. The necessary tools are included in
 
 ## Building and Flashing
 
-After setting up and activating the environment, use the following `idf.py` commands to build and flash the project.
+You can use the helper scripts in `scripts/` or standard `idf.py` commands.
 
 1.  **Build the project:**
     ```bash
+    ./scripts/build_firmware.sh
+    # OR
     idf.py build
     ```
 
 2.  **Flash the project:**
     ```bash
+    ./scripts/install_firmware.sh
+    # OR
     idf.py flash
     ```
 
-3.  **Build, flash, and monitor:**
-    ```bash
-    idf.py flash monitor
-    ```
+## Testing
+
+Tests are located in the `tests/` directory.
+
+### Build Check
+To verify the project compiles correctly:
+```bash
+./tests/test_compile.sh
+```
+
+### End-to-End (E2E) Tests
+To verify the web assets and UI logic:
+```bash
+python3 tests/e2e/test_ux.py
+python3 tests/e2e/test_ux2.py
+```
 
 ## Working with the Code
 
