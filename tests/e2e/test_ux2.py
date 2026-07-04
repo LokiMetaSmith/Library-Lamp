@@ -1,5 +1,9 @@
+import os
+
 def test_ux2():
-    with open('main/web_assets/ereader.html', 'r') as f:
+    base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+    with open(os.path.join(base_dir, 'main/web_assets/ereader.html'), 'r') as f:
         content = f.read()
 
     assert "main library" in content, "Missing CTA in ereader.html"

@@ -1,7 +1,10 @@
 import re
+import os
 
 def test_ux():
-    with open('main/web_assets/index.html', 'r') as f:
+    base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+    with open(os.path.join(base_dir, 'main/web_assets/index.html'), 'r') as f:
         content = f.read()
 
     assert "Upload a book above to get started!" in content, "Missing CTA in local empty state"
@@ -15,14 +18,14 @@ def test_ux():
     assert ":aria-label=\"'Delete ' + file.title\"" in content, "Missing Delete aria-label"
     assert ":aria-label=\"'Cancel transfer for ' + file.title\"" in content, "Missing Cancel transfer aria-label"
 
-    with open('main/web_assets/audio.html', 'r') as f:
+    with open(os.path.join(base_dir, 'main/web_assets/audio.html'), 'r') as f:
         audio_content = f.read()
 
     assert ":aria-label=\"'Remove ' + track + ' from queue'\"" in audio_content, "Missing Remove from queue aria-label"
     assert ":aria-label=\"'Add ' + (file.title || file.name) + ' to queue'\"" in audio_content, "Missing Add to queue aria-label"
     assert ":aria-label=\"'Skip ' + currentTrack\"" in audio_content, "Missing Skip Track aria-label"
 
-    with open('main/web_assets/style.css', 'r') as f:
+    with open(os.path.join(base_dir, 'main/web_assets/style.css'), 'r') as f:
         css_content = f.read()
 
     assert ":focus-visible" in css_content, "Missing focus-visible styles in style.css"
