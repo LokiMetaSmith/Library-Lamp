@@ -350,8 +350,8 @@ body {
     </div>
 
     <div class="field field-cat">
-      <label>Category</label>
-      <div class="cat-btns">
+      <label id="catLabel">Category</label>
+      <div class="cat-btns" role="group" aria-labelledby="catLabel">
         <button class="cat-btn active-Notice" aria-pressed="true" onclick="setType('Notice',this)">📌 Notice</button>
         <button class="cat-btn" aria-pressed="false" onclick="setType('Offer', this)">🌱 Offer</button>
         <button class="cat-btn" aria-pressed="false" onclick="setType('Need',  this)">🤝 Need</button>
