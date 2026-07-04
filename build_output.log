@@ -1,0 +1,4 @@
+Setting up ESP32 Dev Environment and building firmware...
+Error: idf.py could not be found.
+Please ensure you have set up the ESP-IDF environment.
+Run '. <path-to-esp-idf>/export.sh' or use the VS Code extension terminal.

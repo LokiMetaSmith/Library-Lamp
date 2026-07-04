@@ -65,7 +65,8 @@ static esp_err_t audio_state_get_handler(httpd_req_t *req) {
 
 static esp_err_t audio_queue_post_handler(httpd_req_t *req) {
     char buf[256];
-    int ret, remaining = req->content_len;
+    int ret;
+    size_t remaining = req->content_len;
 
     if (remaining >= sizeof(buf)) {
         httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Body too large");
@@ -107,8 +108,8 @@ static esp_err_t audio_queue_post_handler(httpd_req_t *req) {
             current_track[MAX_FILENAME_LEN - 1] = '\0';
 
             // Remove from queue
-            for (int i = 0; i < queue_count - 1; i++) {
-                strncpy(audio_queue[i].filename, audio_queue[i+1].filename, MAX_FILENAME_LEN);
+            if (queue_count > 1) {
+                memmove(&audio_queue[0], &audio_queue[1], (queue_count - 1) * sizeof(audio_track_t));
             }
             queue_count--;
 
@@ -134,7 +135,8 @@ static esp_err_t audio_queue_delete_handler(httpd_req_t *req) {
     }
 
     char buf[256];
-    int ret, remaining = req->content_len;
+    int ret;
+    size_t remaining = req->content_len;
 
     if (remaining >= sizeof(buf)) {
         httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Body too large");
@@ -165,8 +167,8 @@ static esp_err_t audio_queue_delete_handler(httpd_req_t *req) {
 
     int index = index_item->valueint;
     if (index >= 0 && index < queue_count) {
-        for (int i = index; i < queue_count - 1; i++) {
-            strncpy(audio_queue[i].filename, audio_queue[i+1].filename, MAX_FILENAME_LEN);
+        if (index < queue_count - 1) {
+            memmove(&audio_queue[index], &audio_queue[index + 1], (queue_count - 1 - index) * sizeof(audio_track_t));
         }
         queue_count--;
     }
@@ -178,7 +180,8 @@ static esp_err_t audio_queue_delete_handler(httpd_req_t *req) {
 
 static esp_err_t audio_state_post_handler(httpd_req_t *req) {
     char buf[512];
-    int ret, remaining = req->content_len;
+    int ret;
+    size_t remaining = req->content_len;
 
     if (remaining >= sizeof(buf)) {
         httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Body too large");
@@ -233,8 +236,8 @@ static esp_err_t audio_state_post_handler(httpd_req_t *req) {
             strncpy(current_track, audio_queue[0].filename, MAX_FILENAME_LEN - 1);
             current_track[MAX_FILENAME_LEN - 1] = '\0';
 
-            for (int i = 0; i < queue_count - 1; i++) {
-                strncpy(audio_queue[i].filename, audio_queue[i+1].filename, MAX_FILENAME_LEN);
+            if (queue_count > 1) {
+                memmove(&audio_queue[0], &audio_queue[1], (queue_count - 1) * sizeof(audio_track_t));
             }
             queue_count--;
 

@@ -523,6 +523,10 @@ static esp_err_t delete_file_handler(httpd_req_t *req) {
     }
 
     char content[256];
+    if (req->content_len >= sizeof(content)) {
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Payload too large");
+        return ESP_FAIL;
+    }
     int ret = httpd_req_recv(req, content, sizeof(content) - 1);
     if (ret <= 0) {
         return ESP_FAIL;
@@ -538,7 +542,7 @@ static esp_err_t delete_file_handler(httpd_req_t *req) {
     cJSON *j_source = cJSON_GetObjectItem(json, "source");
     cJSON *j_filename = cJSON_GetObjectItem(json, "filename");
 
-    if (!j_source || !j_source->valuestring || !j_filename || !j_filename->valuestring) {
+    if (!j_source || !cJSON_IsString(j_source) || !j_filename || !cJSON_IsString(j_filename)) {
         cJSON_Delete(json);
         httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Bad Request");
         return ESP_FAIL;
@@ -547,13 +551,13 @@ static esp_err_t delete_file_handler(httpd_req_t *req) {
     const char *source = j_source->valuestring;
     const char *filename = j_filename->valuestring;
 
-    if (strstr(filename, "..") != NULL || strchr(filename, '/') != NULL) {
+    if (strstr(filename, "..") != NULL || strchr(filename, '/') != NULL || strchr(filename, '\\') != NULL) {
         cJSON_Delete(json);
         httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid Filename");
         return ESP_FAIL;
     }
 
-    if (strstr(filename, "adminkey.json") != NULL || strstr(filename, ".key") != NULL) {
+    if (strcasestr(filename, "adminkey.json") != NULL || strcasestr(filename, ".key") != NULL) {
         cJSON_Delete(json);
         httpd_resp_send_err(req, HTTPD_403_FORBIDDEN, "Forbidden");
         return ESP_FAIL;
@@ -583,7 +587,8 @@ static esp_err_t setup_get_handler(httpd_req_t *req) {
 // Handler to save credentials and restart
 static esp_err_t save_credentials_post_handler(httpd_req_t *req) {
     char buf[128];
-    int ret, remaining = req->content_len;
+    int ret;
+    size_t remaining = req->content_len;
 
     if (remaining > sizeof(buf) -1) {
         ESP_LOGE(TAG, "Content too long");
@@ -640,7 +645,7 @@ static esp_err_t static_file_handler(httpd_req_t *req) {
     }
 
     // Prevent access to sensitive files
-    if (strstr(req->uri, "adminkey.json") != NULL || strstr(req->uri, ".key") != NULL) {
+    if (strcasestr(req->uri, "adminkey.json") != NULL || strcasestr(req->uri, ".key") != NULL) {
         ESP_LOGE(TAG, "Attempted access to protected file: %s", req->uri);
         httpd_resp_send_err(req, HTTPD_403_FORBIDDEN, "Forbidden");
         return ESP_FAIL;
@@ -700,10 +705,19 @@ static esp_err_t static_file_handler(httpd_req_t *req) {
 
     // Set content type based on file extension
     const char *type = "text/plain";
-    if (strstr(filepath, ".html")) type = "text/html";
-    else if (strstr(filepath, ".css")) type = "text/css";
-    else if (strstr(filepath, ".js")) type = "application/javascript";
+    const char *ext = strrchr(filepath, '.');
+    if (ext) {
+        if (strcasecmp(ext, ".html") == 0) type = "text/html";
+        else if (strcasecmp(ext, ".css") == 0) type = "text/css";
+        else if (strcasecmp(ext, ".js") == 0) type = "application/javascript";
+        else if (strcasecmp(ext, ".ico") == 0) type = "image/x-icon";
+    }
     httpd_resp_set_type(req, type);
+
+    // Add Cache-Control for static assets
+    if (ext && (strcasecmp(ext, ".css") == 0 || strcasecmp(ext, ".js") == 0 || strcasecmp(ext, ".ico") == 0)) {
+        httpd_resp_set_hdr(req, "Cache-Control", "public, max-age=31536000, immutable");
+    }
 
     // Open and send file
     FILE *fd = fopen(filepath, "r");
@@ -713,10 +727,10 @@ static esp_err_t static_file_handler(httpd_req_t *req) {
         return ESP_FAIL;
     }
 
-    char *chunk = malloc(1024);
+    char *chunk = malloc(4096);
     size_t chunk_size;
     do {
-        chunk_size = fread(chunk, 1, 1024, fd);
+        chunk_size = fread(chunk, 1, 4096, fd);
         if (chunk_size > 0) {
             if (httpd_resp_send_chunk(req, chunk, chunk_size) != ESP_OK) {
                 fclose(fd);
@@ -806,13 +820,13 @@ static esp_err_t upload_handler(httpd_req_t *req) {
     }
 
     // Check for directory traversal
-    if (strstr(filename, "..") || strchr(filename, '/')) {
+    if (strstr(filename, "..") != NULL || strchr(filename, '/') != NULL || strchr(filename, '\\') != NULL) {
         httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid filename.");
         return ESP_FAIL;
     }
 
     // Prevent overwriting sensitive files
-    if (strstr(filename, "adminkey.json") != NULL || strstr(filename, ".key") != NULL) {
+    if (strcasestr(filename, "adminkey.json") != NULL || strcasestr(filename, ".key") != NULL) {
         httpd_resp_send_err(req, HTTPD_403_FORBIDDEN, "Forbidden");
         return ESP_FAIL;
     }
@@ -834,7 +848,7 @@ static esp_err_t upload_handler(httpd_req_t *req) {
         return ESP_FAIL;
     }
 
-        int remaining = req->content_len;
+        size_t remaining = req->content_len;
 
     while (remaining > 0) {
         int ret = httpd_req_recv(req, recv_buf, MIN(remaining, 4096));
@@ -921,13 +935,13 @@ static esp_err_t download_handler(httpd_req_t *req) {
     snprintf(filepath, sizeof(filepath), "%s/%s", mount_path, decoded_file_param);
 
     // Basic path traversal prevention
-    if (strstr(decoded_file_param, "..") != NULL) {
+    if (strstr(decoded_file_param, "..") != NULL || strchr(decoded_file_param, '/') != NULL || strchr(decoded_file_param, '\\') != NULL) {
         httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid Filename");
         return ESP_FAIL;
     }
 
     // Prevent access to sensitive files
-    if (strstr(decoded_file_param, "adminkey.json") != NULL || strstr(decoded_file_param, ".key") != NULL) {
+    if (strcasestr(decoded_file_param, "adminkey.json") != NULL || strcasestr(decoded_file_param, ".key") != NULL) {
         ESP_LOGE(TAG, "Attempted access to protected file: %s", decoded_file_param);
         httpd_resp_send_err(req, HTTPD_403_FORBIDDEN, "Forbidden");
         return ESP_FAIL;
@@ -942,14 +956,17 @@ static esp_err_t download_handler(httpd_req_t *req) {
 
     // Determine content type based on extension
     const char *type = "application/octet-stream";
-    if (strstr(filepath, ".epub")) type = "application/epub+zip";
-    else if (strstr(filepath, ".mobi")) type = "application/x-mobipocket-ebook";
-    else if (strstr(filepath, ".pdf")) type = "application/pdf";
-    else if (strstr(filepath, ".txt")) type = "text/plain";
-    else if (strstr(filepath, ".mp3")) type = "audio/mpeg";
-    else if (strstr(filepath, ".m4a")) type = "audio/mp4";
-    else if (strstr(filepath, ".wav")) type = "audio/wav";
-    else if (strstr(filepath, ".ogg")) type = "audio/ogg";
+    const char *ext = strrchr(filepath, '.');
+    if (ext) {
+        if (strcasecmp(ext, ".epub") == 0) type = "application/epub+zip";
+        else if (strcasecmp(ext, ".mobi") == 0) type = "application/x-mobipocket-ebook";
+        else if (strcasecmp(ext, ".pdf") == 0) type = "application/pdf";
+        else if (strcasecmp(ext, ".txt") == 0) type = "text/plain";
+        else if (strcasecmp(ext, ".mp3") == 0) type = "audio/mpeg";
+        else if (strcasecmp(ext, ".m4a") == 0) type = "audio/mp4";
+        else if (strcasecmp(ext, ".wav") == 0) type = "audio/wav";
+        else if (strcasecmp(ext, ".ogg") == 0) type = "audio/ogg";
+    }
 
     httpd_resp_set_type(req, type);
     httpd_resp_set_hdr(req, "Accept-Ranges", "bytes");
@@ -1057,7 +1074,8 @@ static esp_err_t status_handler(httpd_req_t *req) {
 
     if (g_sd_card_initialized) {
         TickType_t now_ticks = xTaskGetTickCount();
-        if (!sd_info_cached || (now_ticks - last_sd_info_ticks) > pdMS_TO_TICKS(SD_INFO_CACHE_DURATION_MS) || g_transfer_progress.active) {
+        // ⚡ Bolt: Removed `|| g_transfer_progress.active` to prevent `esp_vfs_fat_info` from locking VFS during transfers
+        if (!sd_info_cached || (now_ticks - last_sd_info_ticks) > pdMS_TO_TICKS(SD_INFO_CACHE_DURATION_MS)) {
             uint64_t out_total_bytes, out_free_bytes;
             if (esp_vfs_fat_info(MOUNT_POINT_SD, &out_total_bytes, &out_free_bytes) == ESP_OK) {
                 cached_sd_total_mb = out_total_bytes / (1024 * 1024);
@@ -1113,6 +1131,151 @@ static esp_err_t list_files_handler(httpd_req_t *req) {
     }
     free(buf);
 
+    if (strcmp(param, "all") == 0) {
+        httpd_resp_set_type(req, "application/json");
+        httpd_resp_send_chunk(req, "{\"sd\":", 6);
+
+        if (g_sd_card_initialized) {
+            char catalog_path[256];
+            snprintf(catalog_path, sizeof(catalog_path), "%s/catalog.json", MOUNT_POINT_SD);
+            FILE *f = fopen(catalog_path, "r");
+            if (f) {
+                char *chunk = malloc(4096);
+                if (chunk) {
+                    size_t chunk_size;
+                    do {
+                        chunk_size = fread(chunk, 1, 4096, f);
+                        if (chunk_size > 0) {
+                            if (httpd_resp_send_chunk(req, chunk, chunk_size) != ESP_OK) {
+                                break;
+                            }
+                        }
+                    } while (chunk_size == 4096);
+                    free(chunk);
+                }
+                fclose(f);
+            } else {
+                httpd_resp_send_chunk(req, "[]", 2);
+            }
+        } else {
+            httpd_resp_send_chunk(req, "[]", 2);
+        }
+
+        httpd_resp_send_chunk(req, ",\"usb\":", 7);
+
+        if (ebook_reader_connected) {
+            DIR *d = opendir(MOUNT_POINT_USB);
+            if (d) {
+                cJSON *usb_array = cJSON_CreateArray();
+                struct dirent *dir;
+                while ((dir = readdir(d)) != NULL) {
+                    if (dir->d_type == DT_REG) {
+                        const char *ext = strrchr(dir->d_name, '.');
+                        if (ext && (strcasecmp(ext, ".epub") == 0 || strcasecmp(ext, ".mobi") == 0 ||
+                                    strcasecmp(ext, ".pdf") == 0 || strcasecmp(ext, ".txt") == 0)) {
+                            cJSON *file_obj = cJSON_CreateObject();
+                            cJSON_AddStringToObject(file_obj, "name", dir->d_name);
+                            if (strcasecmp(ext, ".epub") == 0) {
+                                cJSON_AddStringToObject(file_obj, "title", dir->d_name);
+                                cJSON_AddStringToObject(file_obj, "author", "Unknown Author");
+                            } else {
+                                cJSON_AddStringToObject(file_obj, "title", dir->d_name);
+                                cJSON_AddStringToObject(file_obj, "author", "");
+                            }
+                            cJSON_AddItemToArray(usb_array, file_obj);
+                        }
+                    }
+                }
+                closedir(d);
+                char *usb_str = cJSON_PrintUnformatted(usb_array);
+                httpd_resp_send_chunk(req, usb_str, strlen(usb_str));
+                free(usb_str);
+                cJSON_Delete(usb_array);
+            } else {
+                httpd_resp_send_chunk(req, "[]", 2);
+            }
+        } else {
+            httpd_resp_send_chunk(req, "[]", 2);
+        }
+
+        httpd_resp_send_chunk(req, "}", 1);
+        httpd_resp_send_chunk(req, NULL, 0);
+        return ESP_OK;
+    }
+
+
+    if (strcmp(param, "all") == 0) {
+        httpd_resp_set_type(req, "application/json");
+        httpd_resp_send_chunk(req, "{\"sd\":", 6);
+
+        if (g_sd_card_initialized) {
+            char catalog_path[256];
+            snprintf(catalog_path, sizeof(catalog_path), "%s/catalog.json", MOUNT_POINT_SD);
+            FILE *f = fopen(catalog_path, "r");
+            if (f) {
+                char *chunk = malloc(4096);
+                if (chunk) {
+                    size_t chunk_size;
+                    do {
+                        chunk_size = fread(chunk, 1, 4096, f);
+                        if (chunk_size > 0) {
+                            if (httpd_resp_send_chunk(req, chunk, chunk_size) != ESP_OK) {
+                                break;
+                            }
+                        }
+                    } while (chunk_size == 4096);
+                    free(chunk);
+                }
+                fclose(f);
+            } else {
+                httpd_resp_send_chunk(req, "[]", 2);
+            }
+        } else {
+            httpd_resp_send_chunk(req, "[]", 2);
+        }
+
+        httpd_resp_send_chunk(req, ",\"usb\":", 7);
+
+        if (ebook_reader_connected) {
+            DIR *d = opendir(MOUNT_POINT_USB);
+            if (d) {
+                cJSON *usb_array = cJSON_CreateArray();
+                struct dirent *dir;
+                while ((dir = readdir(d)) != NULL) {
+                    if (dir->d_type == DT_REG) {
+                        const char *ext = strrchr(dir->d_name, '.');
+                        if (ext && (strcasecmp(ext, ".epub") == 0 || strcasecmp(ext, ".mobi") == 0 ||
+                                    strcasecmp(ext, ".pdf") == 0 || strcasecmp(ext, ".txt") == 0)) {
+                            cJSON *file_obj = cJSON_CreateObject();
+                            cJSON_AddStringToObject(file_obj, "name", dir->d_name);
+                            if (strcasecmp(ext, ".epub") == 0) {
+                                cJSON_AddStringToObject(file_obj, "title", dir->d_name);
+                                cJSON_AddStringToObject(file_obj, "author", "Unknown Author");
+                            } else {
+                                cJSON_AddStringToObject(file_obj, "title", dir->d_name);
+                                cJSON_AddStringToObject(file_obj, "author", "");
+                            }
+                            cJSON_AddItemToArray(usb_array, file_obj);
+                        }
+                    }
+                }
+                closedir(d);
+                char *usb_str = cJSON_PrintUnformatted(usb_array);
+                httpd_resp_send_chunk(req, usb_str, strlen(usb_str));
+                free(usb_str);
+                cJSON_Delete(usb_array);
+            } else {
+                httpd_resp_send_chunk(req, "[]", 2);
+            }
+        } else {
+            httpd_resp_send_chunk(req, "[]", 2);
+        }
+
+        httpd_resp_send_chunk(req, "}", 1);
+        httpd_resp_send_chunk(req, NULL, 0);
+        return ESP_OK;
+    }
+
     const char *mount_path = (strcmp(param, "sd") == 0) ? MOUNT_POINT_SD : MOUNT_POINT_USB;
 
     if (strcmp(param, "sd") == 0 && !g_sd_card_initialized) {
@@ -1132,23 +1295,28 @@ static esp_err_t list_files_handler(httpd_req_t *req) {
         snprintf(catalog_path, sizeof(catalog_path), "%s/catalog.json", mount_path);
         FILE *f = fopen(catalog_path, "r");
         if (f) {
-            fseek(f, 0, SEEK_END);
-            long fsize = ftell(f);
-            fseek(f, 0, SEEK_SET);
-
-            char *json_data = malloc(fsize + 1);
-            if (json_data) {
-                fread(json_data, 1, fsize, f);
-                json_data[fsize] = '\0';
-                fclose(f);
-
-                httpd_resp_set_type(req, "application/json");
-                httpd_resp_send(req, json_data, fsize);
-
-                free(json_data);
-                return ESP_OK;
+            httpd_resp_set_type(req, "application/json");
+            // ⚡ Bolt: Stream large catalog.json in 4KB chunks instead of loading entirely into RAM with malloc()
+            // This prevents OOM crashes on ESP32 by turning O(N) heap usage into O(1), and improves TTFB.
+            char *chunk = malloc(4096);
+            if (chunk) {
+                size_t chunk_size;
+                do {
+                    chunk_size = fread(chunk, 1, 4096, f);
+                    if (chunk_size > 0) {
+                        if (httpd_resp_send_chunk(req, chunk, chunk_size) != ESP_OK) {
+                            ESP_LOGE(TAG, "Failed to send catalog.json chunk");
+                            break;
+                        }
+                    }
+                } while (chunk_size == 4096);
+                httpd_resp_send_chunk(req, NULL, 0); // End chunked response
+                free(chunk);
+            } else {
+                httpd_resp_send_500(req);
             }
             fclose(f);
+            return ESP_OK;
         }
     }
 
@@ -1164,23 +1332,16 @@ static esp_err_t list_files_handler(httpd_req_t *req) {
     struct dirent *dir;
     while ((dir = readdir(d)) != NULL) {
         if (dir->d_type == DT_REG) { // If it's a regular file
-            if (strstr(dir->d_name, ".epub") || strstr(dir->d_name, ".mobi") || strstr(dir->d_name, ".pdf") || strstr(dir->d_name, ".txt")) {
+            const char *ext = strrchr(dir->d_name, '.');
+            if (ext && (strcasecmp(ext, ".epub") == 0 || strcasecmp(ext, ".mobi") == 0 ||
+                        strcasecmp(ext, ".pdf") == 0 || strcasecmp(ext, ".txt") == 0)) {
                 cJSON *file_obj = cJSON_CreateObject();
                 cJSON_AddStringToObject(file_obj, "name", dir->d_name);
 
-                // For EPUBs, try to parse metadata
-                if (strstr(dir->d_name, ".epub")) {
-                    char full_path[512];
-                    snprintf(full_path, sizeof(full_path), "%s/%s", mount_path, dir->d_name);
-
-                    // miniz not available
-                    if (strstr(dir->d_name, ".epub")) {
-                        cJSON_AddStringToObject(file_obj, "title", dir->d_name);
-                        cJSON_AddStringToObject(file_obj, "author", "Unknown Author");
-                    } else {
-                        cJSON_AddStringToObject(file_obj, "title", dir->d_name);
-                        cJSON_AddStringToObject(file_obj, "author", "Unknown");
-                    }
+                // For EPUBs, miniz not available yet, just use filename
+                if (strcasecmp(ext, ".epub") == 0) {
+                    cJSON_AddStringToObject(file_obj, "title", dir->d_name);
+                    cJSON_AddStringToObject(file_obj, "author", "Unknown Author");
                 } else {
                     // For other file types, just use the filename
                     cJSON_AddStringToObject(file_obj, "title", dir->d_name);
@@ -1208,6 +1369,10 @@ static esp_err_t transfer_file_handler(httpd_req_t *req) {
     }
 
     char content[256];
+    if (req->content_len >= sizeof(content)) {
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Payload too large");
+        return ESP_FAIL;
+    }
     int ret = httpd_req_recv(req, content, sizeof(content) - 1);
     if (ret <= 0) {
         g_led_state = ebook_reader_connected ? LED_STATE_CONNECTED : LED_STATE_IDLE;
@@ -1226,9 +1391,9 @@ static esp_err_t transfer_file_handler(httpd_req_t *req) {
     cJSON *j_destination = cJSON_GetObjectItem(json, "destination");
     cJSON *j_filename = cJSON_GetObjectItem(json, "filename");
 
-    if (!j_source || !j_source->valuestring ||
-        !j_destination || !j_destination->valuestring ||
-        !j_filename || !j_filename->valuestring) {
+    if (!j_source || !cJSON_IsString(j_source) ||
+        !j_destination || !cJSON_IsString(j_destination) ||
+        !j_filename || !cJSON_IsString(j_filename)) {
         cJSON_Delete(json);
         httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Bad Request");
         g_led_state = ebook_reader_connected ? LED_STATE_CONNECTED : LED_STATE_IDLE;
@@ -1240,7 +1405,7 @@ static esp_err_t transfer_file_handler(httpd_req_t *req) {
     const char *filename = j_filename->valuestring;
 
     // Basic path traversal prevention
-    if (strstr(filename, "..") != NULL) {
+    if (strstr(filename, "..") != NULL || strchr(filename, '/') != NULL || strchr(filename, '\\') != NULL) {
         cJSON_Delete(json);
         httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid Filename");
         g_led_state = ebook_reader_connected ? LED_STATE_CONNECTED : LED_STATE_IDLE;
@@ -1248,7 +1413,7 @@ static esp_err_t transfer_file_handler(httpd_req_t *req) {
     }
 
     // Prevent transferring sensitive files
-    if (strstr(filename, "adminkey.json") != NULL || strstr(filename, ".key") != NULL) {
+    if (strcasestr(filename, "adminkey.json") != NULL || strcasestr(filename, ".key") != NULL) {
         cJSON_Delete(json);
         httpd_resp_send_err(req, HTTPD_403_FORBIDDEN, "Forbidden");
         g_led_state = ebook_reader_connected ? LED_STATE_CONNECTED : LED_STATE_IDLE;
@@ -1399,6 +1564,10 @@ static esp_err_t set_led_color_handler(httpd_req_t *req) {
     }
 
     char content[100];
+    if (req->content_len >= sizeof(content)) {
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Payload too large");
+        return ESP_FAIL;
+    }
     int ret = httpd_req_recv(req, content, sizeof(content) - 1);
     if (ret <= 0) {
         return ESP_FAIL;
@@ -1415,7 +1584,7 @@ static esp_err_t set_led_color_handler(httpd_req_t *req) {
     cJSON *g_item = cJSON_GetObjectItem(json, "g");
     cJSON *b_item = cJSON_GetObjectItem(json, "b");
 
-    if (r_item && g_item && b_item) {
+    if (r_item && cJSON_IsNumber(r_item) && g_item && cJSON_IsNumber(g_item) && b_item && cJSON_IsNumber(b_item)) {
         g_led_color_r = r_item->valueint;
         g_led_color_g = g_item->valueint;
         g_led_color_b = b_item->valueint;
@@ -1437,6 +1606,10 @@ static esp_err_t admin_set_public_uploads_handler(httpd_req_t *req) {
     }
 
     char content[100];
+    if (req->content_len >= sizeof(content)) {
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Payload too large");
+        return ESP_FAIL;
+    }
     int ret = httpd_req_recv(req, content, sizeof(content) - 1);
     if (ret <= 0) {
         return ESP_FAIL;

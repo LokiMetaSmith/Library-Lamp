@@ -4,19 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Community Hub</title>
+<link rel="stylesheet" href="style.css">
 <style>
 :root {
-  --bg:            #352920;
-  --surface:       #3f3127;
-  --surface2:      #4a382a;
-  --border:        #5a4634;
-  --border-light:  #7a5f47;
-  --ink:           #e8dbce;
-  --ink-muted:     #d1bfae;
-  --accent:        #ffcc80;
-  --accent-dark:   #8c5a35;
-  --accent-light:  #f5eedc;
-
   --c-notice-fg:  #6b5a3e; --c-notice-bg: #f0e8d8; --c-notice-bar: #a09070;
   --c-offer-fg:   #2d5c2a; --c-offer-bg:  #daeeda; --c-offer-bar:  #5a8a57;
   --c-need-fg:    #7a4a10; --c-need-bg:   #f5e8d0; --c-need-bar:   #c4813a;
@@ -25,16 +15,10 @@
   --c-recomm-fg:  #2a5c55; --c-recomm-bg: #daeeee; --c-recomm-bar: #578a82;
   --c-request-fg: #4a4a4a; --c-request-bg: #e0e0e0; --c-request-bar: #8a8a8a;
 
-  --radius: 6px;
   --shadow: 3px 4px 0 rgba(44,36,22,0.10);
 }
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
-  background: var(--bg);
-  color: var(--ink);
-  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-  min-height: 100vh;
   display: flex;
   flex-direction: column;
 }
@@ -54,7 +38,7 @@ body {
   font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
   font-size: 20px;
   font-weight: bold;
-  color: #d8edcf;
+  color: var(--accent-light);
   line-height: 1.2;
 }
 .site-sub {
@@ -329,7 +313,17 @@ body {
 <body>
 
 <header class="site-header">
-  <div id="systemBanner" style="display:none;background:#ffcc00;color:#333;padding:10px;margin:0 24px 15px 24px;border-radius:5px;border:1px solid #e6b800;">
+  <div class="nav-menu" style="position: static; margin-right: 10px;">
+      <button class="menu-btn" onclick="toggleMenu()" aria-label="Toggle Menu" aria-expanded="false" aria-controls="menuContent" style="background: transparent; border: 1px solid var(--accent); color: var(--accent); padding: 4px 8px; font-size: 16px;">☰</button>
+      <div class="menu-content" id="menuContent" style="top: 60px;">
+          <a href="/">Home (USB Transfer View)</a>
+          <a href="/ereader.html">Mobile Download View</a>
+          <a href="/audio.html">Audio Radio</a>
+          <a href="/board.html">Bulletin Board</a>
+          <a href="/about.html">About</a>
+      </div>
+  </div>
+  <div id="systemBanner" aria-live="assertive" style="display:none;background:#ffcc00;color:#333;padding:10px;margin:0 24px 15px 24px;border-radius:5px;border:1px solid #e6b800;">
     <ul id="systemErrorsList" style="margin:0;padding-left:20px;"></ul>
   </div>
   <div class="header-title-block">
@@ -341,7 +335,7 @@ body {
     <div id="postCount">— posts</div>
   </div>
 </header>
-<div id="fullBanner" style="display:none;background:#a30000;color:#fff;
+<div id="fullBanner" aria-live="assertive" style="display:none;background:#a30000;color:#fff;
      text-align:center;padding:10px 16px;font-weight:600">
   📋 This board is currently full. Check back once some posts have expired. 📋
 </div>
@@ -352,12 +346,12 @@ body {
       <label for="nameIn">Your Name</label>
       <input id="nameIn" maxlength="24" placeholder="neighbor"
              autocomplete="off" spellcheck="false">
-      <div class="char-hint" id="nameHint"></div>
+      <div class="char-hint" id="nameHint" aria-live="polite"></div>
     </div>
 
     <div class="field field-cat">
-      <label>Category</label>
-      <div class="cat-btns">
+      <label id="catLabel">Category</label>
+      <div class="cat-btns" role="group" aria-labelledby="catLabel">
         <button class="cat-btn active-Notice" aria-pressed="true" onclick="setType('Notice',this)">📌 Notice</button>
         <button class="cat-btn" aria-pressed="false" onclick="setType('Offer', this)">🌱 Offer</button>
         <button class="cat-btn" aria-pressed="false" onclick="setType('Need',  this)">🤝 Need</button>
@@ -374,7 +368,7 @@ body {
       <textarea id="msgIn" maxlength="300"
                 placeholder="What's on the board?"
                 spellcheck="false"></textarea>
-      <div class="char-hint" id="msgHint"></div>
+      <div class="char-hint" id="msgHint" aria-live="polite"></div>
     </div>
 
   </div>
@@ -420,10 +414,16 @@ async function checkBoardStatus() {
     const btn    = document.getElementById('postBtn');
     if (d.full) {
       banner.style.display = 'block';
-      if (btn) btn.disabled = true;
+      if (btn) {
+        btn.disabled = true;
+        btn.title = "The board is currently full. Check back later.";
+      }
     } else {
       banner.style.display = 'none';
-      if (btn) btn.disabled = false;
+      if (btn) {
+        btn.disabled = false;
+        btn.removeAttribute('title');
+      }
     }
   } catch (e) {}
 }
@@ -607,6 +607,7 @@ async function doPost() {
   if (btn) {
     btn.disabled = true;
     btn.textContent = 'POSTING...';
+    btn.title = "Post is currently being submitted...";
   }
 
   localStorage.setItem('cn_name', n);
@@ -624,6 +625,7 @@ async function doPost() {
     if (btn) {
       btn.disabled = false;
       btn.textContent = 'POST';
+      btn.removeAttribute('title');
     }
   }
 
@@ -653,6 +655,26 @@ async function runPolling() {
 
 runPolling();
 setInterval(runPolling, 60000);
+</script>
+<script>
+    function toggleMenu() {
+        const menu = document.getElementById('menuContent');
+        const btn = document.querySelector('.menu-btn');
+        const isExpanded = btn.getAttribute('aria-expanded') === 'true';
+        menu.classList.toggle('show');
+        btn.setAttribute('aria-expanded', !isExpanded);
+    }
+    window.onclick = function(event) {
+        if (!event.target.matches('.menu-btn')) {
+            var dropdowns = document.getElementsByClassName("menu-content");
+            for (var i = 0; i < dropdowns.length; i++) {
+                if (dropdowns[i].classList.contains('show')) {
+                    dropdowns[i].classList.remove('show');
+                    document.querySelector('.menu-btn').setAttribute('aria-expanded', 'false');
+                }
+            }
+        }
+    }
 </script>
 </body>
 </html>

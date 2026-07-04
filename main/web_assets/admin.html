@@ -468,7 +468,7 @@ function doIdentity() {
 // ── Board actions ─────────────────────────────────────────────────────────────
 function confirmClear() {
   if (!confirm('Delete ALL posts? This cannot be undone.')) return;
-  apiFetch(api('/board/admin/clear'))
+  apiFetch(api('/board/admin/clear'), { method: 'POST' })
     .then(r => r.text())
     .then(msg => fb('postListFb', '✓ ' + msg))
     .catch(() => fb('postListFb', '✗ Failed'));
@@ -514,7 +514,11 @@ async function loadPostList() {
 
 async function deletePost(id) {
   if (!confirm('Delete this post?')) return;
-  const r = await apiFetch(api('/board/admin/delete/post') + '&id=' + id);
+  const r = await apiFetch(api('/board/admin/delete/post'), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id: id })
+  });
   if (r.ok) {
     const row = document.getElementById('pr-' + id);
     if (row) row.remove();

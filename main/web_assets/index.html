@@ -9,21 +9,28 @@
 <body>
     <div id="app">
         <header class="app-header">
-        <div v-if="systemErrors.length > 0" class="system-banner error-banner">
-            <p v-for="err in systemErrors" :key="err">⚠️ {{ err }}</p>
+        <div class="nav-menu">
+            <button class="menu-btn" onclick="toggleMenu()" aria-label="Toggle Menu" aria-expanded="false" aria-controls="menuContent">☰</button>
+            <div class="menu-content" id="menuContent">
+                <a href="/">Home (USB Transfer View)</a>
+                <a href="/ereader.html">Mobile Download View</a>
+                <a href="/audio.html">Audio Radio</a>
+                <a href="/board.html">Bulletin Board</a>
+                <a href="/about.html">About</a>
+            </div>
         </div>
-        <div v-if="systemStatus.length > 0" class="system-banner status-banner">
-            <p v-for="msg in systemStatus" :key="msg">🔄 {{ msg }}</p>
+        <div aria-live="assertive">
+            <div v-if="systemErrors.length > 0" class="system-banner error-banner">
+                <p v-for="err in systemErrors" :key="err">⚠️ {{ err }}</p>
+            </div>
+        </div>
+        <div aria-live="polite">
+            <div v-if="systemStatus.length > 0" class="system-banner status-banner">
+                <p v-for="msg in systemStatus" :key="msg">🔄 {{ msg }}</p>
+            </div>
         </div>
             <h1>E-Book Librarian</h1>
             <div class="status-indicator" :class="statusClass"></div>
-        <div style="display: flex; justify-content: flex-end; gap: 10px; padding-bottom: 10px; flex-wrap: wrap;">
-            <button onclick="window.location.href='/audio.html'">Audio Radio</button>
-            <button onclick="window.location.href='/board.html'">Bulletin Board</button>
-            <button onclick="window.location.href='/setup.html'">Setup</button>
-            <button onclick="window.location.href='/admin.html'">Admin</button>
-            <button onclick="window.location.href='/ereader.html'">Direct Download Mode</button>
-        </div>
         </header>
         <main class="app-main">
             <div class="library-section">
@@ -49,16 +56,19 @@
                             <label for="uploadAuthor" style="display: block; font-size: 0.9em; margin-bottom: 5px;">Author</label>
                             <input type="text" id="uploadAuthor" v-model="uploadAuthor" placeholder="Author" required>
                         </div>
-                        <button type="submit" :disabled="isUploading">
+                        <button type="submit" :disabled="isUploading" :title="isUploading ? 'Upload in progress...' : 'Upload book'">
                             {{ isUploading ? 'Uploading...' : 'Upload' }}
                         </button>
                     </form>
-                    <p class="error-message" v-if="uploadError">{{ uploadError }}</p>
+                    <div aria-live="assertive">
+                        <p class="error-message" v-if="uploadError">{{ uploadError }}</p>
+                    </div>
                 </div>
 
                 <ul class="file-list">
                     <li v-if="localFiles.length === 0" class="empty-state">
-                        No books found in the library.
+                        No books found in the library. <br>
+                        <span v-if="allowPublicUploads || isAdmin" style="font-size: 0.9em; margin-top: 5px; display: inline-block;">Upload a book above to get started!</span>
                     </li>
                     <li v-for="file in localFiles" :key="file.name">
                         <div class="file-info">
@@ -70,10 +80,10 @@
                             <div class="progress-container" v-if="transfer.active && transfer.filename === file.name">
                                 <div class="progress-bar" :style="{ width: transfer.progress + '%' }"></div>
                             </div>
-                            <button @click="transferToEReader(file.name)" :disabled="!isEReaderConnected || transfer.active">Transfer to E-Reader</button>
-                            <a class="sleep-btn" style="text-decoration: none;" v-if="file.name.toLowerCase().endsWith('.epub')" :href="'/viewer.html?file=' + encodeURIComponent(file.name) + '&source=sd'">Read</a>
-                            <button v-if="isAdmin" @click="deleteFile(file.name, 'sd')" class="btn danger" style="background-color: #c94b4b; color: white;">Delete</button>
-                            <button v-if="transfer.active && transfer.filename === file.name" @click="cancelTransfer" class="cancel-btn">Cancel</button>
+                            <button @click="transferToEReader(file.name)" :disabled="!isEReaderConnected || transfer.active" :title="transfer.active ? 'A transfer is currently in progress' : (!isEReaderConnected ? 'Connect an E-Reader to transfer books' : 'Transfer to E-Reader')" :aria-label="'Transfer ' + file.title + ' to E-Reader'">Transfer to E-Reader</button>
+                            <a class="sleep-btn" style="text-decoration: none;" v-if="file.name.toLowerCase().endsWith('.epub')" :href="'/viewer.html?file=' + encodeURIComponent(file.name) + '&source=sd'" :aria-label="'Read ' + file.title">Read</a>
+                            <button v-if="isAdmin" @click="deleteFile(file.name, 'sd')" class="btn danger" style="background-color: #c94b4b; color: white;" :aria-label="'Delete ' + file.title">Delete</button>
+                            <button v-if="transfer.active && transfer.filename === file.name" @click="cancelTransfer" class="cancel-btn" :aria-label="'Cancel transfer for ' + file.title">Cancel</button>
                         </div>
                     </li>
                 </ul>
@@ -83,7 +93,8 @@
                 <div v-if="isEReaderConnected">
                     <ul class="file-list">
                         <li v-if="ereaderFiles.length === 0" class="empty-state">
-                            No books found on the e-reader.
+                            No books found on the e-reader. <br>
+                            <span style="font-size: 0.9em; margin-top: 5px; display: inline-block;">Transfer a book from your local library to start reading!</span>
                         </li>
                         <li v-for="file in ereaderFiles" :key="file.name">
                             <div class="file-info">
@@ -95,9 +106,9 @@
                                 <div class="progress-container" v-if="transfer.active && transfer.filename === file.name">
                                     <div class="progress-bar" :style="{ width: transfer.progress + '%' }"></div>
                                 </div>
-                                <button @click="transferToLibrary(file.name)" :disabled="transfer.active">Transfer to Library</button>
-                                <button v-if="isAdmin" @click="deleteFile(file.name, 'usb')" class="btn danger" style="background-color: #c94b4b; color: white;">Delete</button>
-                                <button v-if="transfer.active && transfer.filename === file.name" @click="cancelTransfer" class="cancel-btn">Cancel</button>
+                                <button @click="transferToLibrary(file.name)" :disabled="transfer.active" :title="transfer.active ? 'A transfer is currently in progress' : 'Transfer to Library'" :aria-label="'Transfer ' + file.title + ' to Library'">Transfer to Library</button>
+                                <button v-if="isAdmin" @click="deleteFile(file.name, 'usb')" class="btn danger" style="background-color: #c94b4b; color: white;" :aria-label="'Delete ' + file.title">Delete</button>
+                                <button v-if="transfer.active && transfer.filename === file.name" @click="cancelTransfer" class="cancel-btn" :aria-label="'Cancel transfer for ' + file.title">Cancel</button>
                             </div>
                         </li>
                     </ul>
@@ -108,7 +119,9 @@
             </div>
         </main>
         <footer class="app-footer">
-            <p class="error-message" v-if="transfer.error">{{ transfer.error }}</p>
+            <div aria-live="assertive">
+                <p class="error-message" v-if="transfer.error">{{ transfer.error }}</p>
+            </div>
             <div class="footer-actions">
                 <button @click="enterSleepMode" class="sleep-btn">Enter Sleep Mode</button>
             </div>
@@ -117,5 +130,25 @@
 
     <script src="vue.global.js"></script>
     <script src="script.js"></script>
+    <script>
+        function toggleMenu() {
+            const menu = document.getElementById('menuContent');
+            const btn = document.querySelector('.menu-btn');
+            const isExpanded = btn.getAttribute('aria-expanded') === 'true';
+            menu.classList.toggle('show');
+            btn.setAttribute('aria-expanded', !isExpanded);
+        }
+        window.onclick = function(event) {
+            if (!event.target.matches('.menu-btn')) {
+                var dropdowns = document.getElementsByClassName("menu-content");
+                for (var i = 0; i < dropdowns.length; i++) {
+                    if (dropdowns[i].classList.contains('show')) {
+                        dropdowns[i].classList.remove('show');
+                        document.querySelector('.menu-btn').setAttribute('aria-expanded', 'false');
+                    }
+                }
+            }
+        }
+    </script>
 </body>
 </html>
