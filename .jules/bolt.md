@@ -44,3 +44,7 @@
 **Learning:** In ESP-IDF web servers, using parallel fetches (`Promise.all`) or sequential fetch chains to multiple endpoints exhausts the connection limit, causing `no slots left for registering handler` or high latency. Previously, `list-files?type=sd` and `list-files?type=usb` were fetched sequentially to avoid the parallel limitation, but this introduced "waterfall" latency on the frontend.
 **Action:** When a frontend needs data from multiple backend sources on load, combine them into a single consolidated endpoint (e.g. `type=all`) that streams a combined JSON response using `httpd_resp_send_chunk`. This solves both the connection exhaustion issue and the frontend fetch latency penalty.
 
+
+## 2024-11-23 - [Combine bulletin board API endpoints to fix fetch waterfall]
+**Learning:** Sequential fetches in JavaScript (`await fetch(a); await fetch(b); await fetch(c);`) resolve the connection pool exhaustion issues on ESP-IDF web servers, but introduce a severe "fetch waterfall" latency penalty on the frontend, drastically slowing down page loads and updates.
+**Action:** Always combine related frontend data requests (like info, status, and messages for a bulletin board) into a single consolidated backend endpoint (e.g. `/board/all`) that returns a combined JSON payload.

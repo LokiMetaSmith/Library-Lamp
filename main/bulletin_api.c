@@ -48,6 +48,47 @@ static esp_err_t board_info_handler(httpd_req_t *req) {
     return ESP_OK;
 }
 
+
+static esp_err_t board_all_handler(httpd_req_t *req) {
+    cJSON *doc = cJSON_CreateObject();
+
+    cJSON *status_obj = cJSON_CreateObject();
+    cJSON_AddBoolToObject(status_obj, "full", msgCount >= MAX_MSGS);
+    cJSON_AddItemToObject(doc, "status", status_obj);
+
+    cJSON *info_obj = cJSON_CreateObject();
+    cJSON_AddStringToObject(info_obj, "name", id_name);
+    cJSON_AddStringToObject(info_obj, "icon", id_icon);
+    cJSON_AddStringToObject(info_obj, "tagline", id_tagline);
+    cJSON_AddStringToObject(info_obj, "rules", id_rules);
+    cJSON_AddStringToObject(info_obj, "footer", id_footer);
+    char uptime_str[32];
+    snprintf(uptime_str, sizeof(uptime_str), "Uptime: %lu m", (unsigned long)(esp_timer_get_time() / 60000000ULL));
+    cJSON_AddStringToObject(info_obj, "uptime", uptime_str);
+    cJSON_AddItemToObject(doc, "info", info_obj);
+
+    cJSON *msgs_arr = cJSON_CreateArray();
+    unsigned long now = nowSecs();
+    for (int i = 0; i < msgCount; i++) {
+        if (msgs[i].expires < now) continue;
+        cJSON *obj = cJSON_CreateObject();
+        cJSON_AddNumberToObject(obj, "id", msgs[i].id);
+        cJSON_AddStringToObject(obj, "author", msgs[i].author);
+        cJSON_AddStringToObject(obj, "type", msgs[i].type);
+        cJSON_AddStringToObject(obj, "text", msgs[i].text);
+        cJSON_AddNumberToObject(obj, "expires", msgs[i].expires);
+        cJSON_AddItemToArray(msgs_arr, obj);
+    }
+    cJSON_AddItemToObject(doc, "messages", msgs_arr);
+
+    char *json_str = cJSON_PrintUnformatted(doc);
+    httpd_resp_set_type(req, "application/json");
+    httpd_resp_send(req, json_str, strlen(json_str));
+    free(json_str);
+    cJSON_Delete(doc);
+    return ESP_OK;
+}
+
 static esp_err_t board_messages_handler(httpd_req_t *req) {
     cJSON *doc = cJSON_CreateArray();
     unsigned long now = nowSecs();
@@ -337,6 +378,10 @@ void register_bulletin_api_handlers(httpd_handle_t server) {
 
     httpd_uri_t msgs_uri = { .uri = "/board/messages", .method = HTTP_GET, .handler = board_messages_handler, .user_ctx = NULL };
     httpd_register_uri_handler(server, &msgs_uri);
+
+    httpd_uri_t all_uri = { .uri = "/board/all", .method = HTTP_GET, .handler = board_all_handler, .user_ctx = NULL };
+    httpd_register_uri_handler(server, &all_uri);
+
 
     httpd_uri_t post_uri = { .uri = "/board/post", .method = HTTP_POST, .handler = board_post_handler, .user_ctx = NULL };
     httpd_register_uri_handler(server, &post_uri);
