@@ -209,7 +209,7 @@ textarea.restore-area:focus { border-color: var(--accent-dark); }
   <h2>Admin Access</h2>
   <label for="keyIn">Admin Access Key</label>
   <input type="password" id="keyIn" autocomplete="off">
-  <button onclick="tryLogin()">Unlock 🔑</button>
+  <button id="loginBtn" onclick="tryLogin()">Unlock 🔑</button>
   <div class="error" id="gateErr" aria-live="assertive"></div>
 </div>
 
@@ -360,6 +360,12 @@ function tryLogin() {
   const val = document.getElementById('keyIn').value;
   if (!val) return;
 
+  const btn = document.getElementById('loginBtn');
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = 'Unlocking... 🔑';
+  }
+
   fetch('/board/admin/auth', {
     method: 'POST',
     body: JSON.stringify({ key: val })
@@ -374,9 +380,17 @@ function tryLogin() {
     document.getElementById('gate').style.display  = 'none';
     document.getElementById('panel').style.display = 'block';
     loadAdminData();
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = 'Unlock 🔑';
+    }
   })
   .catch(() => {
     document.getElementById('gateErr').textContent = 'Incorrect key.';
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = 'Unlock 🔑';
+    }
   });
 }
 document.getElementById('keyIn').addEventListener('keydown', e => {
