@@ -82,7 +82,7 @@ module final_assembly() {
     book_box();
 
     // 2. The cover, placed on top of the box
-    translate([-cover_overhang, -cover_overhang, outer_height]) {
+    translate([-cover_overhang, -cover_overhang, outer_height - 1]) {
         cover();
     }
 
@@ -90,7 +90,7 @@ module final_assembly() {
     if (litho_enabled) {
         // You will likely need to adjust the translation and rotation
         // to get the perfect fit for your specific lithophane.
-        translate([cover_overhang, -cover_overhang, outer_height + cover_height]) {
+        translate([cover_overhang, -cover_overhang, outer_height + cover_height - 1]) {
             // Rotate the lithophane to be flat on the cover
             rotate([90, 0, 90]) {
                 import(bent_litho_stl_path);
