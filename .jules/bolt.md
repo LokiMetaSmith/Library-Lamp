@@ -48,3 +48,6 @@
 ## 2024-11-23 - [Combine bulletin board API endpoints to fix fetch waterfall]
 **Learning:** Sequential fetches in JavaScript (`await fetch(a); await fetch(b); await fetch(c);`) resolve the connection pool exhaustion issues on ESP-IDF web servers, but introduce a severe "fetch waterfall" latency penalty on the frontend, drastically slowing down page loads and updates.
 **Action:** Always combine related frontend data requests (like info, status, and messages for a bulletin board) into a single consolidated backend endpoint (e.g. `/board/all`) that returns a combined JSON payload.
+## 2024-11-23 - [Replace O(N) array shifts with memmove in C backend]
+**Learning:** Manually shifting array structures using `for` loops causes unnecessary overhead and is O(N).
+**Action:** Replace these `for` loops with `memmove` for safe and heavily optimized memory block copies.

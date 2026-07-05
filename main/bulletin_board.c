@@ -221,7 +221,7 @@ void bb_add_message(const char* author, const char* type, const char* text, int 
             }
         }
         if (evict < 0) return;
-        for (int i = evict; i < msgCount - 1; i++) msgs[i] = msgs[i + 1];
+        memmove(&msgs[evict], &msgs[evict + 1], (msgCount - 1 - evict) * sizeof(BulletinMessage));
         msgCount--;
     }
     
@@ -245,7 +245,7 @@ void bb_add_message(const char* author, const char* type, const char* text, int 
 void bb_delete_message(uint16_t targetId) {
     for (int i = 0; i < msgCount; i++) {
         if (msgs[i].id == targetId) {
-            for (int j = i; j < msgCount - 1; j++) msgs[j] = msgs[j + 1];
+            memmove(&msgs[i], &msgs[i + 1], (msgCount - 1 - i) * sizeof(BulletinMessage));
             msgCount--;
             msgsDirty = true;
             bb_save_messages();

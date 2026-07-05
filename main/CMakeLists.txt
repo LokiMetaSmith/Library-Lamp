@@ -40,7 +40,7 @@ idf_component_register(SRCS "${COMPONENT_SRCS}"
 
                          # Peripherals
                          # RMT and GPIO drivers are typically brought in by esp_common or other components
-                         esp_driver_gpio
+
                          esp_driver_rmt
                          # Bluetooth components
                          bt
