@@ -12,3 +12,8 @@
 **Vulnerability:** The `/about.html` page fetches the content of `about.txt` (a user-uploadable file if public uploads are enabled) and inserts it directly into the DOM using `innerHTML` without HTML entity encoding, enabling Stored XSS.
 **Learning:** Any content fetched dynamically from files that could potentially be modified by users (like texts, configs, or descriptions) MUST be treated as untrusted input. Directly using `innerHTML` with unsanitized file content creates a severe XSS risk.
 **Prevention:** Always sanitize/escape text fetched from external or user-modifiable files before inserting it into the DOM using `innerHTML`, or prefer using `textContent` instead when HTML rendering is not strictly required.
+
+## 2025-01-20 - Prevent Out-of-Bounds Write via Null Terminator on HTTP Payload
+**Vulnerability:** HTTP handlers were reading request payloads up to `remaining` bytes into buffers allocated exactly as `malloc(remaining)` or fixed size (e.g., `malloc(1024)` for max 1024 length), and then immediately appending a null terminator `buf[ret] = '\0'`. If `ret` reached the max buffer size, this caused an Out-of-Bounds write of one byte.
+**Learning:** When using `httpd_req_recv` to receive HTTP payloads and converting them into null-terminated C-strings, the buffer must explicitly allocate one extra byte (`+ 1`) exclusively for the null terminator. Checking `remaining >= MAX_SIZE` and allocating `MAX_SIZE` is insufficient if the receive loop reads up to `MAX_SIZE` and then sets `buf[MAX_SIZE] = '\0'`.
+**Prevention:** Always allocate `expected_max_length + 1` bytes when null-terminating dynamic buffers after a socket read.
