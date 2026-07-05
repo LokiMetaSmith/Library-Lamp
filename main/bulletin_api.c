@@ -118,7 +118,8 @@ static esp_err_t board_post_handler(httpd_req_t *req) {
         return ESP_FAIL;
     }
 
-    char *buf = (char *)malloc(1024);
+    // Allocate an extra byte for the null terminator to prevent out-of-bounds write
+    char *buf = (char *)malloc(1025);
     if (!buf) {
         httpd_resp_send_500(req);
         return ESP_FAIL;
@@ -179,7 +180,8 @@ static esp_err_t admin_auth_handler(httpd_req_t *req) {
         return ESP_FAIL;
     }
 
-    char *buf = (char *)malloc(256);
+    // Allocate an extra byte for the null terminator to prevent out-of-bounds write
+    char *buf = (char *)malloc(257);
     if (!buf) {
         httpd_resp_send_500(req);
         return ESP_FAIL;
