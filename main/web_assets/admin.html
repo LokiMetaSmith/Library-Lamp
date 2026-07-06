@@ -340,19 +340,20 @@ window.addEventListener('DOMContentLoaded', () => {
     .catch(e => console.log('Hardware auth not present.'));
 });
 
-function loadAdminData() {
+async function loadAdminData() {
   // Load identity info
-  apiFetch(api('/board/admin/identity/get'))
-    .then(r => r.json())
-    .then(d => {
-      document.getElementById('idName').value = d.name || '';
-      document.getElementById('idIcon').value = d.icon || '';
-      document.getElementById('idTagline').value = d.tagline || '';
-      document.getElementById('idRules').value = d.rules || '';
-      document.getElementById('idFooter').value = d.footer || '';
-    });
-  loadPostList();
-  loadUploadSettings();
+  const r = await apiFetch(api('/board/admin/identity/get'));
+  const d = await r.json();
+  document.getElementById('idName').value = d.name || '';
+  document.getElementById('idIcon').value = d.icon || '';
+  document.getElementById('idTagline').value = d.tagline || '';
+  document.getElementById('idRules').value = d.rules || '';
+  document.getElementById('idFooter').value = d.footer || '';
+
+  // ⚡ Bolt: Await these to execute sequentially rather than concurrently
+  // to avoid exhausting the ESP-IDF connection pool.
+  await loadPostList();
+  await loadUploadSettings();
 }
 
 // ── Gate ────────────────────────────────────────────────────────────────────
@@ -423,12 +424,10 @@ function fb(id, msg) {
 }
 
 // ── Upload Settings ───────────────────────────────────────────────────────────
-function loadUploadSettings() {
-  fetch('/status')
-    .then(r => r.json())
-    .then(d => {
-      document.getElementById('publicUploadsCheck').checked = d.allow_public_uploads;
-    });
+async function loadUploadSettings() {
+  const r = await fetch('/status');
+  const d = await r.json();
+  document.getElementById('publicUploadsCheck').checked = d.allow_public_uploads;
 }
 
 function doSetPublicUploads() {
