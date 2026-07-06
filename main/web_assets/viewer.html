@@ -18,8 +18,8 @@
     <div class="toolbar">
         <a href="javascript:history.back()" id="backBtn">Back</a>
         <div>
-            <button id="prevBtn" disabled>&#8592; Prev</button>
-            <button id="nextBtn" disabled>Next &#8594;</button>
+            <button id="prevBtn" disabled title="Loading book..." aria-label="Previous Page">&#8592; Prev</button>
+            <button id="nextBtn" disabled title="Loading book..." aria-label="Next Page">Next &#8594;</button>
         </div>
     </div>
 
@@ -57,7 +57,9 @@
             rendition.display().then(() => {
                 document.getElementById('loading').style.display = 'none';
                 document.getElementById('prevBtn').disabled = false;
+                document.getElementById('prevBtn').title = "Previous Page (Left Arrow)";
                 document.getElementById('nextBtn').disabled = false;
+                document.getElementById('nextBtn').title = "Next Page (Right Arrow)";
             }).catch(err => {
                 document.getElementById('loading').textContent = "Error loading book: " + err;
             });

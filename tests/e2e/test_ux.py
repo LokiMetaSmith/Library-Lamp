@@ -30,6 +30,14 @@ def test_ux():
 
     assert ":focus-visible" in css_content, "Missing focus-visible styles in style.css"
 
+    with open(os.path.join(base_dir, 'main/web_assets/viewer.html'), 'r') as f:
+        viewer_content = f.read()
+
+    assert "title=\"Loading book...\"" in viewer_content, "Missing disabled state tooltip in viewer.html"
+    assert "aria-label=\"Previous Page\"" in viewer_content, "Missing Previous Page aria-label in viewer.html"
+    assert "aria-label=\"Next Page\"" in viewer_content, "Missing Next Page aria-label in viewer.html"
+    assert "title = \"Previous Page (Left Arrow)\"" in viewer_content, "Missing keyboard hint tooltip in viewer.html"
+
     print("All assertions passed. Modifications are successfully present.")
 
 if __name__ == "__main__":
