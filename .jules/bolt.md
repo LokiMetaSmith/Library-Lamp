@@ -51,3 +51,7 @@
 ## 2024-11-23 - [Replace O(N) array shifts with memmove in C backend]
 **Learning:** Manually shifting array structures using `for` loops causes unnecessary overhead and is O(N).
 **Action:** Replace these `for` loops with `memmove` for safe and heavily optimized memory block copies.
+
+## 2024-11-23 - [Incomplete Rollout of Await in Async Refactor]
+**Learning:** When converting a function that uses a `.then()` chain into an `async/await` sequence, if that function is called within another `async` function and preceded by `await`, it must either be marked as `async` itself (and `await` its internal Promises) or return the Promise explicitly. Otherwise, it implicitly returns `undefined`, the `await` resolves immediately, and the underlying fetches execute concurrently instead of sequentially, defeating the purpose of the refactor.
+**Action:** When refactoring concurrent fetches into sequential awaits, ensure that all functions in the call stack are properly awaited and that intermediate functions are correctly converted to `async` (or return their Promises) so the `await` accurately blocks execution until the network request completes.
