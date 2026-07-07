@@ -517,7 +517,7 @@ async function loadPostList() {
     <div class="post-row-meta">${esc(m.type)} · ${esc(m.author)} · ${timeLeftShort(m.expires)} left</div>
     <div class="post-row-text">${esc(m.text)}</div>
   </div>
-  <button class="btn danger" onclick="deletePost(${m.id})">Delete</button>
+  <button class="btn danger" onclick="deletePost(${m.id}, this)" aria-label="Delete post by ${esc(m.author)}">Delete</button>
 </div>`).join('') +
     '</div>';
   } catch (_) {
@@ -525,8 +525,12 @@ async function loadPostList() {
   }
 }
 
-async function deletePost(id) {
+async function deletePost(id, btn) {
   if (!confirm('Delete this post?')) return;
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = 'Deleting...';
+  }
   const r = await apiFetch(api('/board/admin/delete/post'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -538,6 +542,10 @@ async function deletePost(id) {
     fb('postListFb', '✓ Post deleted');
   } else {
     fb('postListFb', '✗ Delete failed');
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = 'Delete';
+    }
   }
 }
 
