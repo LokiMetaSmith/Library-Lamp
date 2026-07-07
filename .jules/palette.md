@@ -22,3 +22,6 @@
 ## 2024-05-24 - Dynamic Disabled State Explanations with Keyboard Hints
 **Learning:** Adding static aria-labels and static titles to buttons isn't enough when their state changes (e.g. from disabled to enabled). Users need to know *why* a button is disabled, and screen readers need an aria-label. Furthermore, when the button is enabled, replacing the tooltip with keyboard shortcut hints greatly improves usability without cluttering the UI.
 **Action:** When creating interactive viewer-like experiences, provide a default `title` explaining the loading/disabled state along with a static `aria-label`. Then, dynamically update the `title` attribute via JavaScript to show keyboard shortcuts once the state becomes active.
+## 2024-11-21 - Passing element context in vanilla JS lists
+**Learning:** When rendering dynamic lists with string interpolation in vanilla JS (like in `admin.html`), it can be tricky to grab the exact button element later to apply loading states, especially if the button lacks a unique ID.
+**Action:** When adding inline onclick handlers in template literals (e.g., `onclick="deletePost(${id}, this)"`), pass `this` to give the function a direct reference to the clicked element, making it easy to toggle disabled states and text content immediately.
