@@ -364,10 +364,10 @@ body {
     </div>
 
     <div class="field field-msg">
-      <label for="msgIn">Message</label>
+      <label for="msgIn">Message <span style="color: var(--c-need-bar);" aria-hidden="true">*</span></label>
       <textarea id="msgIn" maxlength="300"
                 placeholder="What's on the board?"
-                spellcheck="false"></textarea>
+                spellcheck="false" aria-required="true"></textarea>
       <div class="char-hint" id="msgHint" aria-live="polite"></div>
     </div>
 
@@ -587,7 +587,14 @@ function render(data) {
 async function doPost() {
   const n = document.getElementById('nameIn').value.trim() || 'neighbor';
   const t = document.getElementById('msgIn').value.trim();
-  if (!t) return;
+  const hint = document.getElementById('msgHint');
+
+  if (!t) {
+    hint.textContent = 'Message is required to post.';
+    hint.className = 'char-hint warn';
+    document.getElementById('msgIn').focus();
+    return;
+  }
 
   const btn = document.getElementById('postBtn');
   if (btn) {

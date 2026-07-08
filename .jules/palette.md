@@ -25,3 +25,7 @@
 ## 2024-11-21 - Passing element context in vanilla JS lists
 **Learning:** When rendering dynamic lists with string interpolation in vanilla JS (like in `admin.html`), it can be tricky to grab the exact button element later to apply loading states, especially if the button lacks a unique ID.
 **Action:** When adding inline onclick handlers in template literals (e.g., `onclick="deletePost(${id}, this)"`), pass `this` to give the function a direct reference to the clicked element, making it easy to toggle disabled states and text content immediately.
+
+## 2024-11-21 - [Vanilla JS Silent Form Validations]
+**Learning:** In vanilla JavaScript frontends, simply returning early (`if (!value) return;`) on empty form submissions creates a silent failure where the user clicks the button but nothing happens, which is confusing and poor UX/a11y.
+**Action:** When catching empty required inputs in vanilla JS functions, always use the existing `aria-live` hint/error containers to display a clear error message, and immediately call `.focus()` on the empty input to guide the user to the required action.
