@@ -374,27 +374,33 @@ body {
   </div>
 
   <div class="expiry-row">
-    <span class="expiry-label">Expires:</span>
-    <button class="exp-btn" aria-pressed="false" onclick="setExpiry(24,  this)">1 day</button>
-    <button class="exp-btn" aria-pressed="false" onclick="setExpiry(72,  this)">3 days</button>
-    <button class="exp-btn active" aria-pressed="true" onclick="setExpiry(168, this)">1 week</button>
+    <span class="expiry-label" id="expiryLabel">Expires:</span>
+    <div role="group" aria-labelledby="expiryLabel" style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
+      <button class="exp-btn" aria-pressed="false" onclick="setExpiry(24,  this)">1 day</button>
+      <button class="exp-btn" aria-pressed="false" onclick="setExpiry(72,  this)">3 days</button>
+      <button class="exp-btn active" aria-pressed="true" onclick="setExpiry(168, this)">1 week</button>
+    </div>
     <button class="post-btn" id="postBtn" onclick="doPost()">POST</button>
   </div>
 </div>
 
 <div class="filter-bar">
-  <span class="filter-label">Show:</span>
-  <button class="ftab active" aria-pressed="true" onclick="setFilter('',       this)">All</button>
-  <button class="ftab" aria-pressed="false" onclick="setFilter('Notice', this)">📌 Notice</button>
-  <button class="ftab" aria-pressed="false" onclick="setFilter('Offer',  this)">🌱 Offer</button>
-  <button class="ftab" aria-pressed="false" onclick="setFilter('Need',   this)">🤝 Need</button>
-  <button class="ftab" aria-pressed="false" onclick="setFilter('Event',  this)">📅 Event</button>
-  <button class="ftab" aria-pressed="false" onclick="setFilter('Review',  this)">📖 Review</button>
-  <button class="ftab" aria-pressed="false" onclick="setFilter('Recomm',   this)">💡 Recomm.</button>
-  <button class="ftab" aria-pressed="false" onclick="setFilter('Request',  this)">🔍 Request</button>
+  <span class="filter-label" id="filterLabel">Show:</span>
+  <div role="group" aria-labelledby="filterLabel" style="display: flex; gap: 6px; flex-wrap: wrap; align-items: center;">
+    <button class="ftab active" aria-pressed="true" onclick="setFilter('',       this)">All</button>
+    <button class="ftab" aria-pressed="false" onclick="setFilter('Notice', this)">📌 Notice</button>
+    <button class="ftab" aria-pressed="false" onclick="setFilter('Offer',  this)">🌱 Offer</button>
+    <button class="ftab" aria-pressed="false" onclick="setFilter('Need',   this)">🤝 Need</button>
+    <button class="ftab" aria-pressed="false" onclick="setFilter('Event',  this)">📅 Event</button>
+    <button class="ftab" aria-pressed="false" onclick="setFilter('Review',  this)">📖 Review</button>
+    <button class="ftab" aria-pressed="false" onclick="setFilter('Recomm',   this)">💡 Recomm.</button>
+    <button class="ftab" aria-pressed="false" onclick="setFilter('Request',  this)">🔍 Request</button>
+  </div>
   <span class="sep"></span>
-  <button class="ftab active" id="sNew" aria-pressed="true" onclick="setSort('new', this)">New</button>
-  <button class="ftab"        id="sExp" aria-pressed="false" onclick="setSort('exp', this)">Expiring</button>
+  <div role="group" aria-label="Sort" style="display: flex; gap: 6px; flex-wrap: wrap; align-items: center;">
+    <button class="ftab active" id="sNew" aria-pressed="true" onclick="setSort('new', this)">New</button>
+    <button class="ftab"        id="sExp" aria-pressed="false" onclick="setSort('exp', this)">Expiring</button>
+  </div>
 </div>
 
 <div class="board" id="board"></div>
