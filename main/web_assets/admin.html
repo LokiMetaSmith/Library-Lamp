@@ -358,8 +358,14 @@ async function loadAdminData() {
 
 // ── Gate ────────────────────────────────────────────────────────────────────
 function tryLogin() {
-  const val = document.getElementById('keyIn').value;
-  if (!val) return;
+  const keyInput = document.getElementById('keyIn');
+  const val = keyInput.value;
+  if (!val) {
+    const errEl = document.getElementById('gateErr');
+    if (errEl) errEl.textContent = 'Please enter an access key.';
+    keyInput.focus();
+    return;
+  }
 
   const btn = document.getElementById('loginBtn');
   if (btn) {
@@ -450,10 +456,21 @@ function doSetPublicUploads() {
 
 // ── Change admin key ──────────────────────────────────────────────────────────
 function doSetKey() {
-  const n = document.getElementById('newKey').value;
-  const c = document.getElementById('newKeyConfirm').value;
-  if (n.length < 4)  { fb('keyFb', '✗ Key must be at least 4 characters'); return; }
-  if (n !== c)       { fb('keyFb', '✗ Keys do not match'); return; }
+  const newKeyEl = document.getElementById('newKey');
+  const confirmKeyEl = document.getElementById('newKeyConfirm');
+  const n = newKeyEl.value;
+  const c = confirmKeyEl.value;
+
+  if (n.length < 4) {
+    fb('keyFb', '✗ Key must be at least 4 characters');
+    newKeyEl.focus();
+    return;
+  }
+  if (n !== c) {
+    fb('keyFb', '✗ Keys do not match');
+    confirmKeyEl.focus();
+    return;
+  }
   apiFetch(api('/board/admin/setkey') + '&newkey=' + encodeURIComponent(n))
     .then(r => r.text())
     .then(msg => {
