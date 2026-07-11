@@ -312,7 +312,7 @@ textarea.restore-area:focus { border-color: var(--accent-dark); }
     <div class="section-head">Storage Management</div>
     <div class="section-body">
       <div class="row">
-        <button class="btn danger" onclick="confirmFormatSD()">Format SD Card</button>
+        <button class="btn danger" onclick="confirmFormatSD(this)">Format SD Card</button>
       </div>
       <div class="feedback" id="storageFb" aria-live="polite"></div>
     </div>
@@ -567,8 +567,13 @@ async function deletePost(id, btn) {
 }
 
 // ── Storage Management ────────────────────────────────────────────────────────
-function confirmFormatSD() {
+function confirmFormatSD(btn) {
   if (!confirm('Are you sure you want to format the SD card? All data will be lost.')) return;
+
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = 'Formatting...';
+  }
 
   apiFetch(api('/board/admin/format-sd'), { method: 'POST' })
     .then(r => {
@@ -578,7 +583,13 @@ function confirmFormatSD() {
         fb('storageFb', '✗ Failed to format SD Card');
       }
     })
-    .catch(() => fb('storageFb', '✗ Request failed'));
+    .catch(() => fb('storageFb', '✗ Request failed'))
+    .finally(() => {
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = 'Format SD Card';
+      }
+    });
 }
 
 // ── Lamp Color ────────────────────────────────────────────────────────────────
