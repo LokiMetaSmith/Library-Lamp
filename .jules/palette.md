@@ -36,3 +36,6 @@
 ## 2024-07-10 - Improve inline form validation feedback
 **Learning:** Returning silently when required inputs are empty creates a confusing user experience, as the user clicks a button and nothing appears to happen. Even though standard HTML forms have native validation (which we don't always use or rely on via JS), custom JavaScript logic should also provide explicit feedback.
 **Action:** Always provide actionable inline feedback by updating an existing `aria-live` container with an error message and immediately calling `.focus()` on the invalid input, so screen readers announce the issue and keyboard users can immediately fix it.
+## 2026-07-11 - Provide loading states for destructive async actions
+**Learning:** Destructive or potentially slow operations (like formatting an SD card) without immediate visual feedback can lead to duplicate clicks, user confusion, and perceived slowness.
+**Action:** Always provide immediate visual feedback for async operations by temporarily disabling the trigger button and updating its text (e.g., to a loading state), especially for destructive actions.

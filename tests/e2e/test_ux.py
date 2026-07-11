@@ -38,6 +38,14 @@ def test_ux():
     assert "aria-label=\"Next Page\"" in viewer_content, "Missing Next Page aria-label in viewer.html"
     assert "title = \"Previous Page (Left Arrow)\"" in viewer_content, "Missing keyboard hint tooltip in viewer.html"
 
+    with open(os.path.join(base_dir, 'main/web_assets/admin.html'), 'r') as f:
+        admin_content = f.read()
+
+    assert "onclick=\"confirmFormatSD(this)\"" in admin_content, "Missing 'this' parameter in confirmFormatSD call"
+    assert "btn.disabled = true" in admin_content, "Missing disabled state in confirmFormatSD"
+    assert "Formatting..." in admin_content, "Missing loading text in confirmFormatSD"
+    assert ".finally" in admin_content, "Missing finally block in confirmFormatSD"
+
     print("All assertions passed. Modifications are successfully present.")
 
 if __name__ == "__main__":
