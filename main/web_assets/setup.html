@@ -21,9 +21,9 @@
     <div class="container">
         <h1>Wi-Fi Setup</h1>
         <p>Connect your E-Book Librarian to your local Wi-Fi network.</p>
-        <form action="/save-credentials" method="POST">
+        <form action="/save-credentials" method="POST" onsubmit="const btn = this.querySelector('button[type=submit]'); btn.disabled = true; btn.textContent = 'Connecting...'; return true;">
             <div style="margin-bottom: 15px;">
-                <label for="ssid" style="display: block; text-align: left; margin-bottom: 5px; font-weight: bold; color: #555;">Wi-Fi Network Name (SSID)</label>
+                <label for="ssid" style="display: block; text-align: left; margin-bottom: 5px; font-weight: bold; color: #555;">Wi-Fi Network Name (SSID) <span aria-hidden="true" class="error">*</span></label>
                 <input type="text" id="ssid" name="ssid" required style="margin-bottom: 0;">
             </div>
             <div style="margin-bottom: 20px;">

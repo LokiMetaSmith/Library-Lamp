@@ -39,3 +39,6 @@
 ## 2026-07-11 - Provide loading states for destructive async actions
 **Learning:** Destructive or potentially slow operations (like formatting an SD card) without immediate visual feedback can lead to duplicate clicks, user confusion, and perceived slowness.
 **Action:** Always provide immediate visual feedback for async operations by temporarily disabling the trigger button and updating its text (e.g., to a loading state), especially for destructive actions.
+## 2026-07-12 - Provide loading states for standard HTML form submissions
+**Learning:** Even when not using async JS (like `fetch`), standard HTML forms submitting to slow backends (like an ESP32 saving credentials and restarting Wi-Fi) leave the user hanging without feedback, which can lead to multiple clicks and confusion.
+**Action:** When using standard HTML `<form>` submissions, add a simple `onsubmit` handler to disable the submit button and update its text (e.g., to "Connecting...") to provide immediate visual feedback during the page navigation delay.
