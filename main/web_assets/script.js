@@ -24,7 +24,8 @@ createApp({
             uploadTitle: '',
             uploadAuthor: '',
             isUploading: false,
-            uploadError: ''
+            uploadError: '',
+            isDeleting: null
         }
     },
     computed: {
@@ -117,6 +118,7 @@ createApp({
         async deleteFile(filename, source) {
             if (!confirm(`Are you sure you want to delete ${filename}?`)) return;
 
+            this.isDeleting = filename;
             let url = '/delete-file';
             const savedKey = localStorage.getItem('adminKey');
             if (savedKey) {
@@ -139,6 +141,8 @@ createApp({
             } catch (error) {
                 console.error('Delete error:', error);
                 alert('An error occurred while deleting the file.');
+            } finally {
+                this.isDeleting = null;
             }
         },
         transferToEReader(filename) {

@@ -42,3 +42,6 @@
 ## 2026-07-12 - Provide loading states for standard HTML form submissions
 **Learning:** Even when not using async JS (like `fetch`), standard HTML forms submitting to slow backends (like an ESP32 saving credentials and restarting Wi-Fi) leave the user hanging without feedback, which can lead to multiple clicks and confusion.
 **Action:** When using standard HTML `<form>` submissions, add a simple `onsubmit` handler to disable the submit button and update its text (e.g., to "Connecting...") to provide immediate visual feedback during the page navigation delay.
+## 2024-11-25 - Item-specific async state tracking in Vue lists
+**Learning:** When dealing with async operations (like file deletion) inside a `v-for` list, using a simple boolean `isDeleting` state affects all items in the list, disabling all buttons simultaneously or requiring complex index tracking. Without feedback, the user isn't sure which item is being deleted.
+**Action:** When tracking async states for items in dynamic lists, assign the item's unique identifier (e.g., `this.isDeleting = file.name`) to the state variable instead of a boolean. Then, in the template, bind states specific to that item (`:disabled="isDeleting === file.name"` and change text to "Deleting..."), providing clear, isolated feedback for destructive actions without complex state management.
