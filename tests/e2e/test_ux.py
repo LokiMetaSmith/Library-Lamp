@@ -46,6 +46,9 @@ def test_ux():
     assert "Formatting..." in admin_content, "Missing loading text in confirmFormatSD"
     assert ".finally" in admin_content, "Missing finally block in confirmFormatSD"
 
+    assert "onclick=\"doSetLampColor(this)\"" in admin_content, "Missing 'this' parameter in doSetLampColor call"
+    assert "Setting..." in admin_content, "Missing loading text in doSetLampColor"
+
     print("All assertions passed. Modifications are successfully present.")
 
 if __name__ == "__main__":
