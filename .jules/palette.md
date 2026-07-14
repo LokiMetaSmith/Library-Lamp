@@ -45,3 +45,6 @@
 ## 2024-11-25 - Item-specific async state tracking in Vue lists
 **Learning:** When dealing with async operations (like file deletion) inside a `v-for` list, using a simple boolean `isDeleting` state affects all items in the list, disabling all buttons simultaneously or requiring complex index tracking. Without feedback, the user isn't sure which item is being deleted.
 **Action:** When tracking async states for items in dynamic lists, assign the item's unique identifier (e.g., `this.isDeleting = file.name`) to the state variable instead of a boolean. Then, in the template, bind states specific to that item (`:disabled="isDeleting === file.name"` and change text to "Deleting..."), providing clear, isolated feedback for destructive actions without complex state management.
+## 2026-07-14 - [Vanilla JS Async Feedback]
+**Learning:** When interacting with hardware components in a vanilla JS frontend (like setting the lamp color), missing immediate visual feedback can lead to duplicate submissions or confusion because backend processing adds noticeable delay.
+**Action:** Always provide explicit disabled/loading states wrapping async calls in vanilla JS applications to avoid user confusion and duplicate actions.
