@@ -48,3 +48,7 @@
 ## 2026-07-14 - [Vanilla JS Async Feedback]
 **Learning:** When interacting with hardware components in a vanilla JS frontend (like setting the lamp color), missing immediate visual feedback can lead to duplicate submissions or confusion because backend processing adds noticeable delay.
 **Action:** Always provide explicit disabled/loading states wrapping async calls in vanilla JS applications to avoid user confusion and duplicate actions.
+
+## 2024-07-15 - Admin Panel Form Accessibility & Loading States
+**Learning:** Found multiple form inputs in the admin panel lacking `aria-label` attributes and relying solely on `placeholder` texts for context (which isn't always accessible or visible). Also discovered several action buttons (e.g. Save Settings, Save Identity) that lacked loading feedback during async operations, which could lead to duplicate submissions or confusion.
+**Action:** When adding inputs in vanilla HTML frontends, always pair them with an explicit `aria-label` (or `<label>`). Additionally, for async operations, use inline `onclick` modifications (passing `this` as an argument) to quickly add disabled loading states to action buttons.
