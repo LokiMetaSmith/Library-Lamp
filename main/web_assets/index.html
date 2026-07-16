@@ -45,15 +45,15 @@
                     <h3 style="margin-top: 0;">Upload Book</h3>
                     <form @submit.prevent="uploadBook" style="display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end;">
                         <div>
-                            <label for="uploadFile" style="display: block; font-size: 0.9em; margin-bottom: 5px;">File</label>
+                            <label for="uploadFile" style="display: block; font-size: 0.9em; margin-bottom: 5px;">File <span aria-hidden="true" style="color: #ff8a80;">*</span></label>
                             <input type="file" id="uploadFile" ref="fileInput" required>
                         </div>
                         <div>
-                            <label for="uploadTitle" style="display: block; font-size: 0.9em; margin-bottom: 5px;">Title</label>
+                            <label for="uploadTitle" style="display: block; font-size: 0.9em; margin-bottom: 5px;">Title <span aria-hidden="true" style="color: #ff8a80;">*</span></label>
                             <input type="text" id="uploadTitle" v-model="uploadTitle" placeholder="Title" required>
                         </div>
                         <div>
-                            <label for="uploadAuthor" style="display: block; font-size: 0.9em; margin-bottom: 5px;">Author</label>
+                            <label for="uploadAuthor" style="display: block; font-size: 0.9em; margin-bottom: 5px;">Author <span aria-hidden="true" style="color: #ff8a80;">*</span></label>
                             <input type="text" id="uploadAuthor" v-model="uploadAuthor" placeholder="Author" required>
                         </div>
                         <button type="submit" :disabled="isUploading" :title="isUploading ? 'Upload in progress...' : 'Upload book'">
