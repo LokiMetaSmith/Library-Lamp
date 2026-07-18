@@ -55,3 +55,6 @@
 ## 2024-11-25 - [Form Required Indicators]
 **Learning:** Found an accessibility and UX issue in `index.html` where form inputs like `uploadFile`, `uploadTitle`, and `uploadAuthor` used the native `required` attribute for validation but had no visible indicator (like an asterisk) on their labels. Users could not distinguish mandatory fields from optional ones visually until they failed validation. Providing explicit visual cues makes forms much more predictable and prevents frustration.
 **Action:** Always pair programmatic `required` attributes with a visible indicator on the corresponding `<label>`, such as `<span aria-hidden="true" style="color: #ff8a80;">*</span>`, so users can see which fields are mandatory before attempting to submit.
+## 2024-07-20 - [Hardware Setup Password Visibility]
+**Learning:** In IoT device setup portals (like `setup.html`), mistyping a Wi-Fi password is a common point of failure that often requires hard-resetting the device. Providing a "Show/Hide" password toggle significantly reduces this friction and improves the overall UX of the onboarding process.
+**Action:** When creating or modifying hardware network setup forms, always include a toggle to unmask the password input to prevent user error.
