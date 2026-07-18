@@ -9,8 +9,8 @@
         .container { max-width: 400px; padding: 30px; background-color: #fff; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); text-align: center; }
         h1 { color: #1877f2; margin-bottom: 20px; }
         p { color: #555; margin-bottom: 30px; }
-        input[type="text"], input[type="password"] { width: 90%; padding: 12px; margin-bottom: 20px; border: 1px solid #ddd; border-radius: 6px; font-size: 1em; }
-        button { background-color: #1877f2; color: white; border: none; padding: 12px 20px; border-radius: 6px; cursor: pointer; font-size: 1.1em; width: 98%; transition: background-color 0.2s; }
+        input[type="text"], input[type="password"] { width: 90%; padding: 12px; margin-bottom: 20px; border: 1px solid #ddd; border-radius: 6px; font-size: 1em; box-sizing: border-box; }
+        button { background-color: #1877f2; color: white; border: none; padding: 12px 20px; border-radius: 6px; cursor: pointer; font-size: 1.1em; width: 98%; transition: background-color 0.2s; box-sizing: border-box; }
         button:hover { background-color: #166fe5; }
         .status-message { margin-top: 20px; font-weight: bold; }
         .success { color: #28a745; }
@@ -23,12 +23,15 @@
         <p>Connect your E-Book Librarian to your local Wi-Fi network.</p>
         <form action="/save-credentials" method="POST" onsubmit="const btn = this.querySelector('button[type=submit]'); btn.disabled = true; btn.textContent = 'Connecting...'; return true;">
             <div style="margin-bottom: 15px;">
-                <label for="ssid" style="display: block; text-align: left; margin-bottom: 5px; font-weight: bold; color: #555;">Wi-Fi Network Name (SSID) <span aria-hidden="true" class="error">*</span></label>
+                <label for="ssid" style="display: block; text-align: left; margin-bottom: 5px; font-weight: bold; color: #555; margin-left: 5%;">Wi-Fi Network Name (SSID) <span aria-hidden="true" class="error">*</span></label>
                 <input type="text" id="ssid" name="ssid" required style="margin-bottom: 0;">
             </div>
             <div style="margin-bottom: 20px;">
-                <label for="password" style="display: block; text-align: left; margin-bottom: 5px; font-weight: bold; color: #555;">Password</label>
-                <input type="password" id="password" name="password" style="margin-bottom: 0;">
+                <label for="password" style="display: block; text-align: left; margin-bottom: 5px; font-weight: bold; color: #555; margin-left: 5%;">Password</label>
+                <div style="display: flex; gap: 8px; width: 90%; margin: 0 auto;">
+                    <input type="password" id="password" name="password" style="margin-bottom: 0; width: 100%;">
+                    <button type="button" onclick="const p = document.getElementById('password'); const isPass = p.type === 'password'; p.type = isPass ? 'text' : 'password'; this.textContent = isPass ? 'Hide' : 'Show'; this.setAttribute('aria-pressed', isPass);" aria-label="Show password" aria-pressed="false" style="width: 80px; padding: 0; background-color: #6c757d; font-size: 0.9em; flex-shrink: 0;">Show</button>
+                </div>
             </div>
             <button type="submit">Connect</button>
         </form>
