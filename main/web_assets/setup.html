@@ -30,7 +30,7 @@
                 <label for="password" style="display: block; text-align: left; margin-bottom: 5px; font-weight: bold; color: #555; margin-left: 5%;">Password</label>
                 <div style="display: flex; gap: 8px; width: 90%; margin: 0 auto;">
                     <input type="password" id="password" name="password" style="margin-bottom: 0; width: 100%;">
-                    <button type="button" onclick="const p = document.getElementById('password'); const isPass = p.type === 'password'; p.type = isPass ? 'text' : 'password'; this.textContent = isPass ? 'Hide' : 'Show'; this.setAttribute('aria-pressed', isPass);" aria-label="Show password" aria-pressed="false" style="width: 80px; padding: 0; background-color: #6c757d; font-size: 0.9em; flex-shrink: 0;">Show</button>
+                    <button type="button" onclick="const p = document.getElementById('password'); const isPass = p.type === 'password'; p.type = isPass ? 'text' : 'password'; const label = isPass ? 'Hide password' : 'Show password'; this.textContent = isPass ? 'Hide' : 'Show'; this.setAttribute('aria-pressed', isPass); this.setAttribute('aria-label', label); this.title = label;" aria-label="Show password" title="Show password" aria-pressed="false" style="width: 80px; padding: 0; background-color: #6c757d; font-size: 0.9em; flex-shrink: 0;">Show</button>
                 </div>
             </div>
             <button type="submit">Connect</button>

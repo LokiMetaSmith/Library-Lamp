@@ -58,3 +58,6 @@
 ## 2024-07-20 - [Hardware Setup Password Visibility]
 **Learning:** In IoT device setup portals (like `setup.html`), mistyping a Wi-Fi password is a common point of failure that often requires hard-resetting the device. Providing a "Show/Hide" password toggle significantly reduces this friction and improves the overall UX of the onboarding process.
 **Action:** When creating or modifying hardware network setup forms, always include a toggle to unmask the password input to prevent user error.
+## 2024-07-21 - [Dynamic ARIA labels for Toggle Buttons]
+**Learning:** Found an accessibility issue where an inline password "Show/Hide" toggle button updated its visual text and `aria-pressed` state, but its `aria-label` and `title` attributes remained static (e.g., permanently reading "Show password"). This causes screen readers to announce incorrect information and limits usability for keyboard users relying on tooltips.
+**Action:** When implementing toggle buttons that change functionality (like showing/hiding a password), ensure you dynamically update both the `aria-label` and `title` attributes alongside the visual text to provide accurate context for all users.
