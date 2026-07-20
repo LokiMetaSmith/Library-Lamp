@@ -61,3 +61,6 @@
 ## 2024-07-21 - [Dynamic ARIA labels for Toggle Buttons]
 **Learning:** Found an accessibility issue where an inline password "Show/Hide" toggle button updated its visual text and `aria-pressed` state, but its `aria-label` and `title` attributes remained static (e.g., permanently reading "Show password"). This causes screen readers to announce incorrect information and limits usability for keyboard users relying on tooltips.
 **Action:** When implementing toggle buttons that change functionality (like showing/hiding a password), ensure you dynamically update both the `aria-label` and `title` attributes alongside the visual text to provide accurate context for all users.
+## 2024-11-25 - [Hardware Admin Password Visibility]
+**Learning:** In authentication forms on hardware portals (like the admin gate in `admin.html`), users typing complex or long access keys often mistype them. Providing a "Show/Hide" password toggle alongside the input prevents this frustration.
+**Action:** Always wrap password inputs in a flex container with a "Show/Hide" button that toggles the input type and dynamically updates its `aria-label` and `title` for screen readers and keyboard users.
