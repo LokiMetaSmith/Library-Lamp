@@ -208,7 +208,10 @@ textarea.restore-area:focus { border-color: var(--accent-dark); }
 <div id="gate">
   <h2>Admin Access</h2>
   <label for="keyIn">Admin Access Key</label>
-  <input type="password" id="keyIn" autocomplete="off">
+  <div style="display: flex; gap: 8px; margin-bottom: 10px;">
+    <input type="password" id="keyIn" autocomplete="off" style="margin-bottom: 0;">
+    <button type="button" onclick="const p = document.getElementById('keyIn'); const isPass = p.type === 'password'; p.type = isPass ? 'text' : 'password'; const label = isPass ? 'Hide key' : 'Show key'; this.textContent = isPass ? 'Hide' : 'Show'; this.setAttribute('aria-pressed', isPass); this.setAttribute('aria-label', label); this.title = label;" aria-label="Show key" title="Show key" aria-pressed="false" style="width: 70px; padding: 0; font-size: 0.9em; flex-shrink: 0; background-color: #6c757d; border-color: #5a6268;">Show</button>
+  </div>
   <button id="loginBtn" onclick="tryLogin()">Unlock 🔑</button>
   <div class="error" id="gateErr" aria-live="assertive"></div>
 </div>
