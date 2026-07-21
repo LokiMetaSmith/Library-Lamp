@@ -225,13 +225,19 @@ textarea.restore-area:focus { border-color: var(--accent-dark); }
       <div class="row">
         <div class="fld">
           <label for="newKey">New Key (min 4 characters)</label>
-          <input type="password" id="newKey" maxlength="64" autocomplete="new-password"
-                 placeholder="Enter new key" style="width:200px">
+          <div style="display: flex; gap: 8px;">
+            <input type="password" id="newKey" maxlength="64" autocomplete="new-password"
+                   placeholder="Enter new key" style="width:200px; margin-bottom: 0;">
+            <button type="button" class="btn" onclick="const p = document.getElementById('newKey'); const isPass = p.type === 'password'; p.type = isPass ? 'text' : 'password'; const label = isPass ? 'Hide new key' : 'Show new key'; this.textContent = isPass ? 'Hide' : 'Show'; this.setAttribute('aria-pressed', isPass); this.setAttribute('aria-label', label); this.title = label;" aria-label="Show new key" title="Show new key" aria-pressed="false" style="padding: 0 10px;">Show</button>
+          </div>
         </div>
         <div class="fld">
           <label for="newKeyConfirm">Confirm</label>
-          <input type="password" id="newKeyConfirm" maxlength="64"
-                 placeholder="Confirm new key" style="width:200px">
+          <div style="display: flex; gap: 8px;">
+            <input type="password" id="newKeyConfirm" maxlength="64"
+                   placeholder="Confirm new key" style="width:200px; margin-bottom: 0;">
+            <button type="button" class="btn" onclick="const p = document.getElementById('newKeyConfirm'); const isPass = p.type === 'password'; p.type = isPass ? 'text' : 'password'; const label = isPass ? 'Hide confirmed key' : 'Show confirmed key'; this.textContent = isPass ? 'Hide' : 'Show'; this.setAttribute('aria-pressed', isPass); this.setAttribute('aria-label', label); this.title = label;" aria-label="Show confirmed key" title="Show confirmed key" aria-pressed="false" style="padding: 0 10px;">Show</button>
+          </div>
         </div>
         <button class="btn" onclick="doSetKey(this)">Change Key</button>
       </div>
