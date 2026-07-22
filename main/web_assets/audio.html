@@ -50,7 +50,7 @@
                     <audio ref="audioPlayer" controls @play="onPlay" @pause="onPause" @seeked="onSeeked" @ended="onEnded">
                         Your browser does not support the audio element.
                     </audio>
-                    <button v-if="isDriver" @click="skipTrack" :aria-label="'Skip ' + currentTrack" style="margin-top:10px;">Skip Track</button>
+                    <button v-if="isDriver" @click="skipTrack" :disabled="isSkipping" :title="isSkipping ? 'Skipping track...' : 'Skip Track'" :aria-label="'Skip ' + currentTrack" style="margin-top:10px;">{{ isSkipping ? 'Skipping...' : 'Skip Track' }}</button>
                 </div>
                 <div v-else>
                     <p style="color: #8a7b6c; font-style: italic;">Nothing is currently playing. Add a track to the queue!</p>
