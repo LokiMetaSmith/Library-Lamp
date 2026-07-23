@@ -19,3 +19,6 @@
 ## 2026-06-24 - Accessibility for Toggle Buttons
 **Learning:** Found an interaction improvement opportunity in `board.html` where filtering, sorting, and category buttons visually indicated their active state via CSS classes (e.g., `active` or `active-Notice`), but this state wasn't communicated to screen readers. This leaves visually impaired users unaware of which filter or category is currently selected.
 **Action:** When creating toggle buttons or selectable tabs, always pair visual state classes with `aria-pressed="true"` or `aria-pressed="false"` attributes, and ensure these attributes are dynamically updated alongside the CSS classes in JavaScript logic.
+## 2024-12-05 - [Item-Specific Loading States in Vue]
+**Learning:** When users click action buttons inside a dynamic Vue list (like adding or removing tracks in a queue), failing to provide item-specific loading states can result in double-clicks that spam the backend or cause confusion. Binding specific identifiers (like the filename or index) to a tracking variable provides immediate, targeted visual feedback (e.g., disabling only the clicked button).
+**Action:** Always implement and bind item-specific loading states (e.g., `this.addingToQueue = filename`) for asynchronous actions triggered within `v-for` lists.

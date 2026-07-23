@@ -66,7 +66,7 @@
                     <div v-else>
                         <div v-for="(track, index) in queue" :key="index" class="queue-item">
                             <span>{{ index + 1 }}. {{ track }}</span>
-                            <button v-if="isAdmin" @click="removeFromQueue(index)" :aria-label="'Remove ' + track + ' from queue'" class="btn-small cancel-btn">Remove</button>
+                            <button v-if="isAdmin" @click="removeFromQueue(index)" :disabled="removingFromQueue === index" :title="removingFromQueue === index ? 'Removing...' : 'Remove'" :aria-label="'Remove ' + track + ' from queue'" class="btn-small cancel-btn">{{ removingFromQueue === index ? 'Removing...' : 'Remove' }}</button>
                         </div>
                     </div>
                 </div>
@@ -79,7 +79,7 @@
                                 <span class="file-title">{{ file.title || file.name }}</span>
                             </div>
                             <div class="transfer-controls">
-                                <button @click="addToQueue(file.name)" :aria-label="'Add ' + (file.title || file.name) + ' to queue'">Add to Queue</button>
+                                <button @click="addToQueue(file.name)" :disabled="addingToQueue === file.name" :title="addingToQueue === file.name ? 'Adding...' : 'Add to Queue'" :aria-label="'Add ' + (file.title || file.name) + ' to queue'">{{ addingToQueue === file.name ? 'Adding...' : 'Add to Queue' }}</button>
                             </div>
                         </li>
                     </ul>
@@ -119,6 +119,9 @@
             data() {
                 return {
                     currentTrack: null,
+                    isSkipping: false,
+                    addingToQueue: null,
+                    removingFromQueue: null,
                     isPlaying: false,
                     serverPosition: 0,
                     queue: [],
@@ -226,16 +229,26 @@
                     return fetch(url, { method, headers, body: JSON.stringify(body) });
                 },
                 async addToQueue(filename) {
-                    await fetch('/audio/queue', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ filename })
-                    });
-                    this.fetchState();
+                    this.addingToQueue = filename;
+                    try {
+                        await fetch('/audio/queue', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ filename })
+                        });
+                        await this.fetchState();
+                    } finally {
+                        this.addingToQueue = null;
+                    }
                 },
                 async removeFromQueue(index) {
-                    await this.apiCall('/audio/queue', 'DELETE', { index });
-                    this.fetchState();
+                    this.removingFromQueue = index;
+                    try {
+                        await this.apiCall('/audio/queue', 'DELETE', { index });
+                        await this.fetchState();
+                    } finally {
+                        this.removingFromQueue = null;
+                    }
                 },
                 async updateServerState(action) {
                     if (this.ignoreNextEvent) {
@@ -270,13 +283,18 @@
                     this.fetchState();
                 },
                 async skipTrack() {
+                    this.isSkipping = true;
                     this.isDriver = true;
-                    await fetch('/audio/state', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ action: 'next', position: 0 })
-                    });
-                    this.fetchState();
+                    try {
+                        await fetch('/audio/state', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ action: 'next', position: 0 })
+                        });
+                        await this.fetchState();
+                    } finally {
+                        this.isSkipping = false;
+                    }
                 }
             },
             mounted() {
