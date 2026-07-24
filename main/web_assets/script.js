@@ -33,6 +33,11 @@ createApp({
             if (this.transfer.active) return 'status-transferring';
             if (this.isEReaderConnected) return 'status-connected';
             return 'status-idle';
+        },
+        statusText() {
+            if (this.transfer.active) return 'Transferring';
+            if (this.isEReaderConnected) return 'E-Reader Connected';
+            return 'System Idle';
         }
     },
     methods: {

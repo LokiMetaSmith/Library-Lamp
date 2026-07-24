@@ -64,3 +64,6 @@
 ## 2024-11-25 - [Hardware Admin Password Visibility]
 **Learning:** In authentication forms on hardware portals (like the admin gate in `admin.html`), users typing complex or long access keys often mistype them. Providing a "Show/Hide" password toggle alongside the input prevents this frustration.
 **Action:** Always wrap password inputs in a flex container with a "Show/Hide" button that toggles the input type and dynamically updates its `aria-label` and `title` for screen readers and keyboard users.
+## 2024-11-25 - Non-Text Status Indicators
+**Learning:** Using only colored visual indicators (like the `.status-indicator` dot) to represent system state fails colorblind users and screen readers, violating WCAG guidelines which state color should not be the only visual means of conveying information.
+**Action:** When creating visual status indicators, always bind a human-readable text description to `title` (for hover) and `aria-label` (for screen readers), and use `role="status"` to announce dynamic changes to the system state.
