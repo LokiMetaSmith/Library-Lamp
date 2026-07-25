@@ -77,7 +77,7 @@
                             <span v-if="file.notes" class="file-notes">{{ file.notes }}</span>
                         </div>
                         <div class="transfer-controls">
-                            <div class="progress-container" v-if="transfer.active && transfer.filename === file.name">
+                            <div class="progress-container" v-if="transfer.active && transfer.filename === file.name" role="progressbar" aria-valuemin="0" aria-valuemax="100" :aria-valuenow="Math.round(transfer.progress)" :aria-label="'Transfer progress for ' + file.title" :title="Math.round(transfer.progress) + '%'">
                                 <div class="progress-bar" :style="{ width: transfer.progress + '%' }"></div>
                             </div>
                             <button @click="transferToEReader(file.name)" :disabled="!isEReaderConnected || transfer.active" :title="transfer.active ? 'A transfer is currently in progress' : (!isEReaderConnected ? 'Connect an E-Reader to transfer books' : 'Transfer to E-Reader')" :aria-label="'Transfer ' + file.title + ' to E-Reader'">Transfer to E-Reader</button>
@@ -103,7 +103,7 @@
                                 <span v-if="file.notes" class="file-notes">{{ file.notes }}</span>
                             </div>
                             <div class="transfer-controls">
-                                <div class="progress-container" v-if="transfer.active && transfer.filename === file.name">
+                                <div class="progress-container" v-if="transfer.active && transfer.filename === file.name" role="progressbar" aria-valuemin="0" aria-valuemax="100" :aria-valuenow="Math.round(transfer.progress)" :aria-label="'Transfer progress for ' + file.title" :title="Math.round(transfer.progress) + '%'">
                                     <div class="progress-bar" :style="{ width: transfer.progress + '%' }"></div>
                                 </div>
                                 <button @click="transferToLibrary(file.name)" :disabled="transfer.active" :title="transfer.active ? 'A transfer is currently in progress' : 'Transfer to Library'" :aria-label="'Transfer ' + file.title + ' to Library'">Transfer to Library</button>
