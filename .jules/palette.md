@@ -1,4 +1,4 @@
-## 2026-06-19 - [Form Accessibility]
+## 2024-06-19 - [Form Accessibility]
 **Learning:** Found several input fields relying solely on placeholders or lacking 'for' attributes on labels, which hurts screen reader users and reduces click targets.
 **Action:** Always pair inputs with explicit <label for="..."> elements to improve both accessibility and usability.
 ## 2024-07-04 - [Board Category Accessibility]
@@ -67,3 +67,6 @@
 ## 2024-11-25 - Non-Text Status Indicators
 **Learning:** Using only colored visual indicators (like the `.status-indicator` dot) to represent system state fails colorblind users and screen readers, violating WCAG guidelines which state color should not be the only visual means of conveying information.
 **Action:** When creating visual status indicators, always bind a human-readable text description to `title` (for hover) and `aria-label` (for screen readers), and use `role="status"` to announce dynamic changes to the system state.
+## 2025-01-20 - [Vanilla JS Missing Loading State for Action Buttons]
+**Learning:** In `admin.html`, the "Refresh List" button lacked a loading state during a fetch operation. In vanilla JS, a button click that triggers a backend process must explicitly disable itself and change its label to prevent rapid double-clicks and confusion about whether the request registered.
+**Action:** For action buttons like "Refresh List" relying on an async backend call, modify the inline `onclick` handler to pass `this` and update the button's `disabled` and `textContent` properties at the start, and ensure a `finally` block is used to restore the button when the call completes.
