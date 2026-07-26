@@ -281,7 +281,7 @@ textarea.restore-area:focus { border-color: var(--accent-dark); }
     <div class="section-head">Manage Posts</div>
     <div class="section-body">
       <div class="row">
-        <button class="btn" onclick="loadPostList()">Refresh List</button>
+        <button class="btn" onclick="loadPostList(this)">Refresh List</button>
         <button class="btn danger" onclick="confirmClear(this)">Clear All Posts</button>
       </div>
       <div id="postListFb" class="feedback" aria-live="polite"></div>
@@ -566,7 +566,11 @@ function timeLeftShort(exp) {
   return Math.floor(left/86400) + 'd';
 }
 
-async function loadPostList() {
+async function loadPostList(btn) {
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = 'Refreshing...';
+  }
   const container = document.getElementById('postList');
   container.innerHTML = '<div class="post-empty">Loading…</div>';
   try {
@@ -588,6 +592,11 @@ async function loadPostList() {
     '</div>';
   } catch (_) {
     container.innerHTML = '<div class="post-empty">Failed to load posts.</div>';
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = 'Refresh List';
+    }
   }
 }
 
