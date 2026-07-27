@@ -208,7 +208,10 @@ textarea.restore-area:focus { border-color: var(--accent-dark); }
 <div id="gate">
   <h2>Admin Access</h2>
   <label for="keyIn">Admin Access Key</label>
-  <input type="password" id="keyIn" autocomplete="off">
+  <div style="display: flex; gap: 8px; margin-bottom: 10px;">
+    <input type="password" id="keyIn" autocomplete="off" style="margin-bottom: 0;">
+    <button type="button" onclick="const p = document.getElementById('keyIn'); const isPass = p.type === 'password'; p.type = isPass ? 'text' : 'password'; const label = isPass ? 'Hide key' : 'Show key'; this.textContent = isPass ? 'Hide' : 'Show'; this.setAttribute('aria-pressed', isPass); this.setAttribute('aria-label', label); this.title = label;" aria-label="Show key" title="Show key" aria-pressed="false" style="width: 70px; padding: 0; font-size: 0.9em; flex-shrink: 0; background-color: #6c757d; border-color: #5a6268;">Show</button>
+  </div>
   <button id="loginBtn" onclick="tryLogin()">Unlock 🔑</button>
   <div class="error" id="gateErr" aria-live="assertive"></div>
 </div>
@@ -222,15 +225,21 @@ textarea.restore-area:focus { border-color: var(--accent-dark); }
       <div class="row">
         <div class="fld">
           <label for="newKey">New Key (min 4 characters)</label>
-          <input type="password" id="newKey" maxlength="64" autocomplete="new-password"
-                 placeholder="Enter new key" style="width:200px">
+          <div style="display: flex; gap: 8px;">
+            <input type="password" id="newKey" maxlength="64" autocomplete="new-password"
+                   placeholder="Enter new key" style="width:200px; margin-bottom: 0;">
+            <button type="button" class="btn" onclick="const p = document.getElementById('newKey'); const isPass = p.type === 'password'; p.type = isPass ? 'text' : 'password'; const label = isPass ? 'Hide new key' : 'Show new key'; this.textContent = isPass ? 'Hide' : 'Show'; this.setAttribute('aria-pressed', isPass); this.setAttribute('aria-label', label); this.title = label;" aria-label="Show new key" title="Show new key" aria-pressed="false" style="padding: 0 10px;">Show</button>
+          </div>
         </div>
         <div class="fld">
           <label for="newKeyConfirm">Confirm</label>
-          <input type="password" id="newKeyConfirm" maxlength="64"
-                 placeholder="Confirm new key" style="width:200px">
+          <div style="display: flex; gap: 8px;">
+            <input type="password" id="newKeyConfirm" maxlength="64"
+                   placeholder="Confirm new key" style="width:200px; margin-bottom: 0;">
+            <button type="button" class="btn" onclick="const p = document.getElementById('newKeyConfirm'); const isPass = p.type === 'password'; p.type = isPass ? 'text' : 'password'; const label = isPass ? 'Hide confirmed key' : 'Show confirmed key'; this.textContent = isPass ? 'Hide' : 'Show'; this.setAttribute('aria-pressed', isPass); this.setAttribute('aria-label', label); this.title = label;" aria-label="Show confirmed key" title="Show confirmed key" aria-pressed="false" style="padding: 0 10px;">Show</button>
+          </div>
         </div>
-        <button class="btn" onclick="doSetKey()">Change Key</button>
+        <button class="btn" onclick="doSetKey(this)">Change Key</button>
       </div>
       <div class="feedback" id="keyFb" aria-live="polite"></div>
     </div>
@@ -262,7 +271,7 @@ textarea.restore-area:focus { border-color: var(--accent-dark); }
         <input type="text" id="idFooter" maxlength="80" style="width:100%">
       </div>
       <div class="row">
-        <button class="btn" onclick="doIdentity()">Save Identity</button>
+        <button class="btn" onclick="doIdentity(this)">Save Identity</button>
       </div>
       <div class="feedback" id="idFb" aria-live="polite"></div>
     </div>
@@ -272,8 +281,8 @@ textarea.restore-area:focus { border-color: var(--accent-dark); }
     <div class="section-head">Manage Posts</div>
     <div class="section-body">
       <div class="row">
-        <button class="btn" onclick="loadPostList()">Refresh List</button>
-        <button class="btn danger" onclick="confirmClear()">Clear All Posts</button>
+        <button class="btn" onclick="loadPostList(this)">Refresh List</button>
+        <button class="btn danger" onclick="confirmClear(this)">Clear All Posts</button>
       </div>
       <div id="postListFb" class="feedback" aria-live="polite"></div>
       <div id="postList"></div>
@@ -288,7 +297,7 @@ textarea.restore-area:focus { border-color: var(--accent-dark); }
           <label for="lampColor">Color</label>
           <input type="color" id="lampColor" value="#ffffff" style="height:40px;width:60px;">
         </div>
-        <button class="btn" onclick="doSetLampColor()">Set Lamp Color</button>
+        <button class="btn" onclick="doSetLampColor(this)">Set Lamp Color</button>
       </div>
       <div class="feedback" id="lampFb" aria-live="polite"></div>
     </div>
@@ -302,7 +311,7 @@ textarea.restore-area:focus { border-color: var(--accent-dark); }
         <label for="publicUploadsCheck" style="margin: 0;">Allow Public Book Uploads</label>
       </div>
       <div class="row">
-        <button class="btn" onclick="doSetPublicUploads()">Save Upload Settings</button>
+        <button class="btn" onclick="doSetPublicUploads(this)">Save Upload Settings</button>
       </div>
       <div class="feedback" id="uploadsFb" aria-live="polite"></div>
     </div>
@@ -436,8 +445,12 @@ async function loadUploadSettings() {
   document.getElementById('publicUploadsCheck').checked = d.allow_public_uploads;
 }
 
-function doSetPublicUploads() {
+function doSetPublicUploads(btn) {
   const enabled = document.getElementById('publicUploadsCheck').checked;
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = 'Saving...';
+  }
   apiFetch(api('/admin/set_public_uploads'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -451,11 +464,17 @@ function doSetPublicUploads() {
       fb('uploadsFb', '✗ Failed to save settings');
     }
   })
-  .catch(() => fb('uploadsFb', '✗ Request failed'));
+  .catch(() => fb('uploadsFb', '✗ Request failed'))
+  .finally(() => {
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = 'Save Upload Settings';
+    }
+  });
 }
 
 // ── Change admin key ──────────────────────────────────────────────────────────
-function doSetKey() {
+function doSetKey(btn) {
   const newKeyEl = document.getElementById('newKey');
   const confirmKeyEl = document.getElementById('newKeyConfirm');
   const n = newKeyEl.value;
@@ -471,17 +490,27 @@ function doSetKey() {
     confirmKeyEl.focus();
     return;
   }
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = 'Saving...';
+  }
   apiFetch(api('/board/admin/setkey') + '&newkey=' + encodeURIComponent(n))
     .then(r => r.text())
     .then(msg => {
       fb('keyFb', '✓ ' + msg);
       setTimeout(() => location.reload(), 1500);
     })
-    .catch(() => fb('keyFb', '✗ Request failed'));
+    .catch(() => {
+      fb('keyFb', '✗ Request failed');
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = 'Change Key';
+      }
+    });
 }
 
 // ── Identity ──────────────────────────────────────────────────────────────────
-function doIdentity() {
+function doIdentity(btn) {
   const params = new URLSearchParams({
     name:    document.getElementById('idName').value.trim(),
     icon:    document.getElementById('idIcon').value.trim(),
@@ -489,19 +518,39 @@ function doIdentity() {
     rules:   document.getElementById('idRules').value.trim(),
     footer:  document.getElementById('idFooter').value.trim()
   });
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = 'Saving...';
+  }
   apiFetch(api('/board/admin/identity/set') + '&' + params.toString())
     .then(r => r.text())
     .then(msg => fb('idFb', '✓ ' + msg))
-    .catch(() => fb('idFb', '✗ Request failed'));
+    .catch(() => fb('idFb', '✗ Request failed'))
+    .finally(() => {
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = 'Save Identity';
+      }
+    });
 }
 
 // ── Board actions ─────────────────────────────────────────────────────────────
-function confirmClear() {
+function confirmClear(btn) {
   if (!confirm('Delete ALL posts? This cannot be undone.')) return;
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = 'Clearing...';
+  }
   apiFetch(api('/board/admin/clear'), { method: 'POST' })
     .then(r => r.text())
     .then(msg => fb('postListFb', '✓ ' + msg))
-    .catch(() => fb('postListFb', '✗ Failed'));
+    .catch(() => fb('postListFb', '✗ Failed'))
+    .finally(() => {
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = 'Clear All Posts';
+      }
+    });
 }
 
 // ── Manage Posts ──────────────────────────────────────────────────────────────
@@ -517,7 +566,11 @@ function timeLeftShort(exp) {
   return Math.floor(left/86400) + 'd';
 }
 
-async function loadPostList() {
+async function loadPostList(btn) {
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = 'Refreshing...';
+  }
   const container = document.getElementById('postList');
   container.innerHTML = '<div class="post-empty">Loading…</div>';
   try {
@@ -539,6 +592,11 @@ async function loadPostList() {
     '</div>';
   } catch (_) {
     container.innerHTML = '<div class="post-empty">Failed to load posts.</div>';
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = 'Refresh List';
+    }
   }
 }
 
@@ -593,11 +651,16 @@ function confirmFormatSD(btn) {
 }
 
 // ── Lamp Color ────────────────────────────────────────────────────────────────
-function doSetLampColor() {
+function doSetLampColor(btn) {
   const hex = document.getElementById('lampColor').value;
   const r = parseInt(hex.substring(1, 3), 16);
   const g = parseInt(hex.substring(3, 5), 16);
   const b = parseInt(hex.substring(5, 7), 16);
+
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = 'Setting...';
+  }
 
   apiFetch(api('/set-led-color'), {
     method: 'POST',
@@ -612,7 +675,13 @@ function doSetLampColor() {
       fb('lampFb', '✗ Failed to update color');
     }
   })
-  .catch(() => fb('lampFb', '✗ Request failed'));
+  .catch(() => fb('lampFb', '✗ Request failed'))
+  .finally(() => {
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = 'Set Lamp Color';
+    }
+  });
 }
 </script>
 </body>

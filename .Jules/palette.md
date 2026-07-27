@@ -1,4 +1,4 @@
-## 2026-06-19 - [Form Accessibility]
+## 2024-06-19 - [Form Accessibility]
 **Learning:** Found several input fields relying solely on placeholders or lacking 'for' attributes on labels, which hurts screen reader users and reduces click targets.
 **Action:** Always pair inputs with explicit <label for="..."> elements to improve both accessibility and usability.
 ## 2024-07-04 - [Board Category Accessibility]
@@ -39,3 +39,34 @@
 ## 2026-07-11 - Provide loading states for destructive async actions
 **Learning:** Destructive or potentially slow operations (like formatting an SD card) without immediate visual feedback can lead to duplicate clicks, user confusion, and perceived slowness.
 **Action:** Always provide immediate visual feedback for async operations by temporarily disabling the trigger button and updating its text (e.g., to a loading state), especially for destructive actions.
+## 2026-07-12 - Provide loading states for standard HTML form submissions
+**Learning:** Even when not using async JS (like `fetch`), standard HTML forms submitting to slow backends (like an ESP32 saving credentials and restarting Wi-Fi) leave the user hanging without feedback, which can lead to multiple clicks and confusion.
+**Action:** When using standard HTML `<form>` submissions, add a simple `onsubmit` handler to disable the submit button and update its text (e.g., to "Connecting...") to provide immediate visual feedback during the page navigation delay.
+## 2024-11-25 - Item-specific async state tracking in Vue lists
+**Learning:** When dealing with async operations (like file deletion) inside a `v-for` list, using a simple boolean `isDeleting` state affects all items in the list, disabling all buttons simultaneously or requiring complex index tracking. Without feedback, the user isn't sure which item is being deleted.
+**Action:** When tracking async states for items in dynamic lists, assign the item's unique identifier (e.g., `this.isDeleting = file.name`) to the state variable instead of a boolean. Then, in the template, bind states specific to that item (`:disabled="isDeleting === file.name"` and change text to "Deleting..."), providing clear, isolated feedback for destructive actions without complex state management.
+## 2026-07-14 - [Vanilla JS Async Feedback]
+**Learning:** When interacting with hardware components in a vanilla JS frontend (like setting the lamp color), missing immediate visual feedback can lead to duplicate submissions or confusion because backend processing adds noticeable delay.
+**Action:** Always provide explicit disabled/loading states wrapping async calls in vanilla JS applications to avoid user confusion and duplicate actions.
+
+## 2024-07-15 - Admin Panel Form Accessibility & Loading States
+**Learning:** Found multiple form inputs in the admin panel lacking `aria-label` attributes and relying solely on `placeholder` texts for context (which isn't always accessible or visible). Also discovered several action buttons (e.g. Save Settings, Save Identity) that lacked loading feedback during async operations, which could lead to duplicate submissions or confusion.
+**Action:** When adding inputs in vanilla HTML frontends, always pair them with an explicit `aria-label` (or `<label>`). Additionally, for async operations, use inline `onclick` modifications (passing `this` as an argument) to quickly add disabled loading states to action buttons.
+## 2024-11-25 - [Form Required Indicators]
+**Learning:** Found an accessibility and UX issue in `index.html` where form inputs like `uploadFile`, `uploadTitle`, and `uploadAuthor` used the native `required` attribute for validation but had no visible indicator (like an asterisk) on their labels. Users could not distinguish mandatory fields from optional ones visually until they failed validation. Providing explicit visual cues makes forms much more predictable and prevents frustration.
+**Action:** Always pair programmatic `required` attributes with a visible indicator on the corresponding `<label>`, such as `<span aria-hidden="true" style="color: #ff8a80;">*</span>`, so users can see which fields are mandatory before attempting to submit.
+## 2024-07-20 - [Hardware Setup Password Visibility]
+**Learning:** In IoT device setup portals (like `setup.html`), mistyping a Wi-Fi password is a common point of failure that often requires hard-resetting the device. Providing a "Show/Hide" password toggle significantly reduces this friction and improves the overall UX of the onboarding process.
+**Action:** When creating or modifying hardware network setup forms, always include a toggle to unmask the password input to prevent user error.
+## 2024-07-21 - [Dynamic ARIA labels for Toggle Buttons]
+**Learning:** Found an accessibility issue where an inline password "Show/Hide" toggle button updated its visual text and `aria-pressed` state, but its `aria-label` and `title` attributes remained static (e.g., permanently reading "Show password"). This causes screen readers to announce incorrect information and limits usability for keyboard users relying on tooltips.
+**Action:** When implementing toggle buttons that change functionality (like showing/hiding a password), ensure you dynamically update both the `aria-label` and `title` attributes alongside the visual text to provide accurate context for all users.
+## 2024-11-25 - [Hardware Admin Password Visibility]
+**Learning:** In authentication forms on hardware portals (like the admin gate in `admin.html`), users typing complex or long access keys often mistype them. Providing a "Show/Hide" password toggle alongside the input prevents this frustration.
+**Action:** Always wrap password inputs in a flex container with a "Show/Hide" button that toggles the input type and dynamically updates its `aria-label` and `title` for screen readers and keyboard users.
+## 2024-11-25 - Non-Text Status Indicators
+**Learning:** Using only colored visual indicators (like the `.status-indicator` dot) to represent system state fails colorblind users and screen readers, violating WCAG guidelines which state color should not be the only visual means of conveying information.
+**Action:** When creating visual status indicators, always bind a human-readable text description to `title` (for hover) and `aria-label` (for screen readers), and use `role="status"` to announce dynamic changes to the system state.
+## 2025-01-20 - [Vanilla JS Missing Loading State for Action Buttons]
+**Learning:** In `admin.html`, the "Refresh List" button lacked a loading state during a fetch operation. In vanilla JS, a button click that triggers a backend process must explicitly disable itself and change its label to prevent rapid double-clicks and confusion about whether the request registered.
+**Action:** For action buttons like "Refresh List" relying on an async backend call, modify the inline `onclick` handler to pass `this` and update the button's `disabled` and `textContent` properties at the start, and ensure a `finally` block is used to restore the button when the call completes.

@@ -24,7 +24,8 @@ createApp({
             uploadTitle: '',
             uploadAuthor: '',
             isUploading: false,
-            uploadError: ''
+            uploadError: '',
+            isDeleting: null
         }
     },
     computed: {
@@ -32,6 +33,11 @@ createApp({
             if (this.transfer.active) return 'status-transferring';
             if (this.isEReaderConnected) return 'status-connected';
             return 'status-idle';
+        },
+        statusText() {
+            if (this.transfer.active) return 'Transferring';
+            if (this.isEReaderConnected) return 'E-Reader Connected';
+            return 'System Idle';
         }
     },
     methods: {
@@ -117,6 +123,7 @@ createApp({
         async deleteFile(filename, source) {
             if (!confirm(`Are you sure you want to delete ${filename}?`)) return;
 
+            this.isDeleting = filename;
             let url = '/delete-file';
             const savedKey = localStorage.getItem('adminKey');
             if (savedKey) {
@@ -139,6 +146,8 @@ createApp({
             } catch (error) {
                 console.error('Delete error:', error);
                 alert('An error occurred while deleting the file.');
+            } finally {
+                this.isDeleting = null;
             }
         },
         transferToEReader(filename) {

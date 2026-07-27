@@ -46,6 +46,14 @@ def test_ux():
     assert "Formatting..." in admin_content, "Missing loading text in confirmFormatSD"
     assert ".finally" in admin_content, "Missing finally block in confirmFormatSD"
 
+    assert "onclick=\"doSetLampColor(this)\"" in admin_content, "Missing 'this' parameter in doSetLampColor call"
+    assert "Setting..." in admin_content, "Missing loading text in doSetLampColor"
+
+    # Admin Key Show/Hide feature verification
+    assert "Show new key" in admin_content, "Missing 'Show new key' aria-label/title"
+    assert "Hide new key" in admin_content, "Missing 'Hide new key' logic"
+    assert "Show confirmed key" in admin_content, "Missing 'Show confirmed key' aria-label/title"
+
     print("All assertions passed. Modifications are successfully present.")
 
 if __name__ == "__main__":
