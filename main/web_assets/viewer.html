@@ -16,7 +16,7 @@
 </head>
 <body>
     <div class="toolbar">
-        <a href="javascript:history.back()" id="backBtn">Back</a>
+        <a href="javascript:history.back()" id="backBtn" title="Go back (Escape)" aria-label="Go back (Escape)">Back</a>
         <div>
             <button id="prevBtn" disabled title="Loading book..." aria-label="Previous Page">&#8592; Prev</button>
             <button id="nextBtn" disabled title="Loading book..." aria-label="Next Page">Next &#8594;</button>
@@ -72,6 +72,7 @@
             document.addEventListener("keyup", function(e) {
                 if (e.key === "ArrowLeft") rendition.prev();
                 if (e.key === "ArrowRight") rendition.next();
+                if (e.key === "Escape") document.getElementById('backBtn').click();
             });
         }
     </script>
