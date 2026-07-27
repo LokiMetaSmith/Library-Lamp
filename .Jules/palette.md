@@ -19,3 +19,23 @@
 ## 2026-06-24 - Accessibility for Toggle Buttons
 **Learning:** Found an interaction improvement opportunity in `board.html` where filtering, sorting, and category buttons visually indicated their active state via CSS classes (e.g., `active` or `active-Notice`), but this state wasn't communicated to screen readers. This leaves visually impaired users unaware of which filter or category is currently selected.
 **Action:** When creating toggle buttons or selectable tabs, always pair visual state classes with `aria-pressed="true"` or `aria-pressed="false"` attributes, and ensure these attributes are dynamically updated alongside the CSS classes in JavaScript logic.
+## 2024-05-24 - Dynamic Disabled State Explanations with Keyboard Hints
+**Learning:** Adding static aria-labels and static titles to buttons isn't enough when their state changes (e.g. from disabled to enabled). Users need to know *why* a button is disabled, and screen readers need an aria-label. Furthermore, when the button is enabled, replacing the tooltip with keyboard shortcut hints greatly improves usability without cluttering the UI.
+**Action:** When creating interactive viewer-like experiences, provide a default `title` explaining the loading/disabled state along with a static `aria-label`. Then, dynamically update the `title` attribute via JavaScript to show keyboard shortcuts once the state becomes active.
+## 2024-11-21 - Passing element context in vanilla JS lists
+**Learning:** When rendering dynamic lists with string interpolation in vanilla JS (like in `admin.html`), it can be tricky to grab the exact button element later to apply loading states, especially if the button lacks a unique ID.
+**Action:** When adding inline onclick handlers in template literals (e.g., `onclick="deletePost(${id}, this)"`), pass `this` to give the function a direct reference to the clicked element, making it easy to toggle disabled states and text content immediately.
+
+## 2024-11-21 - [Vanilla JS Silent Form Validations]
+**Learning:** In vanilla JavaScript frontends, simply returning early (`if (!value) return;`) on empty form submissions creates a silent failure where the user clicks the button but nothing happens, which is confusing and poor UX/a11y.
+**Action:** When catching empty required inputs in vanilla JS functions, always use the existing `aria-live` hint/error containers to display a clear error message, and immediately call `.focus()` on the empty input to guide the user to the required action.
+
+## 2024-07-09 - Grouping Custom Toggle Buttons for Screen Readers
+**Learning:** When custom styling or scripting is used to make standard buttons behave like radio button selections (e.g., in a filter bar or an "Expires in" toggle), screen readers announce them as isolated buttons without context. Wrapping these related buttons in an element with `role="group"` and `aria-labelledby` (pointing to the visible label) or `aria-label` provides essential structural context for non-visual users to understand they are mutually exclusive choices within a set. Avoid using `style="display: contents;"` on semantic wrappers, as it can inadvertently remove the element from the accessibility tree in some browsers. Instead, use flexbox styling on the wrapper to maintain layout flow.
+**Action:** Always wrap groups of visually-related custom toggle buttons in a semantic grouping element (`role="group"`) and apply `aria-labelledby` or `aria-label` to ensure screen reader users receive proper contextual cues, taking care to use appropriate CSS layout techniques (like Flexbox) instead of `display: contents;`.
+## 2024-07-10 - Improve inline form validation feedback
+**Learning:** Returning silently when required inputs are empty creates a confusing user experience, as the user clicks a button and nothing appears to happen. Even though standard HTML forms have native validation (which we don't always use or rely on via JS), custom JavaScript logic should also provide explicit feedback.
+**Action:** Always provide actionable inline feedback by updating an existing `aria-live` container with an error message and immediately calling `.focus()` on the invalid input, so screen readers announce the issue and keyboard users can immediately fix it.
+## 2026-07-11 - Provide loading states for destructive async actions
+**Learning:** Destructive or potentially slow operations (like formatting an SD card) without immediate visual feedback can lead to duplicate clicks, user confusion, and perceived slowness.
+**Action:** Always provide immediate visual feedback for async operations by temporarily disabling the trigger button and updating its text (e.g., to a loading state), especially for destructive actions.
