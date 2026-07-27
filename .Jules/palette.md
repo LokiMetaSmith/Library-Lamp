@@ -22,3 +22,6 @@
 ## 2024-12-05 - [Item-Specific Loading States in Vue]
 **Learning:** When users click action buttons inside a dynamic Vue list (like adding or removing tracks in a queue), failing to provide item-specific loading states can result in double-clicks that spam the backend or cause confusion. Binding specific identifiers (like the filename or index) to a tracking variable provides immediate, targeted visual feedback (e.g., disabling only the clicked button).
 **Action:** Always implement and bind item-specific loading states (e.g., `this.addingToQueue = filename`) for asynchronous actions triggered within `v-for` lists.
+## 2024-07-28 - Keyboard Exit Shortcuts in Immersive Views
+**Learning:** When building full-screen or immersive interfaces (like the e-book viewer) that support keyboard navigation for primary actions (e.g., arrow keys for page turning), users intuitively expect a complementary keyboard shortcut (like `Escape`) to exit or go back. Without it, keyboard-only users must disrupt their reading flow to manually tab through the interface to find a back button.
+**Action:** Always pair primary keyboard navigation in immersive views with an intuitive "exit" or "back" shortcut (e.g., `Escape`), and explicitly document the shortcut in the UI (e.g., via tooltips or aria-labels).
