@@ -1,8 +1,8 @@
 ## IDF Component Manager Manifest File
 dependencies:
   idf: ">=4.4"
-  espressif/usb_host_hid: "^1.2.0"
-  espressif/usb_host_msc: "^1.2.0"
+  espressif/usb_host_hid: "^2.0.0"
+  espressif/usb_host_msc: "^2.0.0"
   espressif/led_strip: "^3.0.0"
   jgromes/radiolib: "*"
   espressif/cjson: "^1.7.17"
