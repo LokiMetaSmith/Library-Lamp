@@ -207,7 +207,7 @@ textarea.restore-area:focus { border-color: var(--accent-dark); }
 <!-- Password gate -->
 <div id="gate">
   <h2>Admin Access</h2>
-  <label for="keyIn">Admin Access Key <span aria-hidden="true" class="error">*</span></label>
+  <label for="keyIn">Admin Access Key <span aria-hidden="true" style="color: #ff8a80;">*</span></label>
   <div style="display: flex; gap: 8px; margin-bottom: 10px;">
     <input type="password" id="keyIn" autocomplete="off" style="margin-bottom: 0;" required>
     <button type="button" onclick="const p = document.getElementById('keyIn'); const isPass = p.type === 'password'; p.type = isPass ? 'text' : 'password'; const label = isPass ? 'Hide key' : 'Show key'; this.textContent = isPass ? 'Hide' : 'Show'; this.setAttribute('aria-pressed', isPass); this.setAttribute('aria-label', label); this.title = label;" aria-label="Show key" title="Show key" aria-pressed="false" style="width: 70px; padding: 0; font-size: 0.9em; flex-shrink: 0; background-color: #6c757d; border-color: #5a6268;">Show</button>
@@ -224,7 +224,7 @@ textarea.restore-area:focus { border-color: var(--accent-dark); }
     <div class="section-body">
       <div class="row">
         <div class="fld">
-          <label for="newKey">New Key (min 4 characters) <span aria-hidden="true" class="error">*</span></label>
+          <label for="newKey">New Key (min 4 characters) <span aria-hidden="true" style="color: #ff8a80;">*</span></label>
           <div style="display: flex; gap: 8px;">
             <input type="password" id="newKey" maxlength="64" autocomplete="new-password"
                    placeholder="Enter new key" style="width:200px; margin-bottom: 0;" required>
@@ -232,7 +232,7 @@ textarea.restore-area:focus { border-color: var(--accent-dark); }
           </div>
         </div>
         <div class="fld">
-          <label for="newKeyConfirm">Confirm <span aria-hidden="true" class="error">*</span></label>
+          <label for="newKeyConfirm">Confirm <span aria-hidden="true" style="color: #ff8a80;">*</span></label>
           <div style="display: flex; gap: 8px;">
             <input type="password" id="newKeyConfirm" maxlength="64"
                    placeholder="Confirm new key" style="width:200px; margin-bottom: 0;" required>
