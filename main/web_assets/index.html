@@ -123,7 +123,7 @@
                 <p class="error-message" v-if="transfer.error">{{ transfer.error }}</p>
             </div>
             <div class="footer-actions">
-                <button @click="enterSleepMode" class="sleep-btn">Enter Sleep Mode</button>
+                <button @click="enterSleepMode" :disabled="isSleeping" class="sleep-btn" :title="isSleeping ? 'Entering sleep mode...' : 'Enter sleep mode'">{{ isSleeping ? 'Entering Sleep...' : 'Enter Sleep Mode' }}</button>
             </div>
         </footer>
     </div>
