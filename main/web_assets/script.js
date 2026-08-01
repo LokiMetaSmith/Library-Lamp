@@ -25,7 +25,8 @@ createApp({
             uploadAuthor: '',
             isUploading: false,
             uploadError: '',
-            isDeleting: null
+            isDeleting: null,
+            isSleeping: false
         }
     },
     computed: {
@@ -210,6 +211,7 @@ createApp({
         },
         async enterSleepMode() {
             if (confirm('Are you sure you want to put the device to sleep? You will need to press the RESET button on the board to wake it up.')) {
+                this.isSleeping = true;
                 try {
                     await fetch('/enter-sleep', { method: 'POST' });
                     // If the request succeeds, the device will go to sleep and will stop responding.
@@ -218,6 +220,7 @@ createApp({
                 } catch (error) {
                     console.error('Error entering sleep mode:', error);
                     this.transfer.error = 'Failed to send sleep command.';
+                    this.isSleeping = false;
                 }
             }
         }
