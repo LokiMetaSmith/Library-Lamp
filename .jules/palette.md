@@ -3,3 +3,6 @@
 **Action:** When handling async operations that trigger a page reload, navigation, or hardware halt, only reset the loading state in the `catch` block so the UI remains in the disabled/loading state until the system physically stops responding.## 2026-10-27 - [Vanilla JS Async Feedback for Hardware State Changes]
 **Learning:** Adding loading states to vanilla JS buttons that trigger an action which eventually halts the backend (like a sleep command) requires special care. If you reset the loading state to false in a `finally` block, the button may briefly flash back to its active state before the hardware actually goes to sleep and stops responding.
 **Action:** When handling async operations that trigger a page reload, navigation, or hardware halt, only reset the loading state in the `catch` block so the UI remains in the disabled/loading state until the system physically stops responding.
+## 2026-10-28 - [Color Contrast for Empty/Disabled States]
+**Learning:** The hardcoded color `#8a7b6c` was being used across the app for disabled buttons and empty states, which fails WCAG AA contrast ratio (3.44:1) against the dark theme backgrounds.
+**Action:** Always use the existing `--ink-muted` CSS variable (or `#d1bfae`) for muted text to ensure sufficient contrast (5.02:1) while maintaining the visual hierarchy.

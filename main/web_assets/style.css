@@ -111,7 +111,7 @@ li:last-child {
     margin-top: 4px;
 }
 .empty-state {
-    color: #8a7b6c;
+    color: var(--ink-muted);
     font-style: italic;
     text-align: center;
     padding: 10px;
@@ -135,7 +135,7 @@ button:hover:not(:disabled), .btn:hover, .admin-link:hover {
 }
 button:disabled {
     background-color: var(--border);
-    color: #8a7b6c;
+    color: var(--ink-muted);
     cursor: not-allowed;
     border-color: var(--surface2);
     box-shadow: none;
