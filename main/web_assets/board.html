@@ -339,7 +339,7 @@ body {
      text-align:center;padding:10px 16px;font-weight:600">
   📋 This board is currently full. Check back once some posts have expired. 📋
 </div>
-<div class="post-form">
+<form class="post-form" onsubmit="event.preventDefault(); document.getElementById('postBtn').click();">
   <div class="form-row">
 
     <div class="field field-name">
@@ -352,13 +352,13 @@ body {
     <div class="field field-cat">
       <label id="catLabel">Category</label>
       <div class="cat-btns" role="group" aria-labelledby="catLabel">
-        <button class="cat-btn active-Notice" aria-pressed="true" onclick="setType('Notice',this)">📌 Notice</button>
-        <button class="cat-btn" aria-pressed="false" onclick="setType('Offer', this)">🌱 Offer</button>
-        <button class="cat-btn" aria-pressed="false" onclick="setType('Need',  this)">🤝 Need</button>
-        <button class="cat-btn" aria-pressed="false" onclick="setType('Event', this)">📅 Event</button>
-        <button class="cat-btn" aria-pressed="false" onclick="setType('Review', this)">📖 Review</button>
-        <button class="cat-btn" aria-pressed="false" onclick="setType('Recomm',  this)">💡 Recomm.</button>
-        <button class="cat-btn" aria-pressed="false" onclick="setType('Request', this)">🔍 Request</button>
+        <button type="button" class="cat-btn active-Notice" aria-pressed="true" onclick="setType('Notice',this)">📌 Notice</button>
+        <button type="button" class="cat-btn" aria-pressed="false" onclick="setType('Offer', this)">🌱 Offer</button>
+        <button type="button" class="cat-btn" aria-pressed="false" onclick="setType('Need',  this)">🤝 Need</button>
+        <button type="button" class="cat-btn" aria-pressed="false" onclick="setType('Event', this)">📅 Event</button>
+        <button type="button" class="cat-btn" aria-pressed="false" onclick="setType('Review', this)">📖 Review</button>
+        <button type="button" class="cat-btn" aria-pressed="false" onclick="setType('Recomm',  this)">💡 Recomm.</button>
+        <button type="button" class="cat-btn" aria-pressed="false" onclick="setType('Request', this)">🔍 Request</button>
       </div>
       <div class="char-hint"></div>
     </div>
@@ -376,13 +376,13 @@ body {
   <div class="expiry-row">
     <span class="expiry-label" id="expiryLabel">Expires:</span>
     <div role="group" aria-labelledby="expiryLabel" style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
-      <button class="exp-btn" aria-pressed="false" onclick="setExpiry(24,  this)">1 day</button>
-      <button class="exp-btn" aria-pressed="false" onclick="setExpiry(72,  this)">3 days</button>
-      <button class="exp-btn active" aria-pressed="true" onclick="setExpiry(168, this)">1 week</button>
+      <button type="button" class="exp-btn" aria-pressed="false" onclick="setExpiry(24,  this)">1 day</button>
+      <button type="button" class="exp-btn" aria-pressed="false" onclick="setExpiry(72,  this)">3 days</button>
+      <button type="button" class="exp-btn active" aria-pressed="true" onclick="setExpiry(168, this)">1 week</button>
     </div>
-    <button class="post-btn" id="postBtn" onclick="doPost()">POST</button>
+    <button type="submit" class="post-btn" id="postBtn" onclick="if(this.form.checkValidity()) doPost();">POST</button>
   </div>
-</div>
+</form>
 
 <div class="filter-bar">
   <span class="filter-label" id="filterLabel">Show:</span>
@@ -474,7 +474,7 @@ document.getElementById('msgIn').addEventListener('input', function () {
 });
 
 document.getElementById('msgIn').addEventListener('keydown', function (e) {
-  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); doPost(); }
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); document.getElementById('postBtn').click(); }
 });
 
 // ── Category selection ─────────────────────────
