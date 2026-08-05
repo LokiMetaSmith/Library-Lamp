@@ -205,16 +205,16 @@ textarea.restore-area:focus { border-color: var(--accent-dark); }
 </header>
 
 <!-- Password gate -->
-<div id="gate">
+<form id="gate" onsubmit="event.preventDefault(); tryLogin();">
   <h2>Admin Access</h2>
   <label for="keyIn">Admin Access Key <span aria-hidden="true" style="color: #ff8a80;">*</span></label>
   <div style="display: flex; gap: 8px; margin-bottom: 10px;">
     <input type="password" id="keyIn" autocomplete="off" style="margin-bottom: 0;" required>
     <button type="button" onclick="const p = document.getElementById('keyIn'); const isPass = p.type === 'password'; p.type = isPass ? 'text' : 'password'; const label = isPass ? 'Hide key' : 'Show key'; this.textContent = isPass ? 'Hide' : 'Show'; this.setAttribute('aria-pressed', isPass); this.setAttribute('aria-label', label); this.title = label;" aria-label="Show key" title="Show key" aria-pressed="false" style="width: 70px; padding: 0; font-size: 0.9em; flex-shrink: 0; background-color: #6c757d; border-color: #5a6268;">Show</button>
   </div>
-  <button id="loginBtn" onclick="tryLogin()">Unlock 🔑</button>
+  <button type="submit" id="loginBtn">Unlock 🔑</button>
   <div class="error" id="gateErr" aria-live="assertive"></div>
-</div>
+</form>
 
 <!-- Admin controls (hidden until authenticated) -->
 <div id="panel">
@@ -222,11 +222,11 @@ textarea.restore-area:focus { border-color: var(--accent-dark); }
   <div class="section">
     <div class="section-head">Admin Key</div>
     <div class="section-body">
-      <div class="row">
+      <form class="row" onsubmit="event.preventDefault(); doSetKey(this.querySelector('button[type=submit]'));">
         <div class="fld">
           <label for="newKey">New Key (min 4 characters) <span aria-hidden="true" style="color: #ff8a80;">*</span></label>
           <div style="display: flex; gap: 8px;">
-            <input type="password" id="newKey" maxlength="64" autocomplete="new-password"
+            <input type="password" id="newKey" maxlength="64" minlength="4" autocomplete="new-password"
                    placeholder="Enter new key" style="width:200px; margin-bottom: 0;" required>
             <button type="button" class="btn" onclick="const p = document.getElementById('newKey'); const isPass = p.type === 'password'; p.type = isPass ? 'text' : 'password'; const label = isPass ? 'Hide new key' : 'Show new key'; this.textContent = isPass ? 'Hide' : 'Show'; this.setAttribute('aria-pressed', isPass); this.setAttribute('aria-label', label); this.title = label;" aria-label="Show new key" title="Show new key" aria-pressed="false" style="padding: 0 10px;">Show</button>
           </div>
@@ -234,13 +234,13 @@ textarea.restore-area:focus { border-color: var(--accent-dark); }
         <div class="fld">
           <label for="newKeyConfirm">Confirm <span aria-hidden="true" style="color: #ff8a80;">*</span></label>
           <div style="display: flex; gap: 8px;">
-            <input type="password" id="newKeyConfirm" maxlength="64"
+            <input type="password" id="newKeyConfirm" maxlength="64" minlength="4"
                    placeholder="Confirm new key" style="width:200px; margin-bottom: 0;" required>
             <button type="button" class="btn" onclick="const p = document.getElementById('newKeyConfirm'); const isPass = p.type === 'password'; p.type = isPass ? 'text' : 'password'; const label = isPass ? 'Hide confirmed key' : 'Show confirmed key'; this.textContent = isPass ? 'Hide' : 'Show'; this.setAttribute('aria-pressed', isPass); this.setAttribute('aria-label', label); this.title = label;" aria-label="Show confirmed key" title="Show confirmed key" aria-pressed="false" style="padding: 0 10px;">Show</button>
           </div>
         </div>
-        <button class="btn" onclick="doSetKey(this)">Change Key</button>
-      </div>
+        <button type="submit" class="btn">Change Key</button>
+      </form>
       <div class="feedback" id="keyFb" aria-live="polite"></div>
     </div>
   </div>
@@ -409,9 +409,6 @@ function tryLogin() {
     }
   });
 }
-document.getElementById('keyIn').addEventListener('keydown', e => {
-  if (e.key === 'Enter') tryLogin();
-});
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 function api(path) {
