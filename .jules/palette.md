@@ -14,3 +14,7 @@
 ## 2026-12-10 - Implicit Form Submission
 **Learning:** In custom admin panel layouts (e.g., `admin.html`), using `<div>` wrappers instead of `<form>` elements prevents users from submitting forms using the Enter key natively and bypasses built-in HTML5 validation like `minlength`.
 **Action:** When creating form inputs, always wrap them in a `<form>` tag and include a `<button type="submit">`. Use `onsubmit="event.preventDefault(); ..."` to intercept the action while maintaining standard accessibility and browser behaviors.
+
+## 2026-12-11 - [Input Placeholder Examples in Forms]
+**Learning:** Adding `placeholder` attributes with clear examples (e.g., "e.g., Neighborhood Library") to form inputs significantly improves the UX of configuration pages by reducing cognitive load and demonstrating the expected data format.
+**Action:** When adding or updating configuration or management forms, always provide contextual `placeholder` text on empty input fields to guide the user.
