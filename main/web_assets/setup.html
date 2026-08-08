@@ -24,12 +24,12 @@
         <form action="/save-credentials" method="POST" onsubmit="const btn = this.querySelector('button[type=submit]'); btn.disabled = true; btn.textContent = 'Connecting...'; return true;">
             <div style="margin-bottom: 15px;">
                 <label for="ssid" style="display: block; text-align: left; margin-bottom: 5px; font-weight: bold; color: #555; margin-left: 5%;">Wi-Fi Network Name (SSID) <span aria-hidden="true" style="color: #dc3545;">*</span></label>
-                <input type="text" id="ssid" name="ssid" required style="margin-bottom: 0;">
+                <input type="text" id="ssid" name="ssid" placeholder="e.g., MyHomeNetwork" required style="margin-bottom: 0;">
             </div>
             <div style="margin-bottom: 20px;">
                 <label for="password" style="display: block; text-align: left; margin-bottom: 5px; font-weight: bold; color: #555; margin-left: 5%;">Password</label>
                 <div style="display: flex; gap: 8px; width: 90%; margin: 0 auto;">
-                    <input type="password" id="password" name="password" style="margin-bottom: 0; width: 100%;">
+                    <input type="password" id="password" name="password" placeholder="e.g., MySecretPassword" style="margin-bottom: 0; width: 100%;">
                     <button type="button" onclick="const p = document.getElementById('password'); const isPass = p.type === 'password'; p.type = isPass ? 'text' : 'password'; const label = isPass ? 'Hide password' : 'Show password'; this.textContent = isPass ? 'Hide' : 'Show'; this.setAttribute('aria-pressed', isPass); this.setAttribute('aria-label', label); this.title = label;" aria-label="Show password" title="Show password" aria-pressed="false" style="width: 80px; padding: 0; background-color: #6c757d; font-size: 0.9em; flex-shrink: 0;">Show</button>
                 </div>
             </div>

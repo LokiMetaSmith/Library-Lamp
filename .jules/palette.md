@@ -18,3 +18,7 @@
 ## 2026-12-11 - [Input Placeholder Examples in Forms]
 **Learning:** Adding `placeholder` attributes with clear examples (e.g., "e.g., Neighborhood Library") to form inputs significantly improves the UX of configuration pages by reducing cognitive load and demonstrating the expected data format.
 **Action:** When adding or updating configuration or management forms, always provide contextual `placeholder` text on empty input fields to guide the user.
+
+## 2026-12-11 - [Input Placeholder Examples in Setup Form]
+**Learning:** Adding `placeholder` attributes with clear examples (e.g., "e.g., MyHomeNetwork" and "e.g., MySecretPassword") to configuration inputs in `setup.html` significantly improves the UX by reducing cognitive load and demonstrating the expected data format for the hardware portal.
+**Action:** When creating or maintaining configuration and setup forms, always ensure text and password inputs have descriptive `placeholder` attributes.
