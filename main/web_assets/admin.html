@@ -247,7 +247,7 @@ textarea.restore-area:focus { border-color: var(--accent-dark); }
 
   <div class="section">
     <div class="section-head">Board Identity</div>
-    <div class="section-body">
+    <form class="section-body" onsubmit="event.preventDefault(); doIdentity(this.querySelector('button[type=submit]'));">
       <div class="row">
         <div class="fld" style="flex:0 0 60px">
           <label for="idIcon">Icon</label>
@@ -271,10 +271,10 @@ textarea.restore-area:focus { border-color: var(--accent-dark); }
         <input type="text" id="idFooter" maxlength="80" placeholder="e.g., Maintained by neighborhood volunteers" style="width:100%">
       </div>
       <div class="row">
-        <button class="btn" onclick="doIdentity(this)">Save Identity</button>
+        <button type="submit" class="btn">Save Identity</button>
       </div>
       <div class="feedback" id="idFb" aria-live="polite"></div>
-    </div>
+    </form>
   </div>
 
   <div class="section">
