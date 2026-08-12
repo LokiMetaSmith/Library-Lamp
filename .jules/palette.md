@@ -25,3 +25,7 @@
 ## 2026-12-11 - [Implicit Form Submission in Admin Portal]
 **Learning:** The "Board Identity" configuration section in the Admin portal used a generic `<div>` wrapper with a standard button calling a JavaScript function on click. This setup prevented users from pressing the "Enter" key to submit the form, which is a common expectation for multi-input forms. By replacing the `<div>` with a `<form>` tag, adding an `onsubmit` handler with `event.preventDefault()`, and changing the button to `type="submit"`, native implicit form submission is enabled while retaining the existing JavaScript logic and CSS styling.
 **Action:** When building or updating multi-input configuration sections that require submission, always use semantic `<form>` tags and `type="submit"` buttons, handling the event via `onsubmit` rather than `onclick` to ensure native keyboard accessibility.
+
+## 2026-12-11 - [Visible Character Limits in Text Inputs]
+**Learning:** Character count hints on input fields that only appear when the user is close to the limit (e.g., `n > 18` for a 24-character max) can leave the user guessing their remaining characters for most of the typing experience.
+**Action:** When creating forms with character limits on inputs, always display the character count explicitly (e.g., "0/24") right from the beginning and update it continuously as the user types, rather than hiding it conditionally.

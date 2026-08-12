@@ -456,20 +456,29 @@ let activeSort    = 'new';
 
 // ── Restore name from localStorage ────────────
 const savedName = localStorage.getItem('cn_name');
-if (savedName) document.getElementById('nameIn').value = savedName;
+if (savedName) {
+  const nameInput = document.getElementById('nameIn');
+  nameInput.value = savedName;
+  const nameHint = document.getElementById('nameHint');
+  nameHint.textContent = savedName.length + '/24';
+  if (savedName.length > 20) nameHint.className = 'char-hint warn';
+} else {
+  document.getElementById('nameHint').textContent = '0/24';
+}
+document.getElementById('msgHint').textContent = '0/300';
 
 document.getElementById('nameIn').addEventListener('input', function () {
   localStorage.setItem('cn_name', this.value);
   const h = document.getElementById('nameHint');
   const n = this.value.length;
-  h.textContent = n > 18 ? n + '/24' : '';
+  h.textContent = n + '/24';
   h.className   = 'char-hint' + (n > 20 ? ' warn' : '');
 });
 
 document.getElementById('msgIn').addEventListener('input', function () {
   const h = document.getElementById('msgHint');
   const n = this.value.length;
-  h.textContent = n > 240 ? n + '/300' : '';
+  h.textContent = n + '/300';
   h.className   = 'char-hint' + (n > 270 ? ' warn' : '');
 });
 
