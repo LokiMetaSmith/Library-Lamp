@@ -397,7 +397,8 @@ body {
     <button class="ftab" aria-pressed="false" onclick="setFilter('Request',  this)">🔍 Request</button>
   </div>
   <span class="sep"></span>
-  <div role="group" aria-label="Sort" style="display: flex; gap: 6px; flex-wrap: wrap; align-items: center;">
+  <span class="filter-label" id="sortLabel">Sort:</span>
+  <div role="group" aria-labelledby="sortLabel" style="display: flex; gap: 6px; flex-wrap: wrap; align-items: center;">
     <button class="ftab active" id="sNew" aria-pressed="true" onclick="setSort('new', this)">New</button>
     <button class="ftab"        id="sExp" aria-pressed="false" onclick="setSort('exp', this)">Expiring</button>
   </div>
