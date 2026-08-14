@@ -50,11 +50,11 @@
                         </div>
                         <div>
                             <label for="uploadTitle" style="display: block; font-size: 0.9em; margin-bottom: 5px;">Title <span aria-hidden="true" style="color: #ff8a80;">*</span></label>
-                            <input type="text" id="uploadTitle" v-model="uploadTitle" placeholder="Title" required>
+                            <input type="text" id="uploadTitle" v-model="uploadTitle" placeholder="e.g., The Great Gatsby" required>
                         </div>
                         <div>
                             <label for="uploadAuthor" style="display: block; font-size: 0.9em; margin-bottom: 5px;">Author <span aria-hidden="true" style="color: #ff8a80;">*</span></label>
-                            <input type="text" id="uploadAuthor" v-model="uploadAuthor" placeholder="Author" required>
+                            <input type="text" id="uploadAuthor" v-model="uploadAuthor" placeholder="e.g., F. Scott Fitzgerald" required>
                         </div>
                         <button type="submit" :disabled="isUploading" :title="isUploading ? 'Upload in progress...' : 'Upload book'">
                             {{ isUploading ? 'Uploading...' : 'Upload' }}
