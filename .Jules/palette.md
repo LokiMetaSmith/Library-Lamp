@@ -25,3 +25,6 @@
 ## 2024-07-28 - Keyboard Exit Shortcuts in Immersive Views
 **Learning:** When building full-screen or immersive interfaces (like the e-book viewer) that support keyboard navigation for primary actions (e.g., arrow keys for page turning), users intuitively expect a complementary keyboard shortcut (like `Escape`) to exit or go back. Without it, keyboard-only users must disrupt their reading flow to manually tab through the interface to find a back button.
 **Action:** Always pair primary keyboard navigation in immersive views with an intuitive "exit" or "back" shortcut (e.g., `Escape`), and explicitly document the shortcut in the UI (e.g., via tooltips or aria-labels).
+## 2026-06-25 - [Contextual Placeholders]
+**Learning:** Found that primary forms like the "Upload Book" form in `index.html` were using placeholders that simply duplicated the label text (e.g., `placeholder="Title"` for the Title field). This fails to provide any extra value and does not help the user understand the expected input format. Using contextual examples (e.g., `placeholder="e.g., The Great Gatsby"`) reduces cognitive load and clarifies expectations.
+**Action:** When designing or updating forms, ensure that `placeholder` attributes provide clear, concrete examples of the expected input rather than just repeating the field label.
