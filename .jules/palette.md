@@ -29,3 +29,7 @@
 ## 2026-12-11 - [Visible Character Limits in Text Inputs]
 **Learning:** Character count hints on input fields that only appear when the user is close to the limit (e.g., `n > 18` for a 24-character max) can leave the user guessing their remaining characters for most of the typing experience.
 **Action:** When creating forms with character limits on inputs, always display the character count explicitly (e.g., "0/24") right from the beginning and update it continuously as the user types, rather than hiding it conditionally.
+
+## 2026-12-11 - [ARIA Labels for Download Links]
+**Learning:** When using standard text links (like book titles) as download triggers, screen readers may announce just the title without clarifying the action. Adding an explicit `aria-label` (e.g., "Download The Great Gatsby") provides necessary context for visually impaired users.
+**Action:** Always append an explicit `aria-label` describing the action to text links that initiate downloads, especially in dynamic lists.
