@@ -163,6 +163,7 @@
                 titleLink.textContent = book.title;
                 // Link directly to the download endpoint
                 titleLink.href = `/download?file=${encodeURIComponent(book.name)}&source=sd`;
+                titleLink.setAttribute('aria-label', `Download ${book.title}`);
                 titleLink.style.display = 'block';
                 titleLink.style.marginBottom = '5px';
                 titleLink.style.textDecoration = 'none';
