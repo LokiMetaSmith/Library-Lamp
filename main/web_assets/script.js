@@ -25,6 +25,7 @@ createApp({
             uploadAuthor: '',
             isUploading: false,
             uploadError: '',
+            uploadSuccess: false,
             isDeleting: null,
             isSleeping: false
         }
@@ -178,6 +179,7 @@ createApp({
 
             this.isUploading = true;
             this.uploadError = '';
+            this.uploadSuccess = false;
 
             try {
                 // Construct query URL
@@ -198,6 +200,10 @@ createApp({
                     fileInput.value = '';
                     this.fetchFileLists();
                     this.fetchData(); // to update SD size
+                    this.uploadSuccess = true;
+                    setTimeout(() => {
+                        this.uploadSuccess = false;
+                    }, 4000);
                 } else {
                     const txt = await response.text();
                     this.uploadError = `Upload failed: ${txt || response.statusText}`;

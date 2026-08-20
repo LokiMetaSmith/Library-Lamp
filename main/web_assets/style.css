@@ -326,3 +326,9 @@ a:hover {
     background-color: var(--surface);
     color: var(--accent);
 }
+.success-message {
+    color: #4caf50;
+    font-weight: bold;
+    margin-top: 10px;
+    margin-bottom: 0;
+}
