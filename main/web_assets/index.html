@@ -63,6 +63,9 @@
                     <div aria-live="assertive">
                         <p class="error-message" v-if="uploadError">{{ uploadError }}</p>
                     </div>
+                    <div aria-live="polite">
+                        <p class="success-message" v-if="uploadSuccess">✓ Book uploaded successfully!</p>
+                    </div>
                 </div>
 
                 <ul class="file-list">
