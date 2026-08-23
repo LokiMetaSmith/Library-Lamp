@@ -33,3 +33,7 @@
 ## 2026-12-11 - [ARIA Labels for Download Links]
 **Learning:** When using standard text links (like book titles) as download triggers, screen readers may announce just the title without clarifying the action. Adding an explicit `aria-label` (e.g., "Download The Great Gatsby") provides necessary context for visually impaired users.
 **Action:** Always append an explicit `aria-label` describing the action to text links that initiate downloads, especially in dynamic lists.
+
+## 2026-12-11 - [ARIA Titles for Icon-Only Buttons]
+**Learning:** Icon-only buttons (like the hamburger menu) that rely on `aria-label` for screen reader accessibility often lack clear explanations for sighted users on hover, especially keyboard users. This reduces discoverability and can cause confusion about the button's function.
+**Action:** Always complement `aria-label` on icon-only buttons with a matching `title` attribute to provide a helpful tooltip for sighted mouse and keyboard users.
