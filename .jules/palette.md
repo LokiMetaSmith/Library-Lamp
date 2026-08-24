@@ -37,3 +37,7 @@
 ## 2026-12-11 - [ARIA Titles for Icon-Only Buttons]
 **Learning:** Icon-only buttons (like the hamburger menu) that rely on `aria-label` for screen reader accessibility often lack clear explanations for sighted users on hover, especially keyboard users. This reduces discoverability and can cause confusion about the button's function.
 **Action:** Always complement `aria-label` on icon-only buttons with a matching `title` attribute to provide a helpful tooltip for sighted mouse and keyboard users.
+
+## 2026-12-11 - [Empty State Calls to Action]
+**Learning:** Found an empty state for a disconnected E-Reader that just said "No e-reader connected." This lacked helpful guidance for users, similar to a previous finding where an empty library lacked a call-to-action.
+**Action:** When creating empty states, always reuse the `.empty-state` CSS class for consistency, and provide a helpful call-to-action or instructions (e.g., "Connect your device via USB to view and transfer books.") rather than just stating the lack of data.
