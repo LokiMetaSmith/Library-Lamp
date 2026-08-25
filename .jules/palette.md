@@ -41,3 +41,7 @@
 ## 2026-12-11 - [Empty State Calls to Action]
 **Learning:** Found an empty state for a disconnected E-Reader that just said "No e-reader connected." This lacked helpful guidance for users, similar to a previous finding where an empty library lacked a call-to-action.
 **Action:** When creating empty states, always reuse the `.empty-state` CSS class for consistency, and provide a helpful call-to-action or instructions (e.g., "Connect your device via USB to view and transfer books.") rather than just stating the lack of data.
+
+## 2026-08-25 - [Inline Form Validation vs Native Tooltips]
+**Learning:** When using custom `aria-live` inline validation messages, retaining standard browser validation (via the `required` attribute) can cause native tooltips to trigger, silently blocking form submission and preventing custom JS logic from firing. The form submission logic previously used a confusing loop between `onsubmit` and `onclick` just to call `checkValidity()`, resulting in a poor experience and broken feedback.
+**Action:** When implementing custom inline form validation, always add the `novalidate` attribute to the `<form>` tag to disable native tooltips, while keeping the semantic `required` attributes on inputs for screen readers. Use a clean `onsubmit="event.preventDefault(); doCustomLogic();"` approach.
