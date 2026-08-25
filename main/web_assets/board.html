@@ -339,7 +339,7 @@ body {
      text-align:center;padding:10px 16px;font-weight:600">
   📋 This board is currently full. Check back once some posts have expired. 📋
 </div>
-<form class="post-form" onsubmit="event.preventDefault(); document.getElementById('postBtn').click();">
+<form class="post-form" novalidate onsubmit="event.preventDefault(); doPost();">
   <div class="form-row">
 
     <div class="field field-name">
@@ -380,7 +380,7 @@ body {
       <button type="button" class="exp-btn" aria-pressed="false" onclick="setExpiry(72,  this)">3 days</button>
       <button type="button" class="exp-btn active" aria-pressed="true" onclick="setExpiry(168, this)">1 week</button>
     </div>
-    <button type="submit" class="post-btn" id="postBtn" onclick="if(this.form.checkValidity()) doPost();">POST</button>
+    <button type="submit" class="post-btn" id="postBtn">POST</button>
   </div>
 </form>
 
