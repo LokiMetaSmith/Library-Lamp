@@ -205,7 +205,7 @@ textarea.restore-area:focus { border-color: var(--accent-dark); }
 </header>
 
 <!-- Password gate -->
-<form id="gate" onsubmit="event.preventDefault(); tryLogin();">
+<form id="gate" novalidate onsubmit="event.preventDefault(); tryLogin();">
   <h2>Admin Access</h2>
   <label for="keyIn">Admin Access Key <span aria-hidden="true" style="color: #ff8a80;">*</span></label>
   <div style="display: flex; gap: 8px; margin-bottom: 10px;">
@@ -222,7 +222,7 @@ textarea.restore-area:focus { border-color: var(--accent-dark); }
   <div class="section">
     <div class="section-head">Admin Key</div>
     <div class="section-body">
-      <form class="row" onsubmit="event.preventDefault(); doSetKey(this.querySelector('button[type=submit]'));">
+      <form class="row" novalidate onsubmit="event.preventDefault(); doSetKey(this.querySelector('button[type=submit]'));">
         <div class="fld">
           <label for="newKey">New Key (min 4 characters) <span aria-hidden="true" style="color: #ff8a80;">*</span></label>
           <div style="display: flex; gap: 8px;">

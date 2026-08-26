@@ -45,3 +45,11 @@
 ## 2026-08-25 - [Inline Form Validation vs Native Tooltips]
 **Learning:** When using custom `aria-live` inline validation messages, retaining standard browser validation (via the `required` attribute) can cause native tooltips to trigger, silently blocking form submission and preventing custom JS logic from firing. The form submission logic previously used a confusing loop between `onsubmit` and `onclick` just to call `checkValidity()`, resulting in a poor experience and broken feedback.
 **Action:** When implementing custom inline form validation, always add the `novalidate` attribute to the `<form>` tag to disable native tooltips, while keeping the semantic `required` attributes on inputs for screen readers. Use a clean `onsubmit="event.preventDefault(); doCustomLogic();"` approach.
+
+## 2026-12-11 - [Custom Form Validation Conflicts]
+**Learning:** Implementing custom JavaScript validation () on forms with  inputs can cause browsers to block submission silently due to native HTML5 validation tooltips failing to appear or interfering with the custom logic.
+**Action:** When overriding form submission to use custom inline validation feedback, always add the `novalidate` attribute to the `<form>` element. This disables the native browser tooltips while keeping the semantic `required` attributes for screen readers.
+
+## 2026-12-11 - [Custom Form Validation Conflicts]
+**Learning:** Implementing custom JavaScript validation on forms with required inputs can cause browsers to block submission silently due to native HTML5 validation tooltips failing to appear or interfering with the custom logic.
+**Action:** When overriding form submission to use custom inline validation feedback, always add the `novalidate` attribute to the form element. This disables the native browser tooltips while keeping the semantic required attributes for screen readers.

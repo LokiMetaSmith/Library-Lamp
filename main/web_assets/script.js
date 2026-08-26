@@ -331,7 +331,23 @@ async function uploadBook(event) {
     const authorInput = document.getElementById('uploadAuthor');
     const uploadBtn = document.getElementById('uploadBtn');
 
-    if (!fileInput || !fileInput.files.length) return;
+    const errEl = document.getElementById('uploadError');
+
+    if (!fileInput || !fileInput.files.length) {
+        if (errEl) { errEl.style.display = 'block'; errEl.textContent = 'Please select a file to upload.'; }
+        if (fileInput) fileInput.focus();
+        return;
+    }
+    if (titleInput && !titleInput.value.trim()) {
+        if (errEl) { errEl.style.display = 'block'; errEl.textContent = 'Please enter a title.'; }
+        titleInput.focus();
+        return;
+    }
+    if (authorInput && !authorInput.value.trim()) {
+        if (errEl) { errEl.style.display = 'block'; errEl.textContent = 'Please enter an author.'; }
+        authorInput.focus();
+        return;
+    }
 
     const file = fileInput.files[0];
     const title = titleInput ? titleInput.value : 'Unknown Title';
@@ -339,7 +355,6 @@ async function uploadBook(event) {
     const filename = file.name;
 
     state.isUploading = true;
-    const errEl = document.getElementById('uploadError');
     const succEl = document.getElementById('uploadSuccess');
     if (errEl) { errEl.style.display = 'none'; errEl.textContent = ''; }
     if (succEl) { succEl.style.display = 'none'; }
