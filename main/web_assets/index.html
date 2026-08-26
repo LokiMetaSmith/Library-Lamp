@@ -37,7 +37,7 @@
 
                 <div id="uploadSection" class="upload-section" style="display: none; margin-bottom: 20px; padding: 15px; background-color: rgba(0,0,0,0.2); border-radius: 8px;">
                     <h3 style="margin-top: 0;">Upload Book</h3>
-                    <form id="uploadForm" onsubmit="uploadBook(event)" style="display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end;">
+                    <form id="uploadForm" novalidate onsubmit="uploadBook(event)" style="display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end;">
                         <div>
                             <label for="uploadFile" style="display: block; font-size: 0.9em; margin-bottom: 5px;">File <span aria-hidden="true" style="color: #ff8a80;">*</span></label>
                             <input type="file" id="uploadFile" required>
