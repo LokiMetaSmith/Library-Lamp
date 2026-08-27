@@ -53,3 +53,7 @@
 ## 2026-12-11 - [Custom Form Validation Conflicts]
 **Learning:** Implementing custom JavaScript validation on forms with required inputs can cause browsers to block submission silently due to native HTML5 validation tooltips failing to appear or interfering with the custom logic.
 **Action:** When overriding form submission to use custom inline validation feedback, always add the `novalidate` attribute to the form element. This disables the native browser tooltips while keeping the semantic required attributes for screen readers.
+
+## 2026-12-11 - [Visible Character Limits Reset in Forms]
+**Learning:** When resetting forms that include visible character limit hints (e.g., '0/300'), ensure the hint text is explicitly reset to its initial count rather than being cleared entirely, which would incorrectly hide the indicator from the user for their next entry.
+**Action:** Always reset character hint containers explicitly back to their default state (e.g., `'0/300'`) upon form submission, preventing the count from silently disappearing.

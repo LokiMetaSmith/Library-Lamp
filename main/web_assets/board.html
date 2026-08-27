@@ -629,7 +629,8 @@ async function doPost() {
     });
 
     document.getElementById('msgIn').value      = '';
-    document.getElementById('msgHint').textContent = '';
+    document.getElementById('msgHint').textContent = '0/300';
+    document.getElementById('msgHint').className = 'char-hint';
   } finally {
     if (btn) {
       btn.disabled = false;
