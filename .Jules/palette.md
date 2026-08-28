@@ -28,3 +28,6 @@
 ## 2026-06-25 - [Contextual Placeholders]
 **Learning:** Found that primary forms like the "Upload Book" form in `index.html` were using placeholders that simply duplicated the label text (e.g., `placeholder="Title"` for the Title field). This fails to provide any extra value and does not help the user understand the expected input format. Using contextual examples (e.g., `placeholder="e.g., The Great Gatsby"`) reduces cognitive load and clarifies expectations.
 **Action:** When designing or updating forms, ensure that `placeholder` attributes provide clear, concrete examples of the expected input rather than just repeating the field label.
+## 2026-06-25 - Contextual Placeholders in Bulletin Board
+**Learning:** Found that the Bulletin Board form used generic placeholders like 'neighbor' and 'What\'s on the board?' that didn't provide specific value or guidance. Updating these to explicit examples like 'e.g., Jane (Neighbor)' reduces cognitive load and gives better direction.
+**Action:** Always ensure that placeholder attributes provide clear, concrete examples of the expected input rather than just repeating the field label or asking a generic question.
