@@ -574,7 +574,7 @@ async function loadPostList(btn) {
     const r    = await fetch('/board/messages');
     const data = await r.json();
     if (data.length === 0) {
-      container.innerHTML = '<div class="post-empty">No active posts.</div>';
+      container.innerHTML = '<div class="post-empty empty-state">No active posts.<br><span class="file-notes">Community posts will appear here for moderation.</span></div>';
       return;
     }
     container.innerHTML = '<div class="post-list">' +
@@ -588,7 +588,7 @@ async function loadPostList(btn) {
 </div>`).join('') +
     '</div>';
   } catch (_) {
-    container.innerHTML = '<div class="post-empty">Failed to load posts.</div>';
+    container.innerHTML = '<div class="post-empty empty-state">Failed to load posts.<br><span class="file-notes">Please check your connection and try again.</span></div>';
   } finally {
     if (btn) {
       btn.disabled = false;

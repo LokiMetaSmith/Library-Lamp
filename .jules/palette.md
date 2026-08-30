@@ -57,3 +57,7 @@
 ## 2026-12-11 - [Visible Character Limits Reset in Forms]
 **Learning:** When resetting forms that include visible character limit hints (e.g., '0/300'), ensure the hint text is explicitly reset to its initial count rather than being cleared entirely, which would incorrectly hide the indicator from the user for their next entry.
 **Action:** Always reset character hint containers explicitly back to their default state (e.g., `'0/300'`) upon form submission, preventing the count from silently disappearing.
+
+## 2026-12-12 - [Improved Empty State Guidance in Admin Portal]
+**Learning:** Found that the post empty states in `admin.html` lacked helpful contextual guidance and failed to reuse the consistent `.empty-state` CSS class, contrary to previous learnings on other components.
+**Action:** When managing empty states across all pages, always append `.empty-state` for layout consistency and provide actionable or explanatory subtext (e.g., 'Community posts will appear here for moderation.') rather than merely stating that no data is present.
