@@ -61,3 +61,7 @@
 ## 2026-12-12 - [Improved Empty State Guidance in Admin Portal]
 **Learning:** Found that the post empty states in `admin.html` lacked helpful contextual guidance and failed to reuse the consistent `.empty-state` CSS class, contrary to previous learnings on other components.
 **Action:** When managing empty states across all pages, always append `.empty-state` for layout consistency and provide actionable or explanatory subtext (e.g., 'Community posts will appear here for moderation.') rather than merely stating that no data is present.
+
+## 2026-12-12 - [Bulletin Board Empty State Enhancement]
+**Learning:** Found an empty state in `board.html` that lacked the global `.empty-state` CSS class and used plain text rather than the standardized `.file-notes` subtext class, leading to an inconsistent empty state appearance compared to the rest of the app.
+**Action:** When defining empty states, always append `.empty-state` for layout consistency, retaining any necessary specific layout classes (like `.empty` for grid column spanning). Additionally, wrap subtext instructions in `.file-notes` to match the application's design system.
