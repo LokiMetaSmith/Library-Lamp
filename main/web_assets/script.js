@@ -148,7 +148,7 @@ function renderUI() {
             localList.innerHTML = `
                 <li class="empty-state">
                     No books found in the library. <br>
-                    <span id="uploadHint" style="font-size: 0.9em; margin-top: 5px; display: ${canUpload ? 'inline-block' : 'none'};">Upload a book above to get started!</span>
+                    <span id="uploadHint" class="file-notes" style="display: ${canUpload ? 'inline-block' : 'none'};">Upload a book above to get started!</span>
                 </li>`;
         } else {
             localList.innerHTML = state.localFiles.map(file => {
@@ -186,14 +186,14 @@ function renderUI() {
         if (!state.isEReaderConnected) {
             ereaderContainer.innerHTML = `
                 <div class="empty-state">
-                    No e-reader connected.<br><span style="font-size: 0.9em; margin-top: 5px; display: inline-block;">Connect your device via USB to view and transfer books.</span>
+                    No e-reader connected.<br><span class="file-notes" style="display: inline-block;">Connect your device via USB to view and transfer books.</span>
                 </div>`;
         } else if (state.ereaderFiles.length === 0) {
             ereaderContainer.innerHTML = `
                 <ul class="file-list">
                     <li class="empty-state">
                         No books found on the e-reader. <br>
-                        <span style="font-size: 0.9em; margin-top: 5px; display: inline-block;">Transfer a book from your local library to start reading!</span>
+                        <span class="file-notes" style="display: inline-block;">Transfer a book from your local library to start reading!</span>
                     </li>
                 </ul>`;
         } else {

@@ -65,3 +65,7 @@
 ## 2026-12-12 - [Bulletin Board Empty State Enhancement]
 **Learning:** Found an empty state in `board.html` that lacked the global `.empty-state` CSS class and used plain text rather than the standardized `.file-notes` subtext class, leading to an inconsistent empty state appearance compared to the rest of the app.
 **Action:** When defining empty states, always append `.empty-state` for layout consistency, retaining any necessary specific layout classes (like `.empty` for grid column spanning). Additionally, wrap subtext instructions in `.file-notes` to match the application's design system.
+
+## 2026-12-13 - [Empty State Subtext Consistency]
+**Learning:** We discovered multiple instances across the frontend where secondary subtext or helpful instructions inside `.empty-state` containers were using hardcoded inline styles (like `font-size: 0.9em; margin-top: 5px;`) instead of adhering to the design system's consistent `.file-notes` class.
+**Action:** When providing secondary subtext or helpful instructions within UI components (such as `.empty-state` containers), always use the existing `.file-notes` CSS class instead of inline styles to maintain design system consistency.
