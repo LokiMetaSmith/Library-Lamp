@@ -10,8 +10,19 @@
 // Queue for async transmissions
 QueueHandle_t loraTransmitQueue = NULL;
 bool lora_scanning = false;
+float lora_last_rssi = 0.0f;
+float lora_last_snr = 0.0f;
+uint32_t lora_packets_rx = 0;
+uint32_t lora_packets_tx = 0;
+
 #define LORA_HEARTBEAT_INTERVAL_MS 60000 // 1 minute
 
+uint32_t lora_get_queue_depth(void) {
+    if (loraTransmitQueue == NULL) {
+        return 0;
+    }
+    return (uint32_t)uxQueueMessagesWaiting(loraTransmitQueue);
+}
 
 static const char *TAG = "LORAWAN";
 
@@ -42,10 +53,13 @@ void loraReceiveTask(void *pvParameters) {
                 state = radio->readData(str, 255);
 
                 if (state == RADIOLIB_ERR_NONE) {
+                    lora_last_rssi = radio->getRSSI();
+                    lora_last_snr = radio->getSNR();
+                    lora_packets_rx++;
                     ESP_LOGI(TAG, "Received packet!");
                     ESP_LOGI(TAG, "Data: %s", (char*)str);
-                    ESP_LOGI(TAG, "RSSI: %f dBm", radio->getRSSI());
-                    ESP_LOGI(TAG, "SNR: %f dB", radio->getSNR());
+                    ESP_LOGI(TAG, "RSSI: %f dBm", lora_last_rssi);
+                    ESP_LOGI(TAG, "SNR: %f dB", lora_last_snr);
 
                     // TODO: Parse MSG packets and inject them into bulletin_board
                 } else if (state == RADIOLIB_ERR_CRC_MISMATCH) {
@@ -81,6 +95,7 @@ void loraTransmitTask(void *pvParameters) {
                 lora_scanning = true;
                 int state = radio->transmit(msg);
                 if (state == RADIOLIB_ERR_NONE) {
+                    lora_packets_tx++;
                     ESP_LOGI(TAG, "Broadcast success!");
                 } else {
                     ESP_LOGE(TAG, "Broadcast failed, code %d", state);
@@ -99,7 +114,9 @@ void loraTransmitTask(void *pvParameters) {
                 lora_scanning = true;
                 const char* heartbeat_msg = "HEARTBEAT: Library-Lamp Discovery";
                 ESP_LOGI(TAG, "Sending Discovery Heartbeat");
-                radio->transmit(heartbeat_msg);
+                if (radio->transmit(heartbeat_msg) == RADIOLIB_ERR_NONE) {
+                    lora_packets_tx++;
+                }
                 lora_scanning = false;
                 radio->startReceive();
                 xSemaphoreGive(loraMutex);

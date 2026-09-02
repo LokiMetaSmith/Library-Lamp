@@ -52,6 +52,15 @@
                         </div>
                         <button type="submit" id="uploadBtn" title="Upload book">Upload</button>
                     </form>
+                    <div id="uploadProgressContainer" style="display: none; margin-top: 10px;" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="Upload progress" title="0%">
+                        <div style="display: flex; justify-content: space-between; font-size: 0.85em; margin-bottom: 3px;">
+                            <span>Uploading...</span>
+                            <span id="uploadProgressText">0%</span>
+                        </div>
+                        <div style="width: 100%; background-color: rgba(255,255,255,0.2); height: 8px; border-radius: 4px; overflow: hidden;">
+                            <div id="uploadProgressBar" style="width: 0%; height: 100%; background-color: var(--c-need-bar, #4caf50); transition: width 0.1s ease;"></div>
+                        </div>
+                    </div>
                     <div aria-live="assertive">
                         <p id="uploadError" class="error-message" style="display: none;"></p>
                     </div>

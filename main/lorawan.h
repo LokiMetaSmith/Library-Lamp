@@ -59,7 +59,12 @@ extern "C" {
 #endif
 
 extern bool lora_scanning;
+extern float lora_last_rssi;
+extern float lora_last_snr;
+extern uint32_t lora_packets_rx;
+extern uint32_t lora_packets_tx;
 
+uint32_t lora_get_queue_depth(void);
 void lora_wan_init(void);
 void lora_wan_broadcast(const char *message);
 

@@ -333,6 +333,7 @@ body {
   <div class="header-meta">
     <div id="boardRules"></div>
     <div id="postCount">— posts</div>
+    <div id="loraStats"></div>
   </div>
 </header>
 <div id="fullBanner" aria-live="assertive" style="display:none;background:#a30000;color:#fff;
@@ -557,6 +558,14 @@ async function loadSystemStatus() {
         const list = document.getElementById("systemErrorsList");
         list.innerHTML = errors.map(e => `<li>${e}</li>`).join("");
         banner.style.display = "block";
+      }
+      const loraEl = document.getElementById("loraStats");
+      if (loraEl && data.lora_initialized) {
+        const tx = data.lora_packets_tx || 0;
+        const rx = data.lora_packets_rx || 0;
+        const rssi = (data.lora_last_rssi !== undefined) ? data.lora_last_rssi.toFixed(1) : 0;
+        const snr = (data.lora_last_snr !== undefined) ? data.lora_last_snr.toFixed(1) : 0;
+        loraEl.textContent = `LoRa: TX ${tx} | RX ${rx} | RSSI ${rssi}dBm | SNR ${snr}dB`;
       }
     }
   } catch (e) {
