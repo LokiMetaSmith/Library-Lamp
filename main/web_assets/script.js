@@ -16,6 +16,15 @@ const state = {
     sdUsedMb: 0,
     allowPublicUploads: false,
     isAdmin: false,
+    lora: {
+        initialized: false,
+        scanning: false,
+        lastRssi: 0,
+        lastSnr: 0,
+        packetsRx: 0,
+        packetsTx: 0,
+        queueDepth: 0
+    },
     isUploading: false,
     uploadError: '',
     uploadSuccess: false,
@@ -46,9 +55,21 @@ async function fetchData() {
         if (!data.lora_initialized) errors.push("Warning: LoRaWAN initialization failed.");
         state.systemErrors = errors;
 
+        state.lora.initialized = !!data.lora_initialized;
+        state.lora.scanning = !!data.lora_scanning;
+        if (data.lora_last_rssi !== undefined) state.lora.lastRssi = data.lora_last_rssi;
+        if (data.lora_last_snr !== undefined) state.lora.lastSnr = data.lora_last_snr;
+        if (data.lora_packets_rx !== undefined) state.lora.packetsRx = data.lora_packets_rx;
+        if (data.lora_packets_tx !== undefined) state.lora.packetsTx = data.lora_packets_tx;
+        if (data.lora_queue_depth !== undefined) state.lora.queueDepth = data.lora_queue_depth;
+
         const status = [];
         if (data.catalog_updating) status.push("Updating Library Catalog...");
-        if (data.lora_scanning) status.push("Scanning for other Library-Lamps...");
+        if (data.lora_scanning) {
+            status.push("Scanning for other Library-Lamps...");
+        } else if (state.lora.initialized) {
+            status.push(`LoRa Radio: TX ${state.lora.packetsTx} | RX ${state.lora.packetsRx} | RSSI ${state.lora.lastRssi.toFixed(1)} dBm | SNR ${state.lora.lastSnr.toFixed(1)} dB`);
+        }
         state.systemStatus = status;
 
         if (data.sd_total_mb !== undefined) state.sdTotalMb = data.sd_total_mb;
@@ -356,8 +377,19 @@ async function uploadBook(event) {
 
     state.isUploading = true;
     const succEl = document.getElementById('uploadSuccess');
+    const progContainer = document.getElementById('uploadProgressContainer');
+    const progBar = document.getElementById('uploadProgressBar');
+    const progText = document.getElementById('uploadProgressText');
+
     if (errEl) { errEl.style.display = 'none'; errEl.textContent = ''; }
     if (succEl) { succEl.style.display = 'none'; }
+    if (progContainer) {
+        progContainer.style.display = 'block';
+        progContainer.setAttribute('aria-valuenow', '0');
+        progContainer.setAttribute('title', '0%');
+        if (progBar) progBar.style.width = '0%';
+        if (progText) progText.textContent = '0%';
+    }
 
     if (uploadBtn) {
         uploadBtn.disabled = true;
@@ -365,51 +397,75 @@ async function uploadBook(event) {
         uploadBtn.title = 'Upload in progress...';
     }
 
-    try {
-        let url = `/upload?title=${encodeURIComponent(title)}&author=${encodeURIComponent(author)}&filename=${encodeURIComponent(filename)}`;
-        const savedKey = localStorage.getItem('adminKey');
-        if (savedKey) {
-            url += `&key=${encodeURIComponent(savedKey)}`;
+    let url = `/upload?title=${encodeURIComponent(title)}&author=${encodeURIComponent(author)}&filename=${encodeURIComponent(filename)}`;
+    const savedKey = localStorage.getItem('adminKey');
+    if (savedKey) {
+        url += `&key=${encodeURIComponent(savedKey)}`;
+    }
+
+    return new Promise((resolve) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', url, true);
+
+        if (xhr.upload && progContainer) {
+            xhr.upload.onprogress = (e) => {
+                if (e.lengthComputable) {
+                    const percent = Math.round((e.loaded / e.total) * 100);
+                    progContainer.setAttribute('aria-valuenow', percent);
+                    progContainer.setAttribute('title', `${percent}%`);
+                    if (progBar) progBar.style.width = `${percent}%`;
+                    if (progText) progText.textContent = `${percent}%`;
+                }
+            };
         }
 
-        const response = await fetch(url, {
-            method: 'POST',
-            body: file
-        });
-
-        if (response.ok) {
-            if (titleInput) titleInput.value = '';
-            if (authorInput) authorInput.value = '';
-            fileInput.value = '';
-            if (succEl) {
-                succEl.style.display = 'block';
-                setTimeout(() => {
-                    succEl.style.display = 'none';
-                }, 4000);
+        xhr.onload = () => {
+            state.isUploading = false;
+            if (progContainer) progContainer.style.display = 'none';
+            if (uploadBtn) {
+                uploadBtn.disabled = false;
+                uploadBtn.textContent = 'Upload';
+                uploadBtn.title = 'Upload book';
             }
-            fetchFileLists();
-            fetchData();
-        } else {
-            const txt = await response.text();
+
+            if (xhr.status >= 200 && xhr.status < 300) {
+                if (titleInput) titleInput.value = '';
+                if (authorInput) authorInput.value = '';
+                fileInput.value = '';
+                if (succEl) {
+                    succEl.style.display = 'block';
+                    setTimeout(() => {
+                        succEl.style.display = 'none';
+                    }, 4000);
+                }
+                fetchFileLists();
+                fetchData();
+            } else {
+                if (errEl) {
+                    errEl.textContent = `Upload failed: ${xhr.responseText || xhr.statusText}`;
+                    errEl.style.display = 'block';
+                }
+            }
+            resolve();
+        };
+
+        xhr.onerror = () => {
+            state.isUploading = false;
+            if (progContainer) progContainer.style.display = 'none';
+            if (uploadBtn) {
+                uploadBtn.disabled = false;
+                uploadBtn.textContent = 'Upload';
+                uploadBtn.title = 'Upload book';
+            }
             if (errEl) {
-                errEl.textContent = `Upload failed: ${txt || response.statusText}`;
+                errEl.textContent = 'Network error during upload.';
                 errEl.style.display = 'block';
             }
-        }
-    } catch (err) {
-        console.error(err);
-        if (errEl) {
-            errEl.textContent = 'Network error during upload.';
-            errEl.style.display = 'block';
-        }
-    } finally {
-        state.isUploading = false;
-        if (uploadBtn) {
-            uploadBtn.disabled = false;
-            uploadBtn.textContent = 'Upload';
-            uploadBtn.title = 'Upload book';
-        }
-    }
+            resolve();
+        };
+
+        xhr.send(file);
+    });
 }
 
 async function enterSleepMode(btn) {

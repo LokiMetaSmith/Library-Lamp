@@ -1065,9 +1065,25 @@ static esp_err_t status_handler(httpd_req_t *req) {
     cJSON_AddBoolToObject(root, "catalog_updating", catalog_updating);
     #ifdef LORA_USE_SX1262
     extern bool lora_scanning;
+    extern float lora_last_rssi;
+    extern float lora_last_snr;
+    extern uint32_t lora_packets_rx;
+    extern uint32_t lora_packets_tx;
+    extern uint32_t lora_get_queue_depth(void);
+
     cJSON_AddBoolToObject(root, "lora_scanning", lora_scanning);
+    cJSON_AddNumberToObject(root, "lora_last_rssi", lora_last_rssi);
+    cJSON_AddNumberToObject(root, "lora_last_snr", lora_last_snr);
+    cJSON_AddNumberToObject(root, "lora_packets_rx", lora_packets_rx);
+    cJSON_AddNumberToObject(root, "lora_packets_tx", lora_packets_tx);
+    cJSON_AddNumberToObject(root, "lora_queue_depth", lora_get_queue_depth());
     #else
     cJSON_AddBoolToObject(root, "lora_scanning", false);
+    cJSON_AddNumberToObject(root, "lora_last_rssi", 0);
+    cJSON_AddNumberToObject(root, "lora_last_snr", 0);
+    cJSON_AddNumberToObject(root, "lora_packets_rx", 0);
+    cJSON_AddNumberToObject(root, "lora_packets_tx", 0);
+    cJSON_AddNumberToObject(root, "lora_queue_depth", 0);
     #endif
 
 
