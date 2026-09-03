@@ -31,3 +31,6 @@
 ## 2026-06-25 - Contextual Placeholders in Bulletin Board
 **Learning:** Found that the Bulletin Board form used generic placeholders like 'neighbor' and 'What\'s on the board?' that didn't provide specific value or guidance. Updating these to explicit examples like 'e.g., Jane (Neighbor)' reduces cognitive load and gives better direction.
 **Action:** Always ensure that placeholder attributes provide clear, concrete examples of the expected input rather than just repeating the field label or asking a generic question.
+## 2026-06-25 - [Full-Screen Loader Accessibility]
+**Learning:** Found that the full-screen loading overlay in the e-reader viewer updated its text dynamically to display error messages (e.g., "Error loading book: ...") without an `aria-live` attribute. This causes screen readers to completely miss the error state change, leaving visually impaired users indefinitely waiting for a book that failed to load.
+**Action:** When implementing transient loading overlays or viewer error states, always wrap the status text in an `aria-live="polite"` or `aria-live="assertive"` container so screen readers are correctly notified of the state changes.
