@@ -69,3 +69,7 @@
 ## 2026-12-13 - [Empty State Subtext Consistency]
 **Learning:** We discovered multiple instances across the frontend where secondary subtext or helpful instructions inside `.empty-state` containers were using hardcoded inline styles (like `font-size: 0.9em; margin-top: 5px;`) instead of adhering to the design system's consistent `.file-notes` class.
 **Action:** When providing secondary subtext or helpful instructions within UI components (such as `.empty-state` containers), always use the existing `.file-notes` CSS class instead of inline styles to maintain design system consistency.
+
+## 2026-12-14 - [ARIA Live Regions for Transient States]
+**Learning:** When implementing transient full-screen loading overlays or viewer error states, applying `aria-live` directly to an element that toggles its `display` property can cause screen readers to fail to announce the state change reliably.
+**Action:** Always wrap dynamically updating status text (like loading indicators or error banners) in a permanent `aria-live="polite"` or `aria-live="assertive"` container so screen readers correctly detect and announce the visibility or text changes.
