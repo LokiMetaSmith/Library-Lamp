@@ -76,3 +76,7 @@
 ## 2026-12-14 - [ARIA Live Regions for Transient States]
 **Learning:** When implementing transient full-screen loading overlays or viewer error states, applying `aria-live` directly to an element that toggles its `display` property can cause screen readers to fail to announce the state change reliably because the element wasn't originally part of the accessibility tree when hidden.
 **Action:** Always wrap dynamically updating status text (like loading indicators or error banners) in a permanent `aria-live="polite"` or `aria-live="assertive"` container so screen readers correctly detect and announce the visibility or text changes of child elements.
+
+## $(date +%Y-%m-%d) - Responsive Layout for Mobile Devices
+**Learning:** Always remove temporary verification scripts (e.g., ad-hoc Playwright scripts) and delete `__pycache__` directories before committing or requesting code reviews to prevent accidentally polluting the repository with binary or throwaway files.
+**Action:** When implementing responsive design (flex-wrap and ordering), strictly contain all changes within standard `@media` queries and test both mobile and desktop screen sizes to ensure changes haven't leaked out of the block. I added vertical stacking and 48px touch targets for mobile under an `@media (max-width: 768px)` media query in `style.css`.
