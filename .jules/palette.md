@@ -73,3 +73,6 @@
 ## 2026-12-14 - [ARIA Live Regions for Transient States]
 **Learning:** When implementing transient full-screen loading overlays or viewer error states, applying `aria-live` directly to an element that toggles its `display` property can cause screen readers to fail to announce the state change reliably.
 **Action:** Always wrap dynamically updating status text (like loading indicators or error banners) in a permanent `aria-live="polite"` or `aria-live="assertive"` container so screen readers correctly detect and announce the visibility or text changes.
+## 2026-12-14 - [ARIA Live Regions for Transient States]
+**Learning:** When implementing transient full-screen loading overlays or viewer error states, applying `aria-live` directly to an element that toggles its `display` property can cause screen readers to fail to announce the state change reliably because the element wasn't originally part of the accessibility tree when hidden.
+**Action:** Always wrap dynamically updating status text (like loading indicators or error banners) in a permanent `aria-live="polite"` or `aria-live="assertive"` container so screen readers correctly detect and announce the visibility or text changes of child elements.
