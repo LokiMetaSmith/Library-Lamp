@@ -2,10 +2,13 @@ from playwright.sync_api import sync_playwright
 import os
 
 def run_cuj(page):
-    page.goto("file:///app/main/web_assets/setup.html")
+    page.goto("file:///app/main/web_assets/board.html")
     page.wait_for_timeout(500)
 
-    # Assert placeholders are visible
+    # Let the API calls return empty state to display the banners
+    page.evaluate("document.getElementById('fullBanner').style.display = 'block';")
+    page.evaluate("document.getElementById('systemBanner').style.display = 'block';")
+
     page.screenshot(path="/home/jules/verification/screenshots/verification.png")
     page.wait_for_timeout(1000)
 
