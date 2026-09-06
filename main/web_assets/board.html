@@ -644,6 +644,8 @@ async function doPost() {
     document.getElementById('msgIn').value      = '';
     document.getElementById('msgHint').textContent = '0/300';
     document.getElementById('msgHint').className = 'char-hint';
+    document.getElementById('nameHint').textContent = n.length + '/24';
+    document.getElementById('nameHint').className = 'char-hint' + (n.length > 20 ? ' warn' : '');
   } finally {
     if (btn) {
       btn.disabled = false;

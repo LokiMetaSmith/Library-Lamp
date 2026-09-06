@@ -80,3 +80,7 @@
 ## $(date +%Y-%m-%d) - Responsive Layout for Mobile Devices
 **Learning:** Always remove temporary verification scripts (e.g., ad-hoc Playwright scripts) and delete `__pycache__` directories before committing or requesting code reviews to prevent accidentally polluting the repository with binary or throwaway files.
 **Action:** When implementing responsive design (flex-wrap and ordering), strictly contain all changes within standard `@media` queries and test both mobile and desktop screen sizes to ensure changes haven't leaked out of the block. I added vertical stacking and 48px touch targets for mobile under an `@media (max-width: 768px)` media query in `style.css`.
+
+## 2026-12-14 - [Character Count Hint Updates on Persisted Inputs]
+**Learning:** When a form submission preserves certain input values (like an author's name) for convenience via `localStorage`, blindly resetting all character count hints to zero (e.g., `0/24`) causes the UI to become immediately out-of-sync with the preserved input string.
+**Action:** When resetting forms, check if any input values are intentionally preserved. If they are, recalculate and update their specific character count hints dynamically (e.g., `nameInput.value.length + '/24'`) rather than setting them to zero.
