@@ -34,3 +34,6 @@
 ## 2026-06-25 - [Full-Screen Loader Accessibility]
 **Learning:** Found that the full-screen loading overlay in the e-reader viewer updated its text dynamically to display error messages (e.g., "Error loading book: ...") without an `aria-live` attribute. This causes screen readers to completely miss the error state change, leaving visually impaired users indefinitely waiting for a book that failed to load.
 **Action:** When implementing transient loading overlays or viewer error states, always wrap the status text in an `aria-live="polite"` or `aria-live="assertive"` container so screen readers are correctly notified of the state changes.
+## 2024-08-15 - [File Upload Auto-fill]
+**Learning:** Users uploading e-books often have files already named in an "Author - Title.epub" format. Forcing them to manually retype this information into the Author and Title fields is repetitive and increases friction during the upload process.
+**Action:** When providing file upload forms that require metadata, listen to the file input's `change` event and attempt to intelligently parse and auto-fill the metadata fields (e.g., removing extensions and splitting by delimiters) if they are currently empty.

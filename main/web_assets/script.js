@@ -501,4 +501,30 @@ document.addEventListener('DOMContentLoaded', () => {
     fetchFileLists();
     // ⚡ Bolt: Reduced status polling from 1s to 2s to minimize CPU load on ESP32
     state.pollingInterval = setInterval(fetchData, 2000);
+
+    // 🎨 Palette: Auto-fill Title and Author based on selected filename
+    const uploadFileInput = document.getElementById('uploadFile');
+    if (uploadFileInput) {
+        uploadFileInput.addEventListener('change', function() {
+            if (this.files && this.files.length > 0) {
+                const fileName = this.files[0].name;
+                const titleInput = document.getElementById('uploadTitle');
+                const authorInput = document.getElementById('uploadAuthor');
+
+                if (titleInput && !titleInput.value) {
+                    let nameWithoutExt = fileName.replace(/\.[^/.]+$/, ""); // Remove extension
+
+                    // Try to guess Author and Title from "Author - Title" format
+                    const parts = nameWithoutExt.split(" - ");
+                    if (parts.length === 2 && authorInput && !authorInput.value) {
+                        authorInput.value = parts[0].trim();
+                        nameWithoutExt = parts[1].trim();
+                    }
+
+                    // Replace underscores and format nicely
+                    titleInput.value = nameWithoutExt.replace(/[_-]/g, " ");
+                }
+            }
+        });
+    }
 });
