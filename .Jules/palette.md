@@ -37,3 +37,6 @@
 ## 2024-08-15 - [File Upload Auto-fill]
 **Learning:** Users uploading e-books often have files already named in an "Author - Title.epub" format. Forcing them to manually retype this information into the Author and Title fields is repetitive and increases friction during the upload process.
 **Action:** When providing file upload forms that require metadata, listen to the file input's `change` event and attempt to intelligently parse and auto-fill the metadata fields (e.g., removing extensions and splitting by delimiters) if they are currently empty.
+## 2026-06-25 - [Dropdown Menu Accessibility]
+**Learning:** Found that custom dropdown menus triggered by hamburger icons lacked keyboard accessibility for closing. Users navigating by keyboard expect the `Escape` key to close active menus, dialogs, and popups.
+**Action:** Always add a global `keydown` event listener for the `Escape` key when implementing custom dropdowns or popups, ensuring it hides the content and accurately updates the `aria-expanded` state of the trigger button.
