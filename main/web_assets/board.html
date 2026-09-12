@@ -385,6 +385,9 @@ body {
       <button type="button" class="exp-btn" aria-pressed="false" onclick="setExpiry(72,  this)">3 days</button>
       <button type="button" class="exp-btn active" aria-pressed="true" onclick="setExpiry(168, this)">1 week</button>
     </div>
+    <div aria-live="polite" style="flex: 1; text-align: right; align-self: center;">
+      <span id="postSuccessMsg" class="feedback" style="display: none; min-height: auto; margin-right: 10px;">✓ Posted</span>
+    </div>
     <button type="submit" class="post-btn" id="postBtn">POST</button>
   </div>
 </form>
@@ -459,6 +462,7 @@ let currentType   = 'Notice';
 let currentExpiry = 168;
 let activeFilter  = '';
 let activeSort    = 'new';
+let postSuccessTimeout = null;
 
 // ── Restore name from localStorage ────────────
 const savedName = localStorage.getItem('cn_name');
@@ -646,6 +650,13 @@ async function doPost() {
     document.getElementById('msgHint').className = 'char-hint';
     document.getElementById('nameHint').textContent = n.length + '/24';
     document.getElementById('nameHint').className = 'char-hint' + (n.length > 20 ? ' warn' : '');
+
+    const succEl = document.getElementById('postSuccessMsg');
+    if (succEl) {
+      succEl.style.display = 'inline-block';
+      if (postSuccessTimeout) clearTimeout(postSuccessTimeout);
+      postSuccessTimeout = setTimeout(() => { succEl.style.display = 'none'; }, 4000);
+    }
   } finally {
     if (btn) {
       btn.disabled = false;

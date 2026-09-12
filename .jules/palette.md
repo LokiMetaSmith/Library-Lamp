@@ -84,3 +84,7 @@
 ## 2026-12-14 - [Character Count Hint Updates on Persisted Inputs]
 **Learning:** When a form submission preserves certain input values (like an author's name) for convenience via `localStorage`, blindly resetting all character count hints to zero (e.g., `0/24`) causes the UI to become immediately out-of-sync with the preserved input string.
 **Action:** When resetting forms, check if any input values are intentionally preserved. If they are, recalculate and update their specific character count hints dynamically (e.g., `nameInput.value.length + '/24'`) rather than setting them to zero.
+
+## 2026-12-15 - [Form Submission Success Feedback]
+**Learning:** When submitting forms that reset their state (like the new post form in the Bulletin Board), silently clearing the inputs without explicit success feedback leaves users unsure if their action succeeded, even if the new item appears in a list below.
+**Action:** Always provide immediate inline success feedback (e.g., '✓ Posted') within an `aria-live='polite'` container after a successful form submission, ensuring it clears after a consistent delay (e.g., 4000ms).
