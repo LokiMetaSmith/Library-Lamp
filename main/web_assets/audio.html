@@ -40,11 +40,13 @@
             <div class="audio-container">
                 <h2>Now Playing</h2>
                 <div v-if="currentTrack">
-                    <div class="now-playing">{{ currentTrack }}</div>
-                    <div class="sync-info">
-                        Status: <span :class="statusClass">{{ statusText }}</span>
-                        <br>
-                        <small v-if="isDriver">(You are syncing the radio for others)</small>
+                    <div aria-live="polite">
+                        <div class="now-playing">{{ currentTrack }}</div>
+                        <div class="sync-info">
+                            Status: <span :class="statusClass">{{ statusText }}</span>
+                            <br>
+                            <small v-if="isDriver">(You are syncing the radio for others)</small>
+                        </div>
                     </div>
 
                     <audio ref="audioPlayer" controls @play="onPlay" @pause="onPause" @seeked="onSeeked" @ended="onEnded">
