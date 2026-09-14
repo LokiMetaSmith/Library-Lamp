@@ -40,3 +40,7 @@
 ## 2026-06-25 - [Dropdown Menu Accessibility]
 **Learning:** Found that custom dropdown menus triggered by hamburger icons lacked keyboard accessibility for closing. Users navigating by keyboard expect the `Escape` key to close active menus, dialogs, and popups.
 **Action:** Always add a global `keydown` event listener for the `Escape` key when implementing custom dropdowns or popups, ensuring it hides the content and accurately updates the `aria-expanded` state of the trigger button.
+
+## 2026-06-25 - [Live Audio Status Accessibility]
+**Learning:** Found that dynamic changes in 'Now Playing' and playback status updates (playing/paused) in the Audio Radio UI (`audio.html`) were silently updated in the DOM, leaving screen reader users unaware of track progressions or control states when they weren't actively focused on the audio element.
+**Action:** Always wrap dynamic media status displays (like 'Now Playing' elements) in an `aria-live="polite"` container to ensure changes in track or playback status are automatically announced to screen readers.
