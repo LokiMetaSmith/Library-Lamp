@@ -610,7 +610,7 @@ function render(data) {
   </div>
   <div class="card-footer">
     <span class="card-author">${esc(m.author)}</span>
-    <span class="card-expiry${tl.soon ? ' soon' : ''}">${tl.label}</span>
+    <span class="card-expiry${tl.soon ? ' soon' : ''}"${tl.soon ? ' title="Expires soon" aria-label="Expires soon: ' + tl.label + '"' : ''}>${tl.label}</span>
   </div>
 </div>`;
   }).join('');

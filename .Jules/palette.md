@@ -44,3 +44,6 @@
 ## 2026-06-25 - [Live Audio Status Accessibility]
 **Learning:** Found that dynamic changes in 'Now Playing' and playback status updates (playing/paused) in the Audio Radio UI (`audio.html`) were silently updated in the DOM, leaving screen reader users unaware of track progressions or control states when they weren't actively focused on the audio element.
 **Action:** Always wrap dynamic media status displays (like 'Now Playing' elements) in an `aria-live="polite"` container to ensure changes in track or playback status are automatically announced to screen readers.
+## 2026-06-25 - [Expiring Status Accessibility]
+**Learning:** Using only a color change (like adding a `soon` CSS class) to indicate an approaching expiration fails to provide context for colorblind users and screen readers.
+**Action:** Always pair semantic color changes with descriptive `title` and `aria-label` attributes to ensure the state change is universally perceivable.
