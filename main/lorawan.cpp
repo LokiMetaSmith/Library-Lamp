@@ -153,8 +153,8 @@ void lora_wan_init(void) {
     if (state == RADIOLIB_ERR_NONE) {
         ESP_LOGI(TAG, "SX1262 init success!"); lora_initialized = true;
 
-        // Apply Meshtastic LongFast equivalents
-        radio->setBandwidth(250.0);
+        // Apply Meshtastic LongTurbo equivalents (500kHz for FCC compliance)
+        radio->setBandwidth(500.0);
         radio->setSpreadingFactor(11);
         radio->setCodingRate(8);     // CR = 4/8 -> 8 in RadioLib API
         radio->setSyncWord(0x2B);    // Meshtastic standard sync word
