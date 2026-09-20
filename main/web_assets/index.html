@@ -39,15 +39,15 @@
                     <h3 style="margin-top: 0;">Upload Book</h3>
                     <form id="uploadForm" novalidate onsubmit="uploadBook(event)" style="display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end;">
                         <div>
-                            <label for="uploadFile" style="display: block; font-size: 0.9em; margin-bottom: 5px;">File <span aria-hidden="true" style="color: #ff8a80;">*</span></label>
+                            <label for="uploadFile" style="display: block; font-size: 0.9em; margin-bottom: 5px;">File <span aria-hidden="true" style="color: var(--c-need-bar, #c4813a);">*</span></label>
                             <input type="file" id="uploadFile" required>
                         </div>
                         <div>
-                            <label for="uploadTitle" style="display: block; font-size: 0.9em; margin-bottom: 5px;">Title <span aria-hidden="true" style="color: #ff8a80;">*</span></label>
+                            <label for="uploadTitle" style="display: block; font-size: 0.9em; margin-bottom: 5px;">Title <span aria-hidden="true" style="color: var(--c-need-bar, #c4813a);">*</span></label>
                             <input type="text" id="uploadTitle" placeholder="e.g., The Great Gatsby" required>
                         </div>
                         <div>
-                            <label for="uploadAuthor" style="display: block; font-size: 0.9em; margin-bottom: 5px;">Author <span aria-hidden="true" style="color: #ff8a80;">*</span></label>
+                            <label for="uploadAuthor" style="display: block; font-size: 0.9em; margin-bottom: 5px;">Author <span aria-hidden="true" style="color: var(--c-need-bar, #c4813a);">*</span></label>
                             <input type="text" id="uploadAuthor" placeholder="e.g., F. Scott Fitzgerald" required>
                         </div>
                         <button type="submit" id="uploadBtn" title="Upload book">Upload</button>
