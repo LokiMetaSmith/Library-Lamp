@@ -429,10 +429,13 @@ function apiFetch(url, options) {
   });
 }
 
+const fbTimeouts = {};
+
 function fb(id, msg) {
   const el = document.getElementById(id);
   el.textContent = msg;
-  setTimeout(() => { el.textContent = ''; }, 4000);
+  if (fbTimeouts[id]) clearTimeout(fbTimeouts[id]);
+  fbTimeouts[id] = setTimeout(() => { el.textContent = ''; }, 4000);
 }
 
 // ── Upload Settings ───────────────────────────────────────────────────────────

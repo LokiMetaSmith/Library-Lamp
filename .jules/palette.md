@@ -88,3 +88,7 @@
 ## 2026-12-15 - [Form Submission Success Feedback]
 **Learning:** When submitting forms that reset their state (like the new post form in the Bulletin Board), silently clearing the inputs without explicit success feedback leaves users unsure if their action succeeded, even if the new item appears in a list below.
 **Action:** Always provide immediate inline success feedback (e.g., '✓ Posted') within an `aria-live='polite'` container after a successful form submission, ensuring it clears after a consistent delay (e.g., 4000ms).
+
+## 2026-12-16 - [Timeout Overlaps in Success Messaging]
+**Learning:** Using generic `setTimeout` calls for transient UI messages (like "✓ Posted" or "Upload successful") without tracking the timeout IDs can lead to overlaps. When a user submits forms in quick succession, the timeout from the first submission will unexpectedly clear the message from the second submission before the intended delay.
+**Action:** When using `setTimeout` to manage transient UI states, always store the timeout ID (e.g., in an object dictionary or state object) and call `clearTimeout()` before setting a new one, ensuring the state remains visible for the full duration of the latest action.

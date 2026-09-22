@@ -28,6 +28,7 @@ const state = {
     isUploading: false,
     uploadError: '',
     uploadSuccess: false,
+    uploadSuccessTimeout: null,
     isDeleting: null,
     isSleeping: false,
     pollingInterval: null
@@ -434,7 +435,8 @@ async function uploadBook(event) {
                 fileInput.value = '';
                 if (succEl) {
                     succEl.style.display = 'block';
-                    setTimeout(() => {
+                    if (state.uploadSuccessTimeout) clearTimeout(state.uploadSuccessTimeout);
+                    state.uploadSuccessTimeout = setTimeout(() => {
                         succEl.style.display = 'none';
                     }, 4000);
                 }
