@@ -195,7 +195,7 @@ function renderUI() {
                         <button onclick="transferToEReader('${esc(file.name)}')" ${(!state.isEReaderConnected || state.transfer.active) ? 'disabled' : ''} title="${state.transfer.active ? 'A transfer is currently in progress' : (!state.isEReaderConnected ? 'Connect an E-Reader to transfer books' : 'Transfer to E-Reader')}" aria-label="Transfer ${esc(file.title || file.name)} to E-Reader">Transfer to E-Reader</button>
                         ${isEpub ? `<a class="sleep-btn" style="text-decoration: none;" href="/viewer.html?file=${encodeURIComponent(file.name)}&source=sd" aria-label="Read ${esc(file.title || file.name)}">Read</a>` : ''}
                         ${state.isAdmin ? `<button onclick="deleteFile('${esc(file.name)}', 'sd')" class="btn danger" style="background-color: #c94b4b; color: white;" aria-label="Delete ${esc(file.title || file.name)}" ${(isDeleting || state.transfer.active) ? 'disabled' : ''} title="${isDeleting ? 'Deleting file...' : (state.transfer.active ? 'Action unavailable during transfer' : 'Delete file')}">${isDeleting ? 'Deleting...' : 'Delete'}</button>` : ''}
-                        ${isTransferring ? `<button onclick="cancelTransfer()" class="cancel-btn" aria-label="Cancel transfer for ${esc(file.title || file.name)}">Cancel</button>` : ''}
+                        ${isTransferring ? `<button onclick="cancelTransfer(this)" class="cancel-btn" aria-label="Cancel transfer for ${esc(file.title || file.name)}">Cancel</button>` : ''}
                     </div>
                 </li>`;
             }).join('');
@@ -241,7 +241,7 @@ function renderUI() {
                                 ` : ''}
                                 <button onclick="transferToLibrary('${esc(file.name)}')" ${state.transfer.active ? 'disabled' : ''} title="${state.transfer.active ? 'A transfer is currently in progress' : 'Transfer to Library'}" aria-label="Transfer ${esc(file.title || file.name)} to Library">Transfer to Library</button>
                                 ${state.isAdmin ? `<button onclick="deleteFile('${esc(file.name)}', 'usb')" class="btn danger" style="background-color: #c94b4b; color: white;" aria-label="Delete ${esc(file.title || file.name)}" ${(isDeleting || state.transfer.active) ? 'disabled' : ''} title="${isDeleting ? 'Deleting file...' : (state.transfer.active ? 'Action unavailable during transfer' : 'Delete file')}">${isDeleting ? 'Deleting...' : 'Delete'}</button>` : ''}
-                                ${isTransferring ? `<button onclick="cancelTransfer()" class="cancel-btn" aria-label="Cancel transfer for ${esc(file.title || file.name)}">Cancel</button>` : ''}
+                                ${isTransferring ? `<button onclick="cancelTransfer(this)" class="cancel-btn" aria-label="Cancel transfer for ${esc(file.title || file.name)}">Cancel</button>` : ''}
                             </div>
                         </li>`;
                     }).join('')}
@@ -301,13 +301,23 @@ function transferToLibrary(filename) {
     performTransfer('usb', 'sd', filename);
 }
 
-async function cancelTransfer() {
+async function cancelTransfer(btn) {
     if (!state.transfer.active) return;
+    if (btn) {
+        btn.disabled = true;
+        btn.textContent = 'Canceling...';
+        btn.title = 'Canceling transfer...';
+    }
     try {
         await fetch('/transfer-cancel', { method: 'POST' });
     } catch (error) {
         console.error('Error cancelling transfer:', error);
         state.transfer.error = 'Failed to send cancel request.';
+        if (btn) {
+            btn.disabled = false;
+            btn.textContent = 'Cancel';
+            btn.removeAttribute('title');
+        }
         renderUI();
     }
 }
