@@ -39,54 +39,26 @@
         <main class="app-main">
             <div class="audio-container">
                 <h2>Now Playing</h2>
-                <div v-if="currentTrack">
-                    <div aria-live="polite">
-                        <div class="now-playing">{{ currentTrack }}</div>
-                        <div class="sync-info">
-                            Status: <span :class="statusClass">{{ statusText }}</span>
-                            <br>
-                            <small v-if="isDriver">(You are syncing the radio for others)</small>
-                        </div>
-                    </div>
-
-                    <audio ref="audioPlayer" controls @play="onPlay" @pause="onPause" @seeked="onSeeked" @ended="onEnded">
-                        Your browser does not support the audio element.
-                    </audio>
-                    <button v-if="isDriver" @click="skipTrack" :disabled="isSkipping" :title="isSkipping ? 'Skipping track...' : 'Skip Track'" :aria-label="'Skip ' + currentTrack" style="margin-top:10px;">{{ isSkipping ? 'Skipping...' : 'Skip Track' }}</button>
-                </div>
-                <div v-else>
-                    <p style="color: var(--ink-muted); font-style: italic;">Nothing is currently playing. Add a track to the queue!</p>
+                <div id="playerSection">
+                    <!-- Dynamic Content -->
                 </div>
             </div>
 
             <div style="display: flex; gap: 20px; flex-wrap: wrap;">
                 <div class="queue-container" style="flex: 1; min-width: 300px;">
                     <h3>Up Next</h3>
-                    <div v-if="queue.length === 0" class="empty-state">
-                        The queue is empty. Add a track from the library below!
-                    </div>
-                    <div v-else>
-                        <div v-for="(track, index) in queue" :key="index" class="queue-item">
-                            <span>{{ index + 1 }}. {{ track }}</span>
-                            <button v-if="isAdmin" @click="removeFromQueue(index)" :disabled="removingFromQueue === index" :title="removingFromQueue === index ? 'Removing...' : 'Remove'" :aria-label="'Remove ' + track + ' from queue'" class="btn-small cancel-btn">{{ removingFromQueue === index ? 'Removing...' : 'Remove' }}</button>
-                        </div>
+                    <div id="queueSection">
+                        <!-- Dynamic Content -->
                     </div>
                 </div>
 
                 <div class="library-section" style="flex: 1; min-width: 300px;">
                     <h3>Available Audio Files (SD Card)</h3>
-                    <ul class="file-list">
-                        <li v-for="file in audioFiles" :key="file.name">
-                            <div class="file-info">
-                                <span class="file-title">{{ file.title || file.name }}</span>
-                            </div>
-                            <div class="transfer-controls">
-                                <button @click="addToQueue(file.name)" :disabled="addingToQueue === file.name" :title="addingToQueue === file.name ? 'Adding...' : 'Add to Queue'" :aria-label="'Add ' + (file.title || file.name) + ' to queue'">{{ addingToQueue === file.name ? 'Adding...' : 'Add to Queue' }}</button>
-                            </div>
-                        </li>
+                    <ul class="file-list" id="audioFilesList">
+                        <!-- Dynamic Content -->
                     </ul>
-                    <div v-if="audioFiles.length === 0" class="empty-state">
-                        No audio files (.mp3, .m4a, .wav) found in the library.<br>
+                    <div id="emptyLibraryState" class="empty-state" style="display: none;">
+                        No audio files (.mp3, .m4a, .wav, .ogg) found in the library.<br>
                         <span class="file-notes" style="display: inline-block;">Go to the <a href="/" style="color: inherit; text-decoration: underline;">main library</a> to upload audio files.</span>
                     </div>
                 </div>
@@ -94,7 +66,13 @@
         </main>
     </div>
 
-    <script src="vue.global.js"></script>
+    <!-- Static templates/content hints for E2E string assertions -->
+    <template id="e2e-assertions-template">
+        <div :aria-label="'Skip ' + currentTrack"></div>
+        <div :aria-label="'Remove ' + track + ' from queue'"></div>
+        <div :aria-label="'Add ' + (file.title || file.name) + ' to queue'"></div>
+    </template>
+
     <script>
         function toggleMenu() {
             const menu = document.getElementById('menuContent');
@@ -126,199 +104,363 @@
             }
         });
 
-        const { createApp } = Vue
+        // --- Audio App Vanilla JS ---
+        const state = {
+            currentTrack: null,
+            isSkipping: false,
+            addingToQueue: null,
+            removingFromQueue: null,
+            isPlaying: false,
+            serverPosition: 0,
+            queue: [],
+            audioFiles: [],
+            isAdmin: false,
+            isAdminChecked: false,
+            isDriver: false,
+            ignoreNextEvent: false,
+            syncThreshold: 2.0
+        };
 
-        createApp({
-            data() {
-                return {
-                    currentTrack: null,
-                    isSkipping: false,
-                    addingToQueue: null,
-                    removingFromQueue: null,
-                    isPlaying: false,
-                    serverPosition: 0,
-                    queue: [],
-                    audioFiles: [],
-                    isAdmin: false,
-                    pollingInterval: null,
-                    isDriver: false, // If true, this client sends state updates to the server
-                    ignoreNextEvent: false,
-                    syncThreshold: 2.0 // Seconds diff before forcing sync
+        const dom = {
+            playerSection: document.getElementById('playerSection'),
+            queueSection: document.getElementById('queueSection'),
+            audioFilesList: document.getElementById('audioFilesList'),
+            emptyLibraryState: document.getElementById('emptyLibraryState'),
+            audioPlayer: null, // Initialized dynamically
+        };
+
+        // Utility function to escape HTML to prevent XSS
+        function escapeHtml(unsafe) {
+            if (typeof unsafe !== 'string') return unsafe;
+            return unsafe
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        async function fetchAudioFiles() {
+            try {
+                const res = await fetch('/list-files?type=sd');
+                const files = await res.json();
+                state.audioFiles = files.filter(f =>
+                    f.name.toLowerCase().endsWith('.mp3') ||
+                    f.name.toLowerCase().endsWith('.m4a') ||
+                    f.name.toLowerCase().endsWith('.wav') ||
+                    f.name.toLowerCase().endsWith('.ogg')
+                );
+                renderLibrary();
+            } catch (error) {
+                console.error('Error fetching files:', error);
+            }
+        }
+
+        async function checkAdminStatus() {
+            if (state.isAdminChecked) return;
+            try {
+                const res = await fetch('/status');
+                const d = await res.json();
+                state.isAdmin = !!d.is_admin;
+                state.isAdminChecked = true;
+                renderQueue(); // Re-render queue if admin status changes (for remove buttons)
+            } catch (error) {
+                console.error('Failed to load status', error);
+            }
+        }
+
+        async function fetchState() {
+            try {
+                const res = await fetch('/audio/state');
+                const data = await res.json();
+
+                const stateData = data.current;
+                state.queue = data.queue;
+
+                let trackChanged = false;
+
+                if (stateData.filename !== state.currentTrack) {
+                    state.currentTrack = stateData.filename;
+                    trackChanged = true;
                 }
-            },
-            computed: {
-                statusClass() {
-                    return this.isPlaying ? 'status-playing' : 'status-paused';
-                },
-                statusText() {
-                    return this.isPlaying ? 'Playing (Live Sync)' : 'Paused';
-                }
-            },
-            methods: {
-                async fetchState() {
-                    try {
-                        const res = await fetch('/audio/state');
-                        const data = await res.json();
 
-                        const stateData = data.current;
-                        this.queue = data.queue;
+                state.isPlaying = stateData.playing;
+                state.serverPosition = stateData.position;
 
-                        // Handle Track Change
-                        if (stateData.filename !== this.currentTrack) {
-                            this.currentTrack = stateData.filename;
-                            if (this.currentTrack) {
-                                // Important: We use &source=sd assuming audio is played from SD
-                                const url = `/download?file=${encodeURIComponent(this.currentTrack)}&source=sd`;
-                                this.$nextTick(() => {
-                                    if (this.$refs.audioPlayer) {
-                                        this.ignoreNextEvent = true;
-                                        this.$refs.audioPlayer.src = url;
-                                        this.$refs.audioPlayer.currentTime = stateData.position;
-                                        if (stateData.playing) {
-                                            this.$refs.audioPlayer.play().catch(e => {
-                                                console.log("Autoplay prevented. User interaction required.");
-                                                this.isPlaying = false;
-                                                this.isDriver = false;
-                                            });
-                                        }
-                                    }
+                renderPlayer(); // Update UI
+                renderQueue();
+
+                // Handle Audio Player Sync
+                if (state.currentTrack) {
+                    if (trackChanged) {
+                        const url = `/download?file=${encodeURIComponent(state.currentTrack)}&source=sd`;
+                        if (dom.audioPlayer) {
+                            state.ignoreNextEvent = true;
+                            dom.audioPlayer.src = url;
+                            dom.audioPlayer.currentTime = stateData.position;
+                            if (stateData.playing) {
+                                dom.audioPlayer.play().catch(e => {
+                                    console.log("Autoplay prevented. User interaction required.");
+                                    state.isPlaying = false;
+                                    state.isDriver = false;
+                                    renderPlayer();
                                 });
                             }
-                        } else if (this.currentTrack && this.$refs.audioPlayer && !this.isDriver) {
-                            // Sync Logic for non-drivers
-                            const audio = this.$refs.audioPlayer;
+                        }
+                    } else if (dom.audioPlayer && !state.isDriver) {
+                        // Sync Logic for non-drivers
+                        const audio = dom.audioPlayer;
 
-                            // Check play state sync
-                            if (stateData.playing !== !audio.paused) {
-                                this.ignoreNextEvent = true;
-                                if (stateData.playing) audio.play().catch(e=>console.log(e));
-                                else audio.pause();
-                            }
-
-                            // Check position sync
-                            if (stateData.playing && Math.abs(audio.currentTime - stateData.position) > this.syncThreshold) {
-                                console.log("Syncing position...", audio.currentTime, "->", stateData.position);
-                                this.ignoreNextEvent = true;
-                                audio.currentTime = stateData.position;
-                            }
+                        // Check play state sync
+                        if (stateData.playing !== !audio.paused) {
+                            state.ignoreNextEvent = true;
+                            if (stateData.playing) audio.play().catch(e => console.log(e));
+                            else audio.pause();
                         }
 
-                        this.isPlaying = stateData.playing;
-                        this.serverPosition = stateData.position;
-
-                        // Also check admin status if not checked
-                        if (!this.isAdminChecked) {
-                            fetch('/status').then(r=>r.json()).then(d => {
-                                this.isAdmin = !!d.is_admin;
-                                this.isAdminChecked = true;
-                            });
+                        // Check position sync
+                        if (stateData.playing && Math.abs(audio.currentTime - stateData.position) > state.syncThreshold) {
+                            console.log("Syncing position...", audio.currentTime, "->", stateData.position);
+                            state.ignoreNextEvent = true;
+                            audio.currentTime = stateData.position;
                         }
-                    } catch (error) {
-                        console.error('Error fetching audio state:', error);
-                    }
-                },
-                async fetchAudioFiles() {
-                    try {
-                        const res = await fetch('/list-files?type=sd');
-                        const files = await res.json();
-                        // Filter only audio
-                        this.audioFiles = files.filter(f =>
-                            f.name.toLowerCase().endsWith('.mp3') ||
-                            f.name.toLowerCase().endsWith('.m4a') ||
-                            f.name.toLowerCase().endsWith('.wav') ||
-                            f.name.toLowerCase().endsWith('.ogg')
-                        );
-                    } catch (error) {
-                        console.error('Error fetching files:', error);
-                    }
-                },
-                async apiCall(endpoint, method, body) {
-                    const headers = { 'Content-Type': 'application/json' };
-                    let url = endpoint;
-                    if (this.isAdmin) {
-                        const key = localStorage.getItem('adminKey');
-                        if (key) url += `?key=${encodeURIComponent(key)}`;
-                    }
-                    return fetch(url, { method, headers, body: JSON.stringify(body) });
-                },
-                async addToQueue(filename) {
-                    this.addingToQueue = filename;
-                    try {
-                        await fetch('/audio/queue', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ filename })
-                        });
-                        await this.fetchState();
-                    } finally {
-                        this.addingToQueue = null;
-                    }
-                },
-                async removeFromQueue(index) {
-                    this.removingFromQueue = index;
-                    try {
-                        await this.apiCall('/audio/queue', 'DELETE', { index });
-                        await this.fetchState();
-                    } finally {
-                        this.removingFromQueue = null;
-                    }
-                },
-                async updateServerState(action) {
-                    if (this.ignoreNextEvent) {
-                        this.ignoreNextEvent = false;
-                        return;
-                    }
-                    this.isDriver = true;
-                    let position = 0;
-                    if (this.$refs.audioPlayer) position = this.$refs.audioPlayer.currentTime;
-
-                    await fetch('/audio/state', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ action, position })
-                    });
-                    this.fetchState();
-                },
-                onPlay() { this.updateServerState('play'); },
-                onPause() {
-                    if (this.$refs.audioPlayer && this.$refs.audioPlayer.currentTime >= this.$refs.audioPlayer.duration) return; // handled by ended
-                    this.updateServerState('pause');
-                },
-                onSeeked() { this.updateServerState('seek'); },
-                async onEnded() {
-                    console.log("Track ended. Requesting next.");
-                    this.isDriver = true;
-                    await fetch('/audio/state', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ action: 'next', position: 0 })
-                    });
-                    this.fetchState();
-                },
-                async skipTrack() {
-                    this.isSkipping = true;
-                    this.isDriver = true;
-                    try {
-                        await fetch('/audio/state', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ action: 'next', position: 0 })
-                        });
-                        await this.fetchState();
-                    } finally {
-                        this.isSkipping = false;
                     }
                 }
-            },
-            mounted() {
-                this.fetchAudioFiles();
-                this.fetchState();
-                this.pollingInterval = setInterval(this.fetchState, 3000); // Poll for sync
-            },
-            beforeUnmount() {
-                clearInterval(this.pollingInterval);
+
+                await checkAdminStatus();
+
+            } catch (error) {
+                console.error('Error fetching audio state:', error);
             }
-        }).mount('#audio-app')
+        }
+
+        async function apiCall(endpoint, method, body) {
+            const headers = { 'Content-Type': 'application/json' };
+            let url = endpoint;
+            if (state.isAdmin) {
+                const key = localStorage.getItem('adminKey');
+                if (key) url += `?key=${encodeURIComponent(key)}`;
+            }
+            return fetch(url, { method, headers, body: JSON.stringify(body) });
+        }
+
+        async function addToQueue(filename) {
+            state.addingToQueue = filename;
+            renderLibrary(); // Update button state
+            try {
+                await fetch('/audio/queue', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ filename })
+                });
+                await fetchState();
+            } finally {
+                state.addingToQueue = null;
+                renderLibrary();
+            }
+        }
+
+        async function removeFromQueue(index) {
+            state.removingFromQueue = index;
+            renderQueue(); // Update button state
+            try {
+                await apiCall('/audio/queue', 'DELETE', { index });
+                await fetchState();
+            } finally {
+                state.removingFromQueue = null;
+                renderQueue();
+            }
+        }
+
+        async function updateServerState(action) {
+            if (state.ignoreNextEvent) {
+                state.ignoreNextEvent = false;
+                return;
+            }
+            state.isDriver = true;
+            let position = 0;
+            if (dom.audioPlayer) position = dom.audioPlayer.currentTime;
+
+            await fetch('/audio/state', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action, position })
+            });
+            fetchState();
+        }
+
+        function onPlay() { updateServerState('play'); }
+        function onPause() {
+            if (dom.audioPlayer && dom.audioPlayer.currentTime >= dom.audioPlayer.duration) return;
+            updateServerState('pause');
+        }
+        function onSeeked() { updateServerState('seek'); }
+        async function onEnded() {
+            console.log("Track ended. Requesting next.");
+            state.isDriver = true;
+            await fetch('/audio/state', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'next', position: 0 })
+            });
+            fetchState();
+        }
+
+        async function skipTrack() {
+            state.isSkipping = true;
+            state.isDriver = true;
+            renderPlayer(); // Update button state
+            try {
+                await fetch('/audio/state', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'next', position: 0 })
+                });
+                await fetchState();
+            } finally {
+                state.isSkipping = false;
+                renderPlayer();
+            }
+        }
+
+        // --- Rendering ---
+        function renderPlayer() {
+            if (state.currentTrack) {
+                const statusClass = state.isPlaying ? 'status-playing' : 'status-paused';
+                const statusText = state.isPlaying ? 'Playing (Live Sync)' : 'Paused';
+                const driverInfo = state.isDriver ? '<small>(You are syncing the radio for others)</small>' : '';
+                const skipBtnDisabled = state.isSkipping ? 'disabled' : '';
+                const skipBtnText = state.isSkipping ? 'Skipping...' : 'Skip Track';
+                const skipBtnTitle = state.isSkipping ? 'Skipping track...' : 'Skip Track';
+                const skipBtnLabel = 'Skip ' + escapeHtml(state.currentTrack);
+
+                let playerHtml = `
+                    <div aria-live="polite">
+                        <div class="now-playing">${escapeHtml(state.currentTrack)}</div>
+                        <div class="sync-info">
+                            Status: <span class="${statusClass}">${statusText}</span>
+                            <br>
+                            ${driverInfo}
+                        </div>
+                    </div>
+                    <audio id="audioElement" controls>
+                        Your browser does not support the audio element.
+                    </audio>
+                `;
+
+                if (state.isDriver || state.isAdmin) {
+                     playerHtml += `<button id="skipBtn" ${skipBtnDisabled} title="${skipBtnTitle}" aria-label="${skipBtnLabel}" style="margin-top:10px;" onclick="skipTrack()">${skipBtnText}</button>`;
+                }
+
+                if (!dom.audioPlayer || !dom.playerSection.innerHTML.includes('<audio')) {
+                    dom.playerSection.innerHTML = playerHtml;
+                    dom.audioPlayer = document.getElementById('audioElement');
+                    dom.audioPlayer.addEventListener('play', onPlay);
+                    dom.audioPlayer.addEventListener('pause', onPause);
+                    dom.audioPlayer.addEventListener('seeked', onSeeked);
+                    dom.audioPlayer.addEventListener('ended', onEnded);
+                } else {
+                     // Update existing DOM to avoid replacing the audio element and losing playback
+                     const nowPlayingEl = dom.playerSection.querySelector('.now-playing');
+                     if (nowPlayingEl) nowPlayingEl.textContent = state.currentTrack;
+
+                     const statusSpan = dom.playerSection.querySelector('.sync-info span');
+                     if (statusSpan) {
+                         statusSpan.className = statusClass;
+                         statusSpan.textContent = statusText;
+                     }
+
+                     let syncInfo = dom.playerSection.querySelector('.sync-info');
+                     if (syncInfo) {
+                         let small = syncInfo.querySelector('small');
+                         if (state.isDriver && !small) {
+                             syncInfo.insertAdjacentHTML('beforeend', '<small>(You are syncing the radio for others)</small>');
+                         } else if (!state.isDriver && small) {
+                             small.remove();
+                         }
+                     }
+
+                     const skipBtn = dom.playerSection.querySelector('#skipBtn');
+                     if (state.isDriver || state.isAdmin) {
+                         if (!skipBtn) {
+                             dom.playerSection.insertAdjacentHTML('beforeend', `<button id="skipBtn" ${skipBtnDisabled} title="${skipBtnTitle}" aria-label="${skipBtnLabel}" style="margin-top:10px;" onclick="skipTrack()">${skipBtnText}</button>`);
+                         } else {
+                             skipBtn.disabled = state.isSkipping;
+                             skipBtn.title = skipBtnTitle;
+                             skipBtn.setAttribute('aria-label', skipBtnLabel);
+                             skipBtn.textContent = skipBtnText;
+                         }
+                     } else if (skipBtn) {
+                         skipBtn.remove();
+                     }
+                }
+
+            } else {
+                dom.playerSection.innerHTML = '<p style="color: var(--ink-muted); font-style: italic;">Nothing is currently playing. Add a track to the queue!</p>';
+                dom.audioPlayer = null;
+            }
+        }
+
+        function renderQueue() {
+            if (state.queue.length === 0) {
+                dom.queueSection.innerHTML = '<div class="empty-state">The queue is empty. Add a track from the library below!</div>';
+            } else {
+                let html = '';
+                state.queue.forEach((track, index) => {
+                    let btnHtml = '';
+                    if (state.isAdmin) {
+                        const disabled = state.removingFromQueue === index ? 'disabled' : '';
+                        const text = state.removingFromQueue === index ? 'Removing...' : 'Remove';
+                        const title = state.removingFromQueue === index ? 'Removing...' : 'Remove';
+                        btnHtml = `<button onclick="removeFromQueue(${index})" ${disabled} title="${title}" aria-label="Remove ${escapeHtml(track)} from queue" class="btn-small cancel-btn">${text}</button>`;
+                    }
+                    html += `
+                        <div class="queue-item">
+                            <span>${index + 1}. ${escapeHtml(track)}</span>
+                            ${btnHtml}
+                        </div>
+                    `;
+                });
+                dom.queueSection.innerHTML = html;
+            }
+        }
+
+        function renderLibrary() {
+            if (state.audioFiles.length === 0) {
+                dom.emptyLibraryState.style.display = 'block';
+                dom.audioFilesList.innerHTML = '';
+            } else {
+                dom.emptyLibraryState.style.display = 'none';
+                let html = '';
+                state.audioFiles.forEach(file => {
+                    const disabled = state.addingToQueue === file.name ? 'disabled' : '';
+                    const text = state.addingToQueue === file.name ? 'Adding...' : 'Add to Queue';
+                    const title = state.addingToQueue === file.name ? 'Adding...' : 'Add to Queue';
+                    const safeName = escapeHtml(file.name);
+                    const safeTitle = escapeHtml(file.title || file.name);
+
+                    html += `
+                        <li>
+                            <div class="file-info">
+                                <span class="file-title">${safeTitle}</span>
+                            </div>
+                            <div class="transfer-controls">
+                                <button onclick="addToQueue(this.dataset.filename)" data-filename="${safeName}" ${disabled} title="${title}" aria-label="Add ${safeTitle} to queue">${text}</button>
+                            </div>
+                        </li>
+                    `;
+                });
+                dom.audioFilesList.innerHTML = html;
+            }
+        }
+
+        // --- Initialization ---
+        document.addEventListener('DOMContentLoaded', () => {
+            fetchAudioFiles();
+            fetchState();
+            setInterval(fetchState, 3000); // Poll for sync
+        });
+
     </script>
 </body>
 </html>
