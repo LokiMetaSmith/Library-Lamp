@@ -8,6 +8,7 @@ def test_ux():
         content = f.read()
 
     assert "Upload a book above to get started!" in content, "Missing CTA in local empty state"
+    assert "accept=\".epub,.pdf,.mobi,.azw3,.txt,.cbz,.cbr\"" in content, "Missing accept attribute on uploadFile"
     assert "Transfer a book from your local library to start reading!" in content, "Missing CTA in ereader empty state"
     assert "Upload in progress..." in content, "Missing title tooltip"
     assert "Connect an E-Reader to transfer books" in content, "Missing title tooltip"

@@ -47,3 +47,6 @@
 ## 2026-06-25 - [Expiring Status Accessibility]
 **Learning:** Using only a color change (like adding a `soon` CSS class) to indicate an approaching expiration fails to provide context for colorblind users and screen readers.
 **Action:** Always pair semantic color changes with descriptive `title` and `aria-label` attributes to ensure the state change is universally perceivable.
+## 2026-09-24 - [File Upload Accept Attribute]
+**Learning:** Found that the file upload input lacked an `accept` attribute, meaning users could accidentally select and upload unsupported files (like videos or images), leading to backend errors or wasted storage space.
+**Action:** When implementing file upload inputs, always use the `accept` attribute with explicitly supported file extensions (e.g., `accept=".epub,.pdf,.mobi,.azw3,.txt,.cbz,.cbr"`) to natively filter the OS file picker, preventing invalid uploads and reducing user error.

@@ -1,6 +1,8 @@
 #ifndef LORAWAN_H
 #define LORAWAN_H
 
+#include <stdint.h>
+
 // Wio-SX1262 LoRa module pins (XIAO ESP32S3)
 #define LORA_USE_SX1262
 
