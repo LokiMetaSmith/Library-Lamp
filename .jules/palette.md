@@ -92,3 +92,6 @@
 ## 2026-12-16 - [Timeout Overlaps in Success Messaging]
 **Learning:** Using generic `setTimeout` calls for transient UI messages (like "✓ Posted" or "Upload successful") without tracking the timeout IDs can lead to overlaps. When a user submits forms in quick succession, the timeout from the first submission will unexpectedly clear the message from the second submission before the intended delay.
 **Action:** When using `setTimeout` to manage transient UI states, always store the timeout ID (e.g., in an object dictionary or state object) and call `clearTimeout()` before setting a new one, ensuring the state remains visible for the full duration of the latest action.
+## 2026-12-16 - [Vanilla JS Loading States with Animated Ellipsis]
+**Learning:** Adding loading states to vanilla HTML buttons (like 'POSTING...') can be done efficiently without heavy JavaScript or external dependencies.
+**Action:** Utilize CSS keyframe animations to create an animated ellipsis (via `content` property on a pseudo-element like `.loading-dots::after`). This clarifies the active state visually while maintaining a lightweight UI.
