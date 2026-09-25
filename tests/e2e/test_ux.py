@@ -55,6 +55,11 @@ def test_ux():
     assert "Hide new key" in admin_content, "Missing 'Hide new key' logic"
     assert "Show confirmed key" in admin_content, "Missing 'Show confirmed key' aria-label/title"
 
+    with open(os.path.join(base_dir, 'main/web_assets/board.html'), 'r') as f:
+        board_content = f.read()
+
+    assert "loading-dots" in board_content, "Missing loading-dots animation class in board.html"
+
     print("All assertions passed. Modifications are successfully present.")
 
 if __name__ == "__main__":
