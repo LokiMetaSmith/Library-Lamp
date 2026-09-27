@@ -181,16 +181,6 @@ body {
 .post-btn:hover { background: #a06b43; }
 .post-btn:disabled { opacity: 0.6; cursor: not-allowed; }
 
-@keyframes loadingDots {
-  0% { content: "."; }
-  33% { content: ".."; }
-  66% { content: "..."; }
-}
-.loading-dots::after {
-  content: "";
-  animation: loadingDots 1.5s infinite steps(1);
-}
-
 /* ── Filter bar ── */
 .filter-bar {
   background: var(--surface2);

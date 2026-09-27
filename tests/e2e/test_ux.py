@@ -44,11 +44,11 @@ def test_ux():
 
     assert "onclick=\"confirmFormatSD(this)\"" in admin_content, "Missing 'this' parameter in confirmFormatSD call"
     assert "btn.disabled = true" in admin_content, "Missing disabled state in confirmFormatSD"
-    assert "Formatting..." in admin_content, "Missing loading text in confirmFormatSD"
+    assert "Formatting<span class=\"loading-dots\"></span>" in admin_content, "Missing loading text in confirmFormatSD"
     assert ".finally" in admin_content, "Missing finally block in confirmFormatSD"
 
     assert "onclick=\"doSetLampColor(this)\"" in admin_content, "Missing 'this' parameter in doSetLampColor call"
-    assert "Setting..." in admin_content, "Missing loading text in doSetLampColor"
+    assert "Setting<span class=\"loading-dots\"></span>" in admin_content, "Missing loading text in doSetLampColor"
 
     # Admin Key Show/Hide feature verification
     assert "Show new key" in admin_content, "Missing 'Show new key' aria-label/title"
