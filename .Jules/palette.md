@@ -50,3 +50,6 @@
 ## 2026-09-24 - [File Upload Accept Attribute]
 **Learning:** Found that the file upload input lacked an `accept` attribute, meaning users could accidentally select and upload unsupported files (like videos or images), leading to backend errors or wasted storage space.
 **Action:** When implementing file upload inputs, always use the `accept` attribute with explicitly supported file extensions (e.g., `accept=".epub,.pdf,.mobi,.azw3,.txt,.cbz,.cbr"`) to natively filter the OS file picker, preventing invalid uploads and reducing user error.
+## 2024-10-25 - [Status Indicator Accessibility]
+**Learning:** When creating visual non-text status indicators (like colored dots), relying on color alone is not accessible for colorblind and screen reader users.
+**Action:** Always provide a human-readable text description via `title` (for hover) and `aria-label` (for screen readers), and apply `role="status"` to ensure universal accessibility.
