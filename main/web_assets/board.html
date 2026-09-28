@@ -6,6 +6,7 @@
 <title>Community Hub</title>
 <link rel="stylesheet" href="style.css">
 <style>
+#loraStats .status-indicator { margin-top: 0; margin-right: 6px; vertical-align: middle; width: 10px; height: 10px; }
 :root {
   --c-notice-fg:  #6b5a3e; --c-notice-bg: #f0e8d8; --c-notice-bar: #a09070;
   --c-offer-fg:   #2d5c2a; --c-offer-bg:  #daeeda; --c-offer-bar:  #5a8a57;
@@ -573,7 +574,7 @@ async function loadSystemStatus() {
         const rx = data.lora_packets_rx || 0;
         const rssi = (data.lora_last_rssi !== undefined) ? data.lora_last_rssi.toFixed(1) : 0;
         const snr = (data.lora_last_snr !== undefined) ? data.lora_last_snr.toFixed(1) : 0;
-        loraEl.textContent = `LoRa: TX ${tx} | RX ${rx} | RSSI ${rssi}dBm | SNR ${snr}dB`;
+        loraEl.innerHTML = `<span class="status-indicator status-connected" title="LoRa connected" aria-label="LoRa connected" role="status"></span> LoRa: TX ${tx} | RX ${rx} | RSSI ${rssi}dBm | SNR ${snr}dB`;
       }
     }
   } catch (e) {
