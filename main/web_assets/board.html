@@ -430,12 +430,14 @@ function updateBoardStatus(d) {
     if (btn) {
       btn.disabled = true;
       btn.title = "The board is currently full. Check back later.";
+      btn.setAttribute('aria-label', btn.title);
     }
   } else {
     banner.style.display = 'none';
     if (btn) {
       btn.disabled = false;
       btn.removeAttribute('title');
+      btn.removeAttribute('aria-label');
     }
   }
 }
@@ -635,6 +637,7 @@ async function doPost() {
     btn.disabled = true;
     btn.innerHTML = 'POSTING<span class="loading-dots"></span>';
     btn.title = "Post is currently being submitted...";
+    btn.setAttribute('aria-label', btn.title);
   }
 
   localStorage.setItem('cn_name', n);
@@ -663,6 +666,7 @@ async function doPost() {
       btn.disabled = false;
       btn.textContent = 'POST';
       btn.removeAttribute('title');
+      btn.removeAttribute('aria-label');
     }
   }
 
