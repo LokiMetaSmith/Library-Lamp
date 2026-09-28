@@ -7,6 +7,7 @@
 
 #include "freertos/queue.h"
 #include "reticulum.h"
+#include "lxmf.h"
 
 // Queue for async transmissions
 QueueHandle_t loraTransmitQueue = NULL;
@@ -76,7 +77,8 @@ void loraReceiveTask(void *pvParameters) {
                         }
                         ESP_LOGI(TAG, "Destination Hash: %s", dest_hash_str);
 
-                        // TODO: Handle LXMF/NomadNet frames here
+                        // Pass to LXMF layer
+                        lxmf_handle_packet(&rns_pkt);
                     } else {
                         // Not a Reticulum packet, fall back to string printing
                         ESP_LOGI(TAG, "Non-Reticulum Data: %s", (char*)str);
@@ -221,5 +223,26 @@ void lora_wan_broadcast(const char *message) {
     ESP_LOGI(TAG, "Enqueueing LoRaWAN broadcast: %s", message);
     if (xQueueSend(loraTransmitQueue, message, pdMS_TO_TICKS(100)) != pdPASS) {
         ESP_LOGE(TAG, "Failed to enqueue LoRaWAN broadcast (queue full)");
+    }
+}
+
+void lora_wan_transmit_raw(const uint8_t *data, size_t len) {
+    if (!lora_initialized || !data || len == 0) return;
+
+    ESP_LOGI(TAG, "Executing raw LoRa TX (%zu bytes)", len);
+    if (xSemaphoreTake(loraMutex, pdMS_TO_TICKS(1000)) == pdTRUE) {
+        lora_scanning = true;
+        int state = radio->transmit((uint8_t*)data, len);
+        if (state == RADIOLIB_ERR_NONE) {
+            lora_packets_tx++;
+            ESP_LOGI(TAG, "Raw broadcast success!");
+        } else {
+            ESP_LOGE(TAG, "Raw broadcast failed, code %d", state);
+        }
+        lora_scanning = false;
+        radio->startReceive();
+        xSemaphoreGive(loraMutex);
+    } else {
+        ESP_LOGE(TAG, "Failed to acquire LoRa mutex for raw broadcast");
     }
 }
