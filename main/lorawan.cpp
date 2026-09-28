@@ -6,6 +6,7 @@
 #include "freertos/task.h"
 
 #include "freertos/queue.h"
+#include "reticulum.h"
 
 // Queue for async transmissions
 QueueHandle_t loraTransmitQueue = NULL;
@@ -56,10 +57,30 @@ void loraReceiveTask(void *pvParameters) {
                     lora_last_rssi = radio->getRSSI();
                     lora_last_snr = radio->getSNR();
                     lora_packets_rx++;
-                    ESP_LOGI(TAG, "Received packet!");
-                    ESP_LOGI(TAG, "Data: %s", (char*)str);
+
+                    size_t packet_len = radio->getPacketLength();
+
+                    ESP_LOGI(TAG, "Received packet of length %zu", packet_len);
                     ESP_LOGI(TAG, "RSSI: %f dBm", lora_last_rssi);
                     ESP_LOGI(TAG, "SNR: %f dB", lora_last_snr);
+
+                    rns_packet_t rns_pkt;
+                    if (rns_decode_packet(str, packet_len, &rns_pkt)) {
+                        ESP_LOGI(TAG, "Valid Reticulum frame decoded!");
+                        ESP_LOGI(TAG, "Type: %d, Hops: %d, Payload len: %zu", rns_pkt.type, rns_pkt.hops, rns_pkt.payload_len);
+
+                        // Format and log the destination hash
+                        char dest_hash_str[33] = {0};
+                        for (int i = 0; i < 16; i++) {
+                            sprintf(&dest_hash_str[i * 2], "%02X", rns_pkt.dest_hash[i]);
+                        }
+                        ESP_LOGI(TAG, "Destination Hash: %s", dest_hash_str);
+
+                        // TODO: Handle LXMF/NomadNet frames here
+                    } else {
+                        // Not a Reticulum packet, fall back to string printing
+                        ESP_LOGI(TAG, "Non-Reticulum Data: %s", (char*)str);
+                    }
 
                     // TODO: Parse MSG packets and inject them into bulletin_board
                 } else if (state == RADIOLIB_ERR_CRC_MISMATCH) {

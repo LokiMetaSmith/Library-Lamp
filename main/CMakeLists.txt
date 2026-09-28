@@ -1,6 +1,6 @@
 
 # List of source files for this component.
-set(COMPONENT_SRCS "main.c" "dns_server.c" "lorawan.cpp" "bulletin_board.c" "bulletin_api.c" "audio_api.c")
+set(COMPONENT_SRCS "main.c" "dns_server.c" "lorawan.cpp" "bulletin_board.c" "bulletin_api.c" "audio_api.c" "reticulum.c" "lxmf.c")
 
 # List of directories to add to the include path.
 set(COMPONENT_ADD_INCLUDEDIRS ".")
@@ -44,6 +44,9 @@ idf_component_register(SRCS "${COMPONENT_SRCS}"
                          esp_driver_rmt
                          # Bluetooth components
                          bt
+
+                         # Crypto Components
+                         mbedtls
 
                          # External Components
                          radiolib
