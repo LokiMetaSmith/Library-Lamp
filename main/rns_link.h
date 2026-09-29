@@ -37,6 +37,9 @@ typedef struct {
     // ARQ
     uint16_t next_seq;
     uint16_t unacked_seq;
+
+    // Interface
+    rns_interface_t ifac;
 } rns_link_t;
 
 void rns_link_init(void);

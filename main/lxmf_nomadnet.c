@@ -11,7 +11,7 @@ static const char* TAG = "NOMADNET";
 
 extern bool g_sd_card_initialized;
 
-size_t lxmf_nomadnet_generate_response(const char* path, char* out_buf, size_t max_len) {
+size_t lxmf_nomadnet_generate_response(const char* path, char* out_buf, size_t max_len, rns_interface_t ifac) {
     if (!out_buf || max_len == 0) return 0;
 
     out_buf[0] = '\0';
@@ -92,8 +92,8 @@ size_t lxmf_nomadnet_generate_response(const char* path, char* out_buf, size_t m
         if (written > 0 && written < max_len - offset) offset += written;
 
         // Let the RNS Link state machine know it should start chunking this file
-        extern void rns_link_start_file_stream_global(const char* filepath);
-        rns_link_start_file_stream_global(download_path);
+        extern void rns_link_start_file_stream_global(const char* filepath, rns_interface_t ifac);
+        rns_link_start_file_stream_global(download_path, ifac);
 
     } else {
         int written = snprintf(out_buf + offset, max_len - offset,

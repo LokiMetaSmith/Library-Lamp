@@ -17,6 +17,13 @@ extern "C" {
 #define RNS_PKT_FLAG_PROPAGATE 0x10
 
 typedef enum {
+    IF_NONE = 0,
+    IF_LORA = 1,
+    IF_WIFI = 2,
+    IF_ANY = 3
+} rns_interface_t;
+
+typedef enum {
     RNS_PKT_TYPE_DATA = 0x00,
     RNS_PKT_TYPE_ANNOUNCE = 0x01,
     RNS_PKT_TYPE_LINKREQUEST = 0x02,
@@ -30,6 +37,7 @@ typedef struct {
     uint8_t hops;
     uint8_t* payload;
     size_t payload_len;
+    rns_interface_t recv_interface; // Used to track which interface this packet came from
 } rns_packet_t;
 
 #define RNS_IDENTITY_HASH_LEN 16

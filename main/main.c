@@ -2732,7 +2732,19 @@ void app_main(void) {
     ESP_ERROR_CHECK(gpio_install_isr_service(ESP_INTR_FLAG_LOWMED));
     ESP_ERROR_CHECK(gpio_isr_handler_add(APP_QUIT_PIN, gpio_cb, NULL));
  
-    // Initialize LoRaWAN
+    // Initialize Reticulum and LoRaWAN
+    extern void rns_init(void);
+    extern void rns_identity_init(void);
+    extern void lxmf_init(void);
+    extern void rns_link_init(void);
+    extern void rns_udp_ifac_init(void);
+
+    rns_init();
+    rns_identity_init();
+    lxmf_init();
+    rns_link_init();
+    rns_udp_ifac_init();
+
     lora_wan_init();
 
     // Initialize NVS

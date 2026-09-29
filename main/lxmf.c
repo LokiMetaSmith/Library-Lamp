@@ -47,21 +47,21 @@ bool lxmf_handle_packet(const rns_packet_t* pkt) {
             // Use an MTU-safe buffer size for SX1262 LoRa transmission
             // Max payload size over SX1262 is 255 bytes, minus RNS header overhead
             char response_buf[230];
-            size_t response_len = lxmf_nomadnet_generate_response(path, response_buf, sizeof(response_buf));
+            size_t response_len = lxmf_nomadnet_generate_response(path, response_buf, sizeof(response_buf), pkt->recv_interface);
 
             if (response_len > 0) {
                 // We have a payload to send back.
                 ESP_LOGI(TAG, "Response generated, ready for TX.");
 
                 // If this is part of an encrypted link session, we must encrypt the reply
-                extern bool rns_link_send_encrypted_global(const uint8_t* data, size_t len);
+                extern bool rns_link_send_encrypted_global(const uint8_t* data, size_t len, rns_interface_t ifac);
 
                 // Try to send via active link first
-                if (rns_link_send_encrypted_global((uint8_t*)response_buf, response_len)) {
-                     ESP_LOGI(TAG, "Response sent securely over active link");
+                if (rns_link_send_encrypted_global((uint8_t*)response_buf, response_len, pkt->recv_interface)) {
+                     ESP_LOGI(TAG, "Response sent securely over active link on interface %d", pkt->recv_interface);
                 } else {
                     // Fallback to cleartext broadcast (for dev/debugging without link)
-                    ESP_LOGI(TAG, "No active link, sending response in cleartext");
+                    ESP_LOGI(TAG, "No active link, sending response in cleartext on interface %d", pkt->recv_interface);
 
                     rns_packet_t reply_pkt;
                     memset(&reply_pkt, 0, sizeof(reply_pkt));
@@ -76,8 +76,13 @@ bool lxmf_handle_packet(const rns_packet_t* pkt) {
                     uint8_t out_buf[255];
                     size_t out_len = 0;
                     if (rns_encode_packet(&reply_pkt, out_buf, &out_len)) {
-                        extern void lora_wan_transmit_raw(const uint8_t *data, size_t len);
-                        lora_wan_transmit_raw(out_buf, out_len);
+                        if (pkt->recv_interface == IF_WIFI) {
+                            extern void rns_udp_transmit_raw(const uint8_t *data, size_t len);
+                            rns_udp_transmit_raw(out_buf, out_len);
+                        } else {
+                            extern void lora_wan_transmit_raw(const uint8_t *data, size_t len);
+                            lora_wan_transmit_raw(out_buf, out_len);
+                        }
                     }
                 }
             }
