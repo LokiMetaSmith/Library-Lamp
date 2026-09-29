@@ -29,6 +29,23 @@ dependencies:
       registry_url: https://components.espressif.com/
       type: service
     version: 1.0.22~1
+  espressif/usb:
+    component_hash: 1d90d7c7b0682dbfcc36f47cf5acf224a5cfb850a62f39cd86d3159cfec12a81
+    dependencies:
+    - name: idf
+      require: private
+      version: '>=5.4'
+    source:
+      registry_url: https://components.espressif.com
+      type: service
+    targets:
+    - esp32s2
+    - esp32s3
+    - esp32s31
+    - esp32p4
+    - esp32h4
+    - linux
+    version: 1.4.1
   espressif/usb_host_hid:
     component_hash: a6c5366f9b6d80b0d5f56d085d62941464512e0968b96c5877e76a80fcc23f13
     dependencies:
@@ -80,7 +97,7 @@ dependencies:
   idf:
     source:
       type: idf
-    version: 5.4.1
+    version: 6.2.0
   jgromes/radiolib:
     component_hash: 024269f750d7eb181d07bd57ccec5e5e4e276dbb262d681a6501c8e2244e80f0
     dependencies:
@@ -99,6 +116,6 @@ direct_dependencies:
 - espressif/usb_host_msc
 - idf
 - jgromes/radiolib
-manifest_hash: 70e0e2e91fdc51053b96d4a5b1d0e7bbc3b59f193ffa6de311a26c68f0bcdfba
+manifest_hash: f925119f23bc770c4600631a880ea6d7b1182fc03bea8612a4f6ff8a47c7b57d
 target: esp32s3
-version: 2.0.0
+version: 3.0.0
