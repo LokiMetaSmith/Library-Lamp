@@ -53,3 +53,6 @@
 ## 2024-10-25 - [Status Indicator Accessibility]
 **Learning:** When creating visual non-text status indicators (like colored dots), relying on color alone is not accessible for colorblind and screen reader users.
 **Action:** Always provide a human-readable text description via `title` (for hover) and `aria-label` (for screen readers), and apply `role="status"` to ensure universal accessibility.
+## 2026-09-29 - [Disabled Button Accessibility]
+**Learning:** Found an accessibility issue pattern where vanilla JavaScript explicitly toggles buttons into a disabled state and updates the 'title' attribute to provide a visual tooltip (e.g., 'Uploading...'), but fails to pair it with an 'aria-label'. Screen readers often struggle to announce 'title' attributes reliably when an element is disabled (or at all), meaning visually impaired users are left without context about why an interaction failed or what process is loading.
+**Action:** Always mirror dynamically updated 'title' attributes with identical 'aria-label' attributes, especially when handling loading or disabled states, to ensure screen reader compatibility.

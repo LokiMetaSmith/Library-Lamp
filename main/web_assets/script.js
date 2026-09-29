@@ -307,6 +307,7 @@ async function cancelTransfer(btn) {
         btn.disabled = true;
         btn.textContent = 'Canceling...';
         btn.title = 'Canceling transfer...';
+        btn.setAttribute('aria-label', btn.title);
     }
     try {
         await fetch('/transfer-cancel', { method: 'POST' });
@@ -317,6 +318,7 @@ async function cancelTransfer(btn) {
             btn.disabled = false;
             btn.textContent = 'Cancel';
             btn.removeAttribute('title');
+            btn.removeAttribute('aria-label');
         }
         renderUI();
     }
@@ -406,6 +408,7 @@ async function uploadBook(event) {
         uploadBtn.disabled = true;
         uploadBtn.textContent = 'Uploading...';
         uploadBtn.title = 'Upload in progress...';
+        uploadBtn.setAttribute('aria-label', uploadBtn.title);
     }
 
     let url = `/upload?title=${encodeURIComponent(title)}&author=${encodeURIComponent(author)}&filename=${encodeURIComponent(filename)}`;
@@ -437,6 +440,7 @@ async function uploadBook(event) {
                 uploadBtn.disabled = false;
                 uploadBtn.textContent = 'Upload';
                 uploadBtn.title = 'Upload book';
+                uploadBtn.setAttribute('aria-label', uploadBtn.title);
             }
 
             if (xhr.status >= 200 && xhr.status < 300) {
@@ -468,6 +472,7 @@ async function uploadBook(event) {
                 uploadBtn.disabled = false;
                 uploadBtn.textContent = 'Upload';
                 uploadBtn.title = 'Upload book';
+                uploadBtn.setAttribute('aria-label', uploadBtn.title);
             }
             if (errEl) {
                 errEl.textContent = 'Network error during upload.';
@@ -487,6 +492,7 @@ async function enterSleepMode(btn) {
             btn.disabled = true;
             btn.textContent = 'Entering Sleep...';
             btn.title = 'Entering sleep mode...';
+            btn.setAttribute('aria-label', btn.title);
         }
         try {
             await fetch('/enter-sleep', { method: 'POST' });
@@ -501,6 +507,7 @@ async function enterSleepMode(btn) {
                 btn.disabled = false;
                 btn.textContent = 'Enter Sleep Mode';
                 btn.title = 'Enter sleep mode';
+                btn.setAttribute('aria-label', btn.title);
             }
             renderUI();
         }
