@@ -68,16 +68,33 @@ size_t lxmf_nomadnet_generate_response(const char* path, char* out_buf, size_t m
         }
 
     } else if (strncmp(path, "/download/", 10) == 0) {
-        // Handling file downloads over Reticulum links
-        // For this minimal layer, we just indicate the capability is recognized
-        // Full file chunking would require maintaining Link state and chunking the file
+        // Trigger the Link streaming process for the requested file
+        const char* filename = path + 10;
+
+        // Prevent path traversal
+        if (strstr(filename, "..") || strchr(filename, '/')) {
+            int written = snprintf(out_buf + offset, max_len - offset,
+                "# 403 Forbidden\n\n"
+                "Invalid file path.\n\n"
+            );
+            if (written > 0 && written < max_len - offset) offset += written;
+            return offset;
+        }
+
+        static char download_path[256];
+        snprintf(download_path, sizeof(download_path), "%s/%s", MOUNT_POINT_SD, filename);
+
         int written = snprintf(out_buf + offset, max_len - offset,
             "# Downloading Book\n\n"
             "File: %s\n\n"
-            "> Note: File chunking via LXMF is partially implemented.\n"
-            "> The host will push this to you shortly.", path + 10
+            "> Streaming initiated. Check your link downloads.", filename
         );
         if (written > 0 && written < max_len - offset) offset += written;
+
+        // Let the RNS Link state machine know it should start chunking this file
+        extern void rns_link_start_file_stream_global(const char* filepath);
+        rns_link_start_file_stream_global(download_path);
+
     } else {
         int written = snprintf(out_buf + offset, max_len - offset,
             "# 404 Not Found\n\n"

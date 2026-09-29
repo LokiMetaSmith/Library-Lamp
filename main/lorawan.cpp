@@ -8,6 +8,7 @@
 #include "freertos/queue.h"
 #include "reticulum.h"
 #include "lxmf.h"
+#include "rns_link.h"
 
 // Queue for async transmissions
 QueueHandle_t loraTransmitQueue = NULL;
@@ -77,8 +78,15 @@ void loraReceiveTask(void *pvParameters) {
                         }
                         ESP_LOGI(TAG, "Destination Hash: %s", dest_hash_str);
 
-                        // Pass to LXMF layer
-                        lxmf_handle_packet(&rns_pkt);
+                        if (rns_pkt.type == RNS_PKT_TYPE_ANNOUNCE) {
+                            rns_verify_announce_packet(&rns_pkt);
+                        } else {
+                            // Process link-level packets (LinkRequests, Proofs, Data)
+                            if (!rns_link_process_packet(&rns_pkt)) {
+                                // Try to process as LXMF NomadNet message if link layer ignores it
+                                lxmf_handle_packet(&rns_pkt);
+                            }
+                        }
                     } else {
                         // Not a Reticulum packet, fall back to string printing
                         ESP_LOGI(TAG, "Non-Reticulum Data: %s", (char*)str);
@@ -99,6 +107,9 @@ void loraReceiveTask(void *pvParameters) {
         }
 
         // Yield to RTOS scheduler
+        // Tick the Reticulum link protocol layer (transmits file chunks)
+        rns_link_tick();
+
         vTaskDelay(pdMS_TO_TICKS(50));
     }
 }

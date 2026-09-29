@@ -19,6 +19,16 @@ dependencies:
       registry_url: https://components.espressif.com/
       type: service
     version: 3.0.3
+  espressif/libsodium:
+    component_hash: d4066b373fc6d4c5196db42aeea7faef4ac7f3080af96c2b74e2476c08b78dc1
+    dependencies:
+    - name: idf
+      require: private
+      version: '>=4.2'
+    source:
+      registry_url: https://components.espressif.com/
+      type: service
+    version: 1.0.22~1
   espressif/usb_host_hid:
     component_hash: a6c5366f9b6d80b0d5f56d085d62941464512e0968b96c5877e76a80fcc23f13
     dependencies:
@@ -84,10 +94,11 @@ dependencies:
 direct_dependencies:
 - espressif/cjson
 - espressif/led_strip
+- espressif/libsodium
 - espressif/usb_host_hid
 - espressif/usb_host_msc
 - idf
 - jgromes/radiolib
-manifest_hash: c817b99aff539d3ae8e5a95cd7385224449c2c7d314167e3a5bb41ccc08e34b9
+manifest_hash: 70e0e2e91fdc51053b96d4a5b1d0e7bbc3b59f193ffa6de311a26c68f0bcdfba
 target: esp32s3
 version: 2.0.0
