@@ -52,7 +52,7 @@ sdkconfig
 eim_config.toml
 
 /__pycache__/
-
+build_output.log
 *.bak
 jules_session_*
 .venv/

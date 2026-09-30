@@ -8,6 +8,8 @@
 #include "freertos/queue.h"
 #include "reticulum.h"
 #include "lxmf.h"
+#include "rns_link.h"
+#include "rns_udp_ifac.h"
 
 // Queue for async transmissions
 QueueHandle_t loraTransmitQueue = NULL;
@@ -67,6 +69,7 @@ void loraReceiveTask(void *pvParameters) {
 
                     rns_packet_t rns_pkt;
                     if (rns_decode_packet(str, packet_len, &rns_pkt)) {
+                        rns_pkt.recv_interface = IF_LORA;
                         ESP_LOGI(TAG, "Valid Reticulum frame decoded!");
                         ESP_LOGI(TAG, "Type: %d, Hops: %d, Payload len: %zu", rns_pkt.type, rns_pkt.hops, rns_pkt.payload_len);
 
@@ -77,8 +80,15 @@ void loraReceiveTask(void *pvParameters) {
                         }
                         ESP_LOGI(TAG, "Destination Hash: %s", dest_hash_str);
 
-                        // Pass to LXMF layer
-                        lxmf_handle_packet(&rns_pkt);
+                        if (rns_pkt.type == RNS_PKT_TYPE_ANNOUNCE) {
+                            rns_verify_announce_packet(&rns_pkt);
+                        } else {
+                            // Process link-level packets (LinkRequests, Proofs, Data)
+                            if (!rns_link_process_packet(&rns_pkt)) {
+                                // Try to process as LXMF NomadNet message if link layer ignores it
+                                lxmf_handle_packet(&rns_pkt);
+                            }
+                        }
                     } else {
                         // Not a Reticulum packet, fall back to string printing
                         ESP_LOGI(TAG, "Non-Reticulum Data: %s", (char*)str);
@@ -99,6 +109,9 @@ void loraReceiveTask(void *pvParameters) {
         }
 
         // Yield to RTOS scheduler
+        // Tick the Reticulum link protocol layer (transmits file chunks)
+        rns_link_tick();
+
         vTaskDelay(pdMS_TO_TICKS(50));
     }
 }
@@ -131,19 +144,33 @@ void loraTransmitTask(void *pvParameters) {
             }
         }
 
-        // Periodic Heartbeat
+        // Periodic Heartbeat / Reticulum Announce
         if ((xTaskGetTickCount() - lastHeartbeat) > pdMS_TO_TICKS(LORA_HEARTBEAT_INTERVAL_MS)) {
-            if (xSemaphoreTake(loraMutex, pdMS_TO_TICKS(1000)) == pdTRUE) {
-                lora_scanning = true;
-                const char* heartbeat_msg = "HEARTBEAT: Library-Lamp Discovery";
-                ESP_LOGI(TAG, "Sending Discovery Heartbeat");
-                if (radio->transmit(heartbeat_msg) == RADIOLIB_ERR_NONE) {
-                    lora_packets_tx++;
+            ESP_LOGI(TAG, "Generating Reticulum Announce packet...");
+            rns_packet_t ann_pkt;
+            uint8_t payload_buf[150]; // Large enough for Ed25519 Pubkey + AppData + Signature
+            rns_generate_announce_packet(&ann_pkt, payload_buf, "Library Lamp");
+
+            uint8_t out_buf[255];
+            size_t out_len = 0;
+            if (rns_encode_packet(&ann_pkt, out_buf, &out_len)) {
+
+                // 1. Broadcast over LoRa
+                if (xSemaphoreTake(loraMutex, pdMS_TO_TICKS(1000)) == pdTRUE) {
+                    lora_scanning = true;
+                    ESP_LOGI(TAG, "Sending Discovery Heartbeat/Announce over LoRa");
+                    if (radio->transmit(out_buf, out_len) == RADIOLIB_ERR_NONE) {
+                        lora_packets_tx++;
+                    }
+                    lora_scanning = false;
+                    radio->startReceive();
+                    xSemaphoreGive(loraMutex);
                 }
-                lora_scanning = false;
-                radio->startReceive();
-                xSemaphoreGive(loraMutex);
+
+                // 2. Broadcast over Wi-Fi UDP Interface
+                rns_udp_transmit_raw(out_buf, out_len);
             }
+
             lastHeartbeat = xTaskGetTickCount();
         }
     }
