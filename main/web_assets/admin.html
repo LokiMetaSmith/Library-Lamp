@@ -21,6 +21,15 @@ body {
   display: flex;
   flex-direction: column;
 }
+@keyframes loadingDots {
+  0% { content: "."; }
+  33% { content: ".."; }
+  66% { content: "..."; }
+}
+.loading-dots::after {
+  content: "";
+  animation: loadingDots 1.5s infinite steps(1);
+}
 .site-header {
   background: var(--accent-dark);
   padding: 14px 20px;

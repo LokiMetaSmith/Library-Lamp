@@ -305,7 +305,7 @@ async function cancelTransfer(btn) {
     if (!state.transfer.active) return;
     if (btn) {
         btn.disabled = true;
-        btn.textContent = 'Canceling...';
+        btn.innerHTML = 'Canceling<span class="loading-dots"></span>';
         btn.title = 'Canceling transfer...';
         btn.setAttribute('aria-label', btn.title);
     }
@@ -406,7 +406,7 @@ async function uploadBook(event) {
 
     if (uploadBtn) {
         uploadBtn.disabled = true;
-        uploadBtn.textContent = 'Uploading...';
+        uploadBtn.innerHTML = 'Uploading<span class="loading-dots"></span>';
         uploadBtn.title = 'Upload in progress...';
         uploadBtn.setAttribute('aria-label', uploadBtn.title);
     }
@@ -490,7 +490,7 @@ async function enterSleepMode(btn) {
         state.isSleeping = true;
         if (btn) {
             btn.disabled = true;
-            btn.textContent = 'Entering Sleep...';
+            btn.innerHTML = 'Entering Sleep<span class="loading-dots"></span>';
             btn.title = 'Entering sleep mode...';
             btn.setAttribute('aria-label', btn.title);
         }
