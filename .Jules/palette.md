@@ -154,3 +154,6 @@
 **Learning:** Adding loading states to vanilla HTML buttons (like 'POSTING...') can be done efficiently without heavy JavaScript or external dependencies.
 **Action:** Utilize CSS keyframe animations to create an animated ellipsis (via `content` property on a pseudo-element like `.loading-dots::after`). This clarifies the active state visually while maintaining a lightweight UI.
 
+## 2026-12-16 - [Standardized Async Button Loading States]
+**Learning:** Hardcoded text dots (e.g., 'Uploading...') on async buttons provide poor visual feedback and create inconsistencies when some buttons use CSS animations (like '.loading-dots' in 'admin.html' and 'board.html').
+**Action:** Reused the existing lightweight '.loading-dots' CSS keyframe animation across all async actions ('script.js', 'setup.html') by injecting it via 'innerHTML', creating a unified, delightful, and dependency-free visual rhythm for the UI. Ensure that the CSS animation itself is included on all pages that use it (e.g. by injecting it inline in admin.html and setup.html, which do not load the global style.css).
