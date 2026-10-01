@@ -72,7 +72,7 @@ body {
   text-transform: uppercase; color: var(--ink-muted);
   display: block; margin-bottom: 5px;
 }
-#gate input:focus { border-color: var(--accent-dark); }
+#gate input:focus-visible { border-color: var(--accent-dark); }
 #gate button {
   width: 100%;
   background: var(--accent-dark);
@@ -132,7 +132,7 @@ body {
 .fld input[type="text"],
 .fld input[type="datetime-local"] { width: 200px; }
 .fld input[type="number"] { width: 80px; }
-.fld input:focus { border-color: var(--accent-dark); }
+.fld input:focus-visible { border-color: var(--accent-dark); }
 
 .btn {
   background: var(--accent-dark);
@@ -172,7 +172,7 @@ textarea.restore-area {
   height: 120px;
   outline: none;
 }
-textarea.restore-area:focus { border-color: var(--accent-dark); }
+textarea.restore-area:focus-visible { border-color: var(--accent-dark); }
 
 /* ── Post list ── */
 .post-list { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
