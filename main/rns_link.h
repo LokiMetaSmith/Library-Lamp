@@ -37,6 +37,7 @@ typedef struct {
     // ARQ
     uint16_t next_seq;
     uint16_t unacked_seq;
+    uint32_t last_tx_ms; // Track when the last packet was sent for retransmission timeouts
 
     // Interface
     rns_interface_t ifac;

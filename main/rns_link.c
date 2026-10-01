@@ -128,36 +128,41 @@ bool rns_link_process_packet(const rns_packet_t* pkt) {
             link->last_activity_ms = xTaskGetTickCount() * portTICK_PERIOD_MS;
 
             // Decrypt link packet using crypto_secretbox
-            // Check if there is enough payload for MAC (16 bytes) + 3 bytes minimal payload
+            // Check if there is enough payload for MAC (16 bytes) + 2 bytes seq header + minimal payload
             if (pkt->payload_len >= (crypto_secretbox_MACBYTES + 3)) {
-                // In a full implementation, we'd extract the nonce from the packet or use a synchronized counter.
-                // For this implementation, we use a simple counter based on sequence number as nonce.
-                // To do this properly, the packet needs to contain the sequence number unencrypted.
-                // Since our minimal ARQ just sends ACKs, we'll try to decrypt it.
-                // This requires a shared agreement on nonce handling.
-                // Assuming simple static nonce for ACKs in this minimal stub for now.
-                uint8_t nonce[crypto_secretbox_NONCEBYTES] = {0}; // Static nonce for ACKs for now
+                // The first 2 bytes are the unencrypted sequence number
+                uint16_t seq = (pkt->payload[0] << 8) | pkt->payload[1];
 
-                uint8_t* decrypted_buf = malloc(pkt->payload_len - crypto_secretbox_MACBYTES);
+                // Reconstruct the nonce used by the sender
+                uint8_t nonce[crypto_secretbox_NONCEBYTES] = {0};
+                nonce[0] = pkt->payload[0];
+                nonce[1] = pkt->payload[1];
+
+                // The ciphertext starts after the 2-byte sequence header
+                size_t ciphertext_len = pkt->payload_len - 2;
+                const uint8_t* ciphertext = pkt->payload + 2;
+
+                size_t decrypted_len = ciphertext_len - crypto_secretbox_MACBYTES;
+                uint8_t* decrypted_buf = malloc(decrypted_len);
                 if (decrypted_buf) {
-                    if (crypto_secretbox_open_easy(decrypted_buf, pkt->payload, pkt->payload_len, nonce, link->shared_key) == 0) {
+                    if (crypto_secretbox_open_easy(decrypted_buf, ciphertext, ciphertext_len, nonce, link->shared_key) == 0) {
                         // Successfully decrypted
                         // Simulated ACK parsing (naive)
-                        if (decrypted_buf[0] == 0xAC) {
+                        if (decrypted_len >= 3 && decrypted_buf[0] == 0xAC) {
                             uint16_t ack_seq = (decrypted_buf[1] << 8) | decrypted_buf[2];
                             ESP_LOGI(TAG, "Received ACK for seq %d on interface %d", ack_seq, pkt->recv_interface);
                             link->unacked_seq = ack_seq + 1;
-                        } else {
+                        } else if (decrypted_len > 0) {
                             // If it's not an ACK, it might be LXMF data over the link. Pass it up.
                             // We need to create a dummy rns_packet_t with the decrypted payload
                             ESP_LOGI(TAG, "Passing decrypted link payload to LXMF");
                             rns_packet_t link_payload_pkt = *pkt; // copy headers
                             link_payload_pkt.payload = decrypted_buf;
-                            link_payload_pkt.payload_len = pkt->payload_len - crypto_secretbox_MACBYTES;
+                            link_payload_pkt.payload_len = decrypted_len;
                             lxmf_handle_packet(&link_payload_pkt);
                         }
                     } else {
-                        ESP_LOGW(TAG, "Failed to decrypt link packet on interface %d", pkt->recv_interface);
+                        ESP_LOGW(TAG, "Failed to decrypt link packet on interface %d (seq %d)", pkt->recv_interface, seq);
                     }
                     free(decrypted_buf);
                 }
@@ -257,8 +262,19 @@ static void tick_link(rns_link_t* link) {
     if (link->state == LINK_STATE_ACTIVE && link->is_streaming) {
         // Wait for ACK before sending next chunk to avoid flooding LoRa (Stop-and-wait ARQ)
         if (link->next_seq > link->unacked_seq) {
-             // Timeout handling for retransmission could go here
-             return;
+            // Check for retransmission timeout (3000ms)
+            if ((xTaskGetTickCount() * portTICK_PERIOD_MS) - link->last_tx_ms > 3000) {
+                ESP_LOGI(TAG, "Timeout waiting for ACK seq %d, retransmitting.", link->next_seq - 1);
+
+                // Seek back in the file to retransmit the last chunk
+                FILE* f = (FILE*)link->stream_fp;
+                if (f) {
+                    fseek(f, link->streaming_offset, SEEK_SET);
+                    link->next_seq--; // Roll back sequence number for retransmission
+                }
+            } else {
+                return; // Still waiting for ACK, timeout hasn't hit yet
+            }
         }
 
         FILE* f = (FILE*)link->stream_fp;
@@ -266,6 +282,9 @@ static void tick_link(rns_link_t* link) {
              link->is_streaming = false;
              return;
         }
+
+        // Save offset before reading, in case we need to retransmit
+        link->streaming_offset = ftell(f);
 
         // Buffer sizing for MTU compliance (255 bytes max for SX1262)
         // RNS Header (IFAC+HDR+MAC+PROPAGATE+TYPE+HOPS) = ~1 byte
@@ -302,6 +321,7 @@ static void tick_link(rns_link_t* link) {
             crypto_secretbox_easy(ciphertext_buf + 2, chunk_buf + 2, bytes_read, nonce, link->shared_key);
 
             send_link_packet(link, ciphertext_buf, bytes_read + 2 + crypto_secretbox_MACBYTES, link->link_id);
+            link->last_tx_ms = xTaskGetTickCount() * portTICK_PERIOD_MS;
             link->next_seq++;
 
         } else {
