@@ -58,6 +58,7 @@ bool rns_decode_packet(const uint8_t* buffer, size_t len, rns_packet_t* out_pkt)
 }
 
 #include "sodium.h"
+#include "nvs_flash.h"
 
 rns_identity_t g_rns_local_identity;
 
@@ -67,9 +68,26 @@ void rns_identity_init(void) {
         return;
     }
 
-    // In a real device, these keys should be persisted to NVS or SPIFFS so identity is retained.
-    // For this minimal implementation, we generate an ephemeral identity per boot.
-    crypto_sign_ed25519_keypair(g_rns_local_identity.public_key, g_rns_local_identity.private_key);
+    nvs_handle_t my_handle;
+    esp_err_t err = nvs_open("storage", NVS_READWRITE, &my_handle);
+    if (err == ESP_OK) {
+        size_t priv_len = ED25519_PRIVATE_KEY_BYTES;
+        err = nvs_get_blob(my_handle, "rns_priv_key", g_rns_local_identity.private_key, &priv_len);
+
+        if (err == ESP_OK && priv_len == ED25519_PRIVATE_KEY_BYTES) {
+            ESP_LOGI(TAG, "Loaded Reticulum Identity from NVS.");
+            crypto_sign_ed25519_sk_to_pk(g_rns_local_identity.public_key, g_rns_local_identity.private_key);
+        } else {
+            ESP_LOGI(TAG, "No valid Reticulum Identity in NVS. Generating new one...");
+            crypto_sign_ed25519_keypair(g_rns_local_identity.public_key, g_rns_local_identity.private_key);
+            nvs_set_blob(my_handle, "rns_priv_key", g_rns_local_identity.private_key, ED25519_PRIVATE_KEY_BYTES);
+            nvs_commit(my_handle);
+        }
+        nvs_close(my_handle);
+    } else {
+        ESP_LOGE(TAG, "Error (%s) opening NVS handle! Using ephemeral identity.", esp_err_to_name(err));
+        crypto_sign_ed25519_keypair(g_rns_local_identity.public_key, g_rns_local_identity.private_key);
+    }
 
     // Hash the public key to get the identity hash (using sha256 as per Reticulum identity generation)
     mbedtls_sha256(g_rns_local_identity.public_key, ED25519_PUBLIC_KEY_BYTES, g_rns_local_identity.hash, 0); // 0 = SHA-256
@@ -78,7 +96,7 @@ void rns_identity_init(void) {
     for (int i = 0; i < 16; i++) {
         sprintf(&hash_str[i * 2], "%02X", g_rns_local_identity.hash[i]);
     }
-    ESP_LOGI(TAG, "Generated Ephemeral Reticulum Identity: %s", hash_str);
+    ESP_LOGI(TAG, "Reticulum Identity Hash: %s", hash_str);
 }
 
 void rns_generate_announce_packet(rns_packet_t* pkt_out, uint8_t* payload_buf, const char* app_data) {

@@ -2,6 +2,7 @@
 #include <string.h>
 #include "esp_log.h"
 #include "mbedtls/sha256.h"
+#include "bulletin_board.h"
 #include "lxmf_nomadnet.h"
 
 static const char* TAG = "LXMF";
@@ -88,6 +89,29 @@ bool lxmf_handle_packet(const rns_packet_t* pkt) {
             }
 
             return true;
+        } else {
+            // Might be a pure LXMF text message (e.g. for the Bulletin Board)
+            // A real LXMF message parsing is complex (msgpack). For this stub, we do a basic ASCII sniff.
+            // If it's mostly printable, we'll assume it's a message and dump it to the board.
+            size_t printable_count = 0;
+            for (size_t i = 0; i < pkt->payload_len; i++) {
+                if (payload_str[i] >= ' ' && payload_str[i] <= '~') printable_count++;
+            }
+
+            if (printable_count > (pkt->payload_len / 2) && pkt->payload_len > 10) {
+                ESP_LOGI(TAG, "Sniffed cleartext-like LXMF message, adding to Bulletin Board.");
+                // We cap the length to BB max to prevent buffer overflow. We don't have author context in cleartext.
+                char msg_text[300] = {0};
+                // Extract the printable portion roughly (very naive)
+                size_t p = 0;
+                for (size_t i = 0; i < pkt->payload_len && p < 299; i++) {
+                    if (payload_str[i] >= ' ' && payload_str[i] <= '~') {
+                        msg_text[p++] = payload_str[i];
+                    }
+                }
+                bb_add_message("LoRa/LXMF User", "Message", msg_text, 24);
+                return true;
+            }
         }
     }
 

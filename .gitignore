@@ -56,3 +56,5 @@ build_output.log
 *.bak
 jules_session_*
 .venv/
+build_output.log
+sdkconfig.old
