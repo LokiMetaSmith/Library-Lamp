@@ -58,3 +58,6 @@ jules_session_*
 .venv/
 build_output.log
 sdkconfig.old
+
+__pycache__/
+*.pyc

@@ -54,11 +54,15 @@ def test_ux():
     assert "Show new key" in admin_content, "Missing 'Show new key' aria-label/title"
     assert "Hide new key" in admin_content, "Missing 'Hide new key' logic"
     assert "Show confirmed key" in admin_content, "Missing 'Show confirmed key' aria-label/title"
+    assert "input:focus-visible" in admin_content, "Missing focus-visible support in admin.html"
+    assert "textarea.restore-area:focus-visible" in admin_content, "Missing focus-visible support in admin.html"
 
     with open(os.path.join(base_dir, 'main/web_assets/board.html'), 'r') as f:
         board_content = f.read()
 
     assert "loading-dots" in board_content, "Missing loading-dots animation class in board.html"
+    assert "input:focus-visible" in board_content, "Missing focus-visible support in board.html"
+    assert "textarea:focus-visible" in board_content, "Missing focus-visible support in board.html"
 
     print("All assertions passed. Modifications are successfully present.")
 
