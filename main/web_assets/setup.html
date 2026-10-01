@@ -30,6 +30,9 @@
     <div class="container">
         <h1>Wi-Fi Setup</h1>
         <p>Connect your E-Book Librarian to your local Wi-Fi network.</p>
+        <p class="file-notes" style="font-size: 0.9em; margin-top: -20px; color: #777;">
+            Note: Connecting to Wi-Fi enables automatic syncing with the global <strong>Playnet Community Bulletin Board</strong>, while keeping your local E-Book offline network active.
+        </p>
         <form action="/save-credentials" method="POST" novalidate onsubmit="const ssidIn = document.getElementById('ssid'); if (!ssidIn.value.trim()) { const stat = document.getElementById('status'); stat.textContent = 'Please enter a Wi-Fi Network Name (SSID).'; stat.className = 'status-message error'; ssidIn.focus(); return false; } const btn = this.querySelector('button[type=submit]'); btn.disabled = true; btn.innerHTML = 'Connecting<span class=\'loading-dots\'></span>'; return true;">
             <div style="margin-bottom: 15px;">
                 <label for="ssid" style="display: block; text-align: left; margin-bottom: 5px; font-weight: bold; color: #555; margin-left: 5%;">Wi-Fi Network Name (SSID) <span aria-hidden="true" style="color: var(--c-need-bar, #c4813a);">*</span></label>
