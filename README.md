@@ -19,6 +19,19 @@ The device hosts its own Wi-Fi network and provides a simple web interface, allo
 - **Visual Status Indicator:** An onboard RGB LED strip shows the system's current state (idle, connected, waiting for confirmation, transferring).
 - **Manual Sleep Mode:** A "shipping mode" can be activated from the web interface to put the device into deep sleep, conserving battery for long periods. A manual reset is required to wake the device.
 - **Physical Eject/Sleep Button:** A single button provides three functions: confirming a pending USB transfer, safely ejecting the connected USB device (short press), and putting the device into deep sleep (long press).
+- **LoRa Mesh Networking:** Hardware support for SX1262 LoRa modules enables decentralized, off-grid communication and book sharing.
+- **LXMF Messaging:** Send and receive messages off-grid using the Reticulum and LXMF protocols.
+- **Audio/Media Player:** Enjoy in-browser audio playback and streaming directly from the library.
+- **Community Bulletin Board:** A local, SQLite-backed guestbook and bulletin board for users to interact, share statuses, and leave messages.
+
+## 🌐 Decentralized Mesh & Inter-Library Loan
+
+The E-Book Librarian now supports decentralized networking via **Reticulum** and the **Nomad Network (NomadNet) NodePage protocol**. By integrating an SX1262 LoRa module, devices can communicate completely off-grid, forming an ad-hoc mesh network.
+
+This enables:
+- **Inter-Library Loan:** Discover and share books with other E-Book Librarian nodes over long-distance LoRa or local Wi-Fi multicast without needing an internet connection.
+- **LXMF Messaging:** Secure, encrypted, and decentralized messaging between library users.
+- **Resilient Infrastructure:** The dual-interface implementation seamlessly handles traffic over both Wi-Fi (UDP multicast) and LoRa, ensuring reliable connectivity.
 
 All the necessary components to build this project are listed in the [Bill of Materials (BOM.md)](BOM.md).
 
