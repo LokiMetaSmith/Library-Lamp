@@ -59,7 +59,7 @@
                     </ul>
                     <div id="emptyLibraryState" class="empty-state" style="display: none;">
                         No audio files (.mp3, .m4a, .wav, .ogg) found in the library.<br>
-                        <span class="file-notes" style="display: inline-block;">Go to the <a href="/" style="color: inherit; text-decoration: underline;">main library</a> to upload audio files.</span>
+                        <span class="file-notes">Go to the <a href="/" style="color: inherit; text-decoration: underline;">main library</a> to upload audio files.</span>
                     </div>
                 </div>
             </div>
@@ -403,7 +403,7 @@
 
         function renderQueue() {
             if (state.queue.length === 0) {
-                dom.queueSection.innerHTML = '<div class="empty-state">The queue is empty. Add a track from the library below!</div>';
+                dom.queueSection.innerHTML = '<div class="empty-state">The queue is empty.<br><span class="file-notes">Add a track from the library below!</span></div>';
             } else {
                 let html = '';
                 state.queue.forEach((track, index) => {
