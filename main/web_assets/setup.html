@@ -61,7 +61,9 @@
             </div>
             <button type="submit">Connect</button>
         </form>
-        <div id="status" aria-live="polite" style="display: none;"></div>
+        <div aria-live="polite" aria-atomic="true">
+            <div id="status" style="display: none;"></div>
+        </div>
         <button type="button" class="btn-secondary" onclick="window.location.href='/index.html'">Back to Library</button>
     </div>
 </body>

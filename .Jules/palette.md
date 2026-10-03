@@ -163,3 +163,6 @@
 ## 2023-10-25 - Standardizing Empty States
 **Learning:** For consistency across the design system, `.empty-state` containers should use the `.file-notes` CSS class for secondary subtext/call-to-actions, rather than plain unstyled text or custom inline styles.
 **Action:** When adding or updating empty states, ensure subtext (e.g., instructions on how to populate the list) is wrapped in `<span class="file-notes">`.
+## 2026-10-03 - Added aria-live wrappers to dynamic status messages
+**Learning:** Dynamic text updates (like upload progress) in this app's vanilla JS architecture were visually updating but hidden from screen readers because the text nodes weren't wrapped in permanent `aria-live` regions.
+**Action:** Always wrap dynamic status, loading, and progress text containers with `aria-live="polite"` or `assertive` upon initial render to ensure screen readers capture the state changes.
