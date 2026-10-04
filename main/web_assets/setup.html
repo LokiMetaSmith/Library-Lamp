@@ -47,7 +47,7 @@
         <p class="file-notes">
             Note: Connecting to Wi-Fi enables automatic syncing with the global <strong>Playnet Community Bulletin Board</strong>, while keeping your local E-Book offline network active.
         </p>
-        <form action="/save-credentials" method="POST" novalidate onsubmit="const ssidIn = document.getElementById('ssid'); if (!ssidIn.value.trim()) { const stat = document.getElementById('status'); stat.textContent = 'Please enter a Wi-Fi Network Name (SSID).'; stat.className = 'status-message error'; ssidIn.focus(); return false; } const btn = this.querySelector('button[type=submit]'); btn.disabled = true; btn.innerHTML = 'Connecting<span class=\'loading-dots\'></span>'; return true;">
+        <form action="/save-credentials" method="POST" novalidate onsubmit="const ssidIn = document.getElementById('ssid'); if (!ssidIn.value.trim()) { const stat = document.getElementById('status'); stat.textContent = 'Please enter a Wi-Fi Network Name (SSID).'; stat.className = 'status-message error'; stat.style.display = 'block'; ssidIn.focus(); return false; } const btn = this.querySelector('button[type=submit]'); btn.disabled = true; btn.innerHTML = 'Connecting<span class=\'loading-dots\'></span>'; return true;">
             <div style="margin-bottom: 15px;">
                 <label for="ssid">Wi-Fi Network Name (SSID) <span aria-hidden="true" style="color: var(--c-need-bar);">*</span></label>
                 <input type="text" id="ssid" name="ssid" placeholder="e.g., MyHomeNetwork" required style="margin-bottom: 0;">

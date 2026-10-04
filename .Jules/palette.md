@@ -166,3 +166,7 @@
 ## 2026-10-03 - Added aria-live wrappers to dynamic status messages
 **Learning:** Dynamic text updates (like upload progress) in this app's vanilla JS architecture were visually updating but hidden from screen readers because the text nodes weren't wrapped in permanent `aria-live` regions.
 **Action:** Always wrap dynamic status, loading, and progress text containers with `aria-live="polite"` or `assertive` upon initial render to ensure screen readers capture the state changes.
+
+## 2026-10-04 - [Invisible Inline Validation Errors]
+**Learning:** When replacing native form validation tooltips with custom inline error text inside a container that is initially hidden (`display: none`), setting the text content and class alone is insufficient; the error remains invisible to the user.
+**Action:** Always ensure you explicitly toggle the display property (e.g., `stat.style.display = 'block';`) when dynamically populating hidden error containers during form validation to ensure the user actually receives the feedback.
