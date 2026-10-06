@@ -170,3 +170,7 @@
 ## 2026-10-04 - [Invisible Inline Validation Errors]
 **Learning:** When replacing native form validation tooltips with custom inline error text inside a container that is initially hidden (`display: none`), setting the text content and class alone is insufficient; the error remains invisible to the user.
 **Action:** Always ensure you explicitly toggle the display property (e.g., `stat.style.display = 'block';`) when dynamically populating hidden error containers during form validation to ensure the user actually receives the feedback.
+
+## 2026-10-06 - Mirroring aria-label for disabled loading buttons
+**Learning:** Screen readers often fail to read standard `title` attributes on `<button disabled>` elements. When dynamically switching an active button to a disabled state with loading text (e.g. `POSTING...`), it is crucial to explicitly set a descriptive `aria-label` matching the `title`. Furthermore, when the button is re-enabled, these attributes must be fully removed (`removeAttribute()`) rather than just set to empty strings, to prevent stale or invisible text from being announced in its idle state.
+**Action:** When adding transient loading states to disabled buttons, always mirror `title` to `aria-label` when disabling, and invoke `removeAttribute('title')` and `removeAttribute('aria-label')` when re-enabling.
