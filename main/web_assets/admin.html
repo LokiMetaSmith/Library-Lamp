@@ -389,6 +389,8 @@ function tryLogin() {
   if (btn) {
     btn.disabled = true;
     btn.innerHTML = 'Unlocking<span class="loading-dots"></span> 🔑';
+    btn.title = 'Unlocking...';
+    btn.setAttribute('aria-label', btn.title);
   }
 
   fetch('/board/admin/auth', {
@@ -408,6 +410,8 @@ function tryLogin() {
     if (btn) {
       btn.disabled = false;
       btn.textContent = 'Unlock 🔑';
+      btn.removeAttribute('title');
+      btn.removeAttribute('aria-label');
     }
   })
   .catch(() => {
@@ -415,6 +419,8 @@ function tryLogin() {
     if (btn) {
       btn.disabled = false;
       btn.textContent = 'Unlock 🔑';
+      btn.removeAttribute('title');
+      btn.removeAttribute('aria-label');
     }
   });
 }
@@ -459,6 +465,8 @@ function doSetPublicUploads(btn) {
   if (btn) {
     btn.disabled = true;
     btn.innerHTML = 'Saving<span class="loading-dots"></span>';
+    btn.title = 'Saving upload settings...';
+    btn.setAttribute('aria-label', btn.title);
   }
   apiFetch(api('/admin/set_public_uploads'), {
     method: 'POST',
@@ -478,6 +486,8 @@ function doSetPublicUploads(btn) {
     if (btn) {
       btn.disabled = false;
       btn.textContent = 'Save Upload Settings';
+      btn.removeAttribute('title');
+      btn.removeAttribute('aria-label');
     }
   });
 }
@@ -502,6 +512,8 @@ function doSetKey(btn) {
   if (btn) {
     btn.disabled = true;
     btn.innerHTML = 'Saving<span class="loading-dots"></span>';
+    btn.title = 'Saving new key...';
+    btn.setAttribute('aria-label', btn.title);
   }
   apiFetch(api('/board/admin/setkey') + '&newkey=' + encodeURIComponent(n))
     .then(r => r.text())
@@ -514,6 +526,8 @@ function doSetKey(btn) {
       if (btn) {
         btn.disabled = false;
         btn.textContent = 'Change Key';
+        btn.removeAttribute('title');
+        btn.removeAttribute('aria-label');
       }
     });
 }
@@ -530,6 +544,8 @@ function doIdentity(btn) {
   if (btn) {
     btn.disabled = true;
     btn.innerHTML = 'Saving<span class="loading-dots"></span>';
+    btn.title = 'Saving identity settings...';
+    btn.setAttribute('aria-label', btn.title);
   }
   apiFetch(api('/board/admin/identity/set') + '&' + params.toString())
     .then(r => r.text())
@@ -539,6 +555,8 @@ function doIdentity(btn) {
       if (btn) {
         btn.disabled = false;
         btn.textContent = 'Save Identity';
+        btn.removeAttribute('title');
+        btn.removeAttribute('aria-label');
       }
     });
 }
@@ -549,6 +567,8 @@ function confirmClear(btn) {
   if (btn) {
     btn.disabled = true;
     btn.innerHTML = 'Clearing<span class="loading-dots"></span>';
+    btn.title = 'Clearing all posts...';
+    btn.setAttribute('aria-label', btn.title);
   }
   apiFetch(api('/board/admin/clear'), { method: 'POST' })
     .then(r => r.text())
@@ -558,6 +578,8 @@ function confirmClear(btn) {
       if (btn) {
         btn.disabled = false;
         btn.textContent = 'Clear All Posts';
+        btn.removeAttribute('title');
+        btn.removeAttribute('aria-label');
       }
     });
 }
@@ -579,6 +601,8 @@ async function loadPostList(btn) {
   if (btn) {
     btn.disabled = true;
     btn.innerHTML = 'Refreshing<span class="loading-dots"></span>';
+    btn.title = 'Refreshing posts list...';
+    btn.setAttribute('aria-label', btn.title);
   }
   const container = document.getElementById('postList');
   container.innerHTML = '<div class="post-empty">Loading…</div>';
@@ -605,6 +629,8 @@ async function loadPostList(btn) {
     if (btn) {
       btn.disabled = false;
       btn.textContent = 'Refresh List';
+      btn.removeAttribute('title');
+      btn.removeAttribute('aria-label');
     }
   }
 }
@@ -614,6 +640,8 @@ async function deletePost(id, btn) {
   if (btn) {
     btn.disabled = true;
     btn.innerHTML = 'Deleting<span class="loading-dots"></span>';
+    btn.title = 'Deleting post...';
+    btn.setAttribute('aria-label', btn.title);
   }
   const r = await apiFetch(api('/board/admin/delete/post'), {
     method: 'POST',
@@ -629,6 +657,8 @@ async function deletePost(id, btn) {
     if (btn) {
       btn.disabled = false;
       btn.textContent = 'Delete';
+      btn.removeAttribute('title');
+      btn.removeAttribute('aria-label');
     }
   }
 }
@@ -640,6 +670,8 @@ function confirmFormatSD(btn) {
   if (btn) {
     btn.disabled = true;
     btn.innerHTML = 'Formatting<span class="loading-dots"></span>';
+    btn.title = 'Formatting SD card...';
+    btn.setAttribute('aria-label', btn.title);
   }
 
   apiFetch(api('/board/admin/format-sd'), { method: 'POST' })
@@ -655,6 +687,8 @@ function confirmFormatSD(btn) {
       if (btn) {
         btn.disabled = false;
         btn.textContent = 'Format SD Card';
+        btn.removeAttribute('title');
+        btn.removeAttribute('aria-label');
       }
     });
 }
@@ -669,6 +703,8 @@ function doSetLampColor(btn) {
   if (btn) {
     btn.disabled = true;
     btn.innerHTML = 'Setting<span class="loading-dots"></span>';
+    btn.title = 'Setting lamp color...';
+    btn.setAttribute('aria-label', btn.title);
   }
 
   apiFetch(api('/set-led-color'), {
@@ -689,6 +725,8 @@ function doSetLampColor(btn) {
     if (btn) {
       btn.disabled = false;
       btn.textContent = 'Set Lamp Color';
+      btn.removeAttribute('title');
+      btn.removeAttribute('aria-label');
     }
   });
 }
