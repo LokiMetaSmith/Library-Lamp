@@ -33,6 +33,12 @@
                     <a href="/about.html">About</a>
                 </div>
             </div>
+            <div aria-live="assertive">
+                <div id="systemErrorsBanner" class="system-banner error-banner" style="display: none;"></div>
+            </div>
+            <div aria-live="polite">
+                <div id="systemStatusBanner" class="system-banner status-banner" style="display: none;"></div>
+            </div>
             <h1>Audio Radio</h1>
         </header>
 
@@ -156,6 +162,42 @@
             }
         }
 
+
+        async function loadSystemStatus(data) {
+            const errors = [];
+            if (!data.sd_mounted) errors.push("Warning: SD Card not mounted.");
+            if (!data.usb_mounted) errors.push("Warning: USB initialization failed.");
+            if (!data.lora_initialized) errors.push("Warning: LoRaWAN initialization failed.");
+
+            const errBanner = document.getElementById("systemErrorsBanner");
+            if (errBanner) {
+                if (errors.length > 0) {
+                    errBanner.innerHTML = errors.map(e => `<p>⚠️ ${escapeHtml(e)}</p>`).join("");
+                    errBanner.style.display = "block";
+                } else {
+                    errBanner.style.display = "none";
+                }
+            }
+
+            const status = [];
+            if (data.catalog_updating) status.push("Updating Library Catalog...");
+            if (data.lora_scanning) {
+                status.push("Scanning for other Library-Lamps...");
+            } else if (data.lora_initialized) {
+                status.push(`LoRa Radio: TX ${data.lora_packets_tx || 0} | RX ${data.lora_packets_rx || 0} | RSSI ${data.lora_last_rssi ? data.lora_last_rssi.toFixed(1) : 0} dBm | SNR ${data.lora_last_snr ? data.lora_last_snr.toFixed(1) : 0} dB`);
+            }
+
+            const statBanner = document.getElementById("systemStatusBanner");
+            if (statBanner) {
+                if (status.length > 0) {
+                    statBanner.innerHTML = status.map(msg => `<p>🔄 ${escapeHtml(msg)}</p>`).join("");
+                    statBanner.style.display = "block";
+                } else {
+                    statBanner.style.display = "none";
+                }
+            }
+        }
+
         async function checkAdminStatus() {
             if (state.isAdminChecked) return;
             try {
@@ -163,6 +205,7 @@
                 const d = await res.json();
                 state.isAdmin = !!d.is_admin;
                 state.isAdminChecked = true;
+                loadSystemStatus(d);
                 renderQueue(); // Re-render queue if admin status changes (for remove buttons)
             } catch (error) {
                 console.error('Failed to load status', error);
