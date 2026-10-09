@@ -174,3 +174,7 @@
 ## 2026-10-06 - Mirroring aria-label for disabled loading buttons
 **Learning:** Screen readers often fail to read standard `title` attributes on `<button disabled>` elements. When dynamically switching an active button to a disabled state with loading text (e.g. `POSTING...`), it is crucial to explicitly set a descriptive `aria-label` matching the `title`. Furthermore, when the button is re-enabled, these attributes must be fully removed (`removeAttribute()`) rather than just set to empty strings, to prevent stale or invisible text from being announced in its idle state.
 **Action:** When adding transient loading states to disabled buttons, always mirror `title` to `aria-label` when disabling, and invoke `removeAttribute('title')` and `removeAttribute('aria-label')` when re-enabling.
+
+## 2026-12-16 - [Redundant Attributes on Text Buttons]
+**Learning:** Adding `title` or `aria-label` to buttons that already have clear, visible text content (e.g., 'Upload' or 'Enter Sleep Mode') is redundant and an accessibility anti-pattern. Native tooltips can obscure the UI, and screen readers will reliably announce the button text anyway.
+**Action:** When working with textual buttons, avoid duplicating the text content into `title` or `aria-label` attributes. Rely on the text content itself. Ensure any dynamically added loading states correctly remove these attributes when the button is re-enabled using `removeAttribute()`.

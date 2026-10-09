@@ -439,8 +439,8 @@ async function uploadBook(event) {
             if (uploadBtn) {
                 uploadBtn.disabled = false;
                 uploadBtn.textContent = 'Upload';
-                uploadBtn.title = 'Upload book';
-                uploadBtn.setAttribute('aria-label', uploadBtn.title);
+                uploadBtn.removeAttribute('title');
+                uploadBtn.removeAttribute('aria-label');
             }
 
             if (xhr.status >= 200 && xhr.status < 300) {
@@ -471,8 +471,8 @@ async function uploadBook(event) {
             if (uploadBtn) {
                 uploadBtn.disabled = false;
                 uploadBtn.textContent = 'Upload';
-                uploadBtn.title = 'Upload book';
-                uploadBtn.setAttribute('aria-label', uploadBtn.title);
+                uploadBtn.removeAttribute('title');
+                uploadBtn.removeAttribute('aria-label');
             }
             if (errEl) {
                 errEl.textContent = 'Network error during upload.';
@@ -506,8 +506,8 @@ async function enterSleepMode(btn) {
             if (btn) {
                 btn.disabled = false;
                 btn.textContent = 'Enter Sleep Mode';
-                btn.title = 'Enter sleep mode';
-                btn.setAttribute('aria-label', btn.title);
+                btn.removeAttribute('title');
+                btn.removeAttribute('aria-label');
             }
             renderUI();
         }

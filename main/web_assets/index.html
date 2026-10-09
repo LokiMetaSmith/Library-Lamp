@@ -50,7 +50,7 @@
                             <label for="uploadAuthor" style="display: block; font-size: 0.9em; margin-bottom: 5px;">Author <span aria-hidden="true" style="color: var(--c-need-bar, #c4813a);">*</span></label>
                             <input type="text" id="uploadAuthor" placeholder="e.g., F. Scott Fitzgerald" required>
                         </div>
-                        <button type="submit" id="uploadBtn" title="Upload book">Upload</button>
+                        <button type="submit" id="uploadBtn">Upload</button>
                     </form>
                     <div aria-live="polite" aria-atomic="true">
                         <div id="uploadProgressContainer" style="display: none; margin-top: 10px;" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="Upload progress" title="0%">
@@ -92,7 +92,7 @@
                 <p id="transferError" class="error-message" style="display: none;"></p>
             </div>
             <div class="footer-actions">
-                <button id="sleepBtn" onclick="enterSleepMode(this)" class="sleep-btn" title="Enter sleep mode">Enter Sleep Mode</button>
+                <button id="sleepBtn" onclick="enterSleepMode(this)" class="sleep-btn">Enter Sleep Mode</button>
             </div>
         </footer>
     </div>
