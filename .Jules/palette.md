@@ -178,3 +178,6 @@
 ## 2026-12-16 - [Redundant Attributes on Text Buttons]
 **Learning:** Adding `title` or `aria-label` to buttons that already have clear, visible text content (e.g., 'Upload' or 'Enter Sleep Mode') is redundant and an accessibility anti-pattern. Native tooltips can obscure the UI, and screen readers will reliably announce the button text anyway.
 **Action:** When working with textual buttons, avoid duplicating the text content into `title` or `aria-label` attributes. Rely on the text content itself. Ensure any dynamically added loading states correctly remove these attributes when the button is re-enabled using `removeAttribute()`.
+## 2024-10-10 - Audio disabled button aria-label
+**Learning:** The 'Add to Queue' and 'Remove' buttons in the audio interface had a mismatched `title` and `aria-label` during their disabled (loading) state. This creates confusion for screen readers since the `aria-label` remained static.
+**Action:** Always ensure `aria-label` accurately mirrors the dynamic visual text or `title` of a button, especially when transitioning into loading states.

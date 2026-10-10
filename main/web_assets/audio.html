@@ -455,7 +455,8 @@
                         const disabled = state.removingFromQueue === index ? 'disabled' : '';
                         const text = state.removingFromQueue === index ? 'Removing...' : 'Remove';
                         const title = state.removingFromQueue === index ? 'Removing...' : 'Remove';
-                        btnHtml = `<button onclick="removeFromQueue(${index})" ${disabled} title="${title}" aria-label="Remove ${escapeHtml(track)} from queue" class="btn-small cancel-btn">${text}</button>`;
+                        const ariaLabel = state.removingFromQueue === index ? 'Removing...' : `Remove ${escapeHtml(track)} from queue`;
+                        btnHtml = `<button onclick="removeFromQueue(${index})" ${disabled} title="${title}" aria-label="${ariaLabel}" class="btn-small cancel-btn">${text}</button>`;
                     }
                     html += `
                         <div class="queue-item">
@@ -481,6 +482,7 @@
                     const title = state.addingToQueue === file.name ? 'Adding...' : 'Add to Queue';
                     const safeName = escapeHtml(file.name);
                     const safeTitle = escapeHtml(file.title || file.name);
+                    const ariaLabel = state.addingToQueue === file.name ? 'Adding...' : `Add ${safeTitle} to queue`;
 
                     html += `
                         <li>
@@ -488,7 +490,7 @@
                                 <span class="file-title">${safeTitle}</span>
                             </div>
                             <div class="transfer-controls">
-                                <button onclick="addToQueue(this.dataset.filename)" data-filename="${safeName}" ${disabled} title="${title}" aria-label="Add ${safeTitle} to queue">${text}</button>
+                                <button onclick="addToQueue(this.dataset.filename)" data-filename="${safeName}" ${disabled} title="${title}" aria-label="${ariaLabel}">${text}</button>
                             </div>
                         </li>
                     `;
