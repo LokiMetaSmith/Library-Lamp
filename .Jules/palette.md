@@ -181,3 +181,6 @@
 ## 2024-10-10 - Audio disabled button aria-label
 **Learning:** The 'Add to Queue' and 'Remove' buttons in the audio interface had a mismatched `title` and `aria-label` during their disabled (loading) state. This creates confusion for screen readers since the `aria-label` remained static.
 **Action:** Always ensure `aria-label` accurately mirrors the dynamic visual text or `title` of a button, especially when transitioning into loading states.
+## 2026-10-11 - [Fix Missing Standalone Styles]
+**Learning:** Standalone pages (`setup.html`, `admin.html`) often implement UI states in JavaScript (like appending a `.loading-dots` class to buttons on submit) but may forget to embed the necessary CSS animations since they don't load the global stylesheet.
+**Action:** Always verify that CSS classes and animations manipulated by inline JavaScript actually exist within the `<style>` block for standalone pages.
