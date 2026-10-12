@@ -179,6 +179,12 @@ function renderUI() {
                 const progressPct = Math.round(state.transfer.progress);
                 const isEpub = file.name.toLowerCase().endsWith('.epub');
 
+                const transferTitle = state.transfer.active ? 'A transfer is currently in progress' : (!state.isEReaderConnected ? 'Connect an E-Reader to transfer books' : 'Transfer to E-Reader');
+                const transferAria = state.transfer.active ? 'A transfer is currently in progress' : (!state.isEReaderConnected ? 'Connect an E-Reader to transfer books' : `Transfer ${esc(file.title || file.name)} to E-Reader`);
+
+                const deleteTitle = isDeleting ? 'Deleting file...' : (state.transfer.active ? 'Action unavailable during transfer' : 'Delete file');
+                const deleteAria = isDeleting ? 'Deleting file...' : (state.transfer.active ? 'Action unavailable during transfer' : `Delete ${esc(file.title || file.name)}`);
+
                 return `
                 <li>
                     <div class="file-info">
@@ -192,9 +198,9 @@ function renderUI() {
                                 <div class="progress-bar" style="width: ${progressPct}%"></div>
                             </div>
                         ` : ''}
-                        <button onclick="transferToEReader('${esc(file.name)}')" ${(!state.isEReaderConnected || state.transfer.active) ? 'disabled' : ''} title="${state.transfer.active ? 'A transfer is currently in progress' : (!state.isEReaderConnected ? 'Connect an E-Reader to transfer books' : 'Transfer to E-Reader')}" aria-label="Transfer ${esc(file.title || file.name)} to E-Reader">Transfer to E-Reader</button>
+                        <button onclick="transferToEReader('${esc(file.name)}')" ${(!state.isEReaderConnected || state.transfer.active) ? 'disabled' : ''} title="${transferTitle}" aria-label="${transferAria}">Transfer to E-Reader</button>
                         ${isEpub ? `<a class="sleep-btn" style="text-decoration: none;" href="/viewer.html?file=${encodeURIComponent(file.name)}&source=sd" aria-label="Read ${esc(file.title || file.name)}">Read</a>` : ''}
-                        ${state.isAdmin ? `<button onclick="deleteFile('${esc(file.name)}', 'sd')" class="btn danger" style="background-color: #c94b4b; color: white;" aria-label="Delete ${esc(file.title || file.name)}" ${(isDeleting || state.transfer.active) ? 'disabled' : ''} title="${isDeleting ? 'Deleting file...' : (state.transfer.active ? 'Action unavailable during transfer' : 'Delete file')}">${isDeleting ? 'Deleting...' : 'Delete'}</button>` : ''}
+                        ${state.isAdmin ? `<button onclick="deleteFile('${esc(file.name)}', 'sd')" class="btn danger" style="background-color: #c94b4b; color: white;" aria-label="${deleteAria}" ${(isDeleting || state.transfer.active) ? 'disabled' : ''} title="${deleteTitle}">${isDeleting ? 'Deleting...' : 'Delete'}</button>` : ''}
                         ${isTransferring ? `<button onclick="cancelTransfer(this)" class="cancel-btn" aria-label="Cancel transfer for ${esc(file.title || file.name)}">Cancel</button>` : ''}
                     </div>
                 </li>`;
@@ -226,6 +232,12 @@ function renderUI() {
                         const isDeleting = state.isDeleting === file.name;
                         const progressPct = Math.round(state.transfer.progress);
 
+                        const transferLibTitle = state.transfer.active ? 'A transfer is currently in progress' : 'Transfer to Library';
+                        const transferLibAria = state.transfer.active ? 'A transfer is currently in progress' : `Transfer ${esc(file.title || file.name)} to Library`;
+
+                        const deleteTitle = isDeleting ? 'Deleting file...' : (state.transfer.active ? 'Action unavailable during transfer' : 'Delete file');
+                        const deleteAria = isDeleting ? 'Deleting file...' : (state.transfer.active ? 'Action unavailable during transfer' : `Delete ${esc(file.title || file.name)}`);
+
                         return `
                         <li>
                             <div class="file-info">
@@ -239,8 +251,8 @@ function renderUI() {
                                         <div class="progress-bar" style="width: ${progressPct}%"></div>
                                     </div>
                                 ` : ''}
-                                <button onclick="transferToLibrary('${esc(file.name)}')" ${state.transfer.active ? 'disabled' : ''} title="${state.transfer.active ? 'A transfer is currently in progress' : 'Transfer to Library'}" aria-label="Transfer ${esc(file.title || file.name)} to Library">Transfer to Library</button>
-                                ${state.isAdmin ? `<button onclick="deleteFile('${esc(file.name)}', 'usb')" class="btn danger" style="background-color: #c94b4b; color: white;" aria-label="Delete ${esc(file.title || file.name)}" ${(isDeleting || state.transfer.active) ? 'disabled' : ''} title="${isDeleting ? 'Deleting file...' : (state.transfer.active ? 'Action unavailable during transfer' : 'Delete file')}">${isDeleting ? 'Deleting...' : 'Delete'}</button>` : ''}
+                                <button onclick="transferToLibrary('${esc(file.name)}')" ${state.transfer.active ? 'disabled' : ''} title="${transferLibTitle}" aria-label="${transferLibAria}">Transfer to Library</button>
+                                ${state.isAdmin ? `<button onclick="deleteFile('${esc(file.name)}', 'usb')" class="btn danger" style="background-color: #c94b4b; color: white;" aria-label="${deleteAria}" ${(isDeleting || state.transfer.active) ? 'disabled' : ''} title="${deleteTitle}">${isDeleting ? 'Deleting...' : 'Delete'}</button>` : ''}
                                 ${isTransferring ? `<button onclick="cancelTransfer(this)" class="cancel-btn" aria-label="Cancel transfer for ${esc(file.title || file.name)}">Cancel</button>` : ''}
                             </div>
                         </li>`;
