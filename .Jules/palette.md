@@ -184,3 +184,6 @@
 ## 2026-10-11 - [Fix Missing Standalone Styles]
 **Learning:** Standalone pages (`setup.html`, `admin.html`) often implement UI states in JavaScript (like appending a `.loading-dots` class to buttons on submit) but may forget to embed the necessary CSS animations since they don't load the global stylesheet.
 **Action:** Always verify that CSS classes and animations manipulated by inline JavaScript actually exist within the `<style>` block for standalone pages.
+## 2026-10-12 - [Disabled Interactive Elements aria-label Sync]
+**Learning:** Screen readers do not reliably announce 'title' attributes on disabled elements. Providing static 'aria-label' text on dynamically disabled buttons causes accessibility tools to ignore the temporary loading or disabled context.
+**Action:** Always dynamically sync the 'aria-label' attribute with the 'title' attribute for disabled interactive states so screen readers accurately announce the temporary state or disabled reason.
