@@ -25,6 +25,7 @@ body {
 }
 
 /* ── Header ── */
+.menu-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .site-header {
   background: var(--accent-dark);
   padding: 14px 20px;
@@ -125,6 +126,7 @@ body {
   white-space: nowrap;
 }
 .cat-btn:hover { border-color: var(--border); color: var(--ink); background: var(--surface2); }
+.cat-btn:focus-visible { outline: 2px solid var(--accent-dark); outline-offset: 2px; }
 .cat-btn.active-Notice { background: var(--c-notice-bg); border-color: var(--c-notice-bar); color: var(--c-notice-fg); font-weight: bold; }
 .cat-btn.active-Offer  { background: var(--c-offer-bg);  border-color: var(--c-offer-bar);  color: var(--c-offer-fg);  font-weight: bold; }
 .cat-btn.active-Need   { background: var(--c-need-bg);   border-color: var(--c-need-bar);   color: var(--c-need-fg);   font-weight: bold; }
@@ -161,6 +163,7 @@ body {
   transition: all .15s;
 }
 .exp-btn:hover  { border-color: var(--border); color: var(--ink); }
+.exp-btn:focus-visible { outline: 2px solid var(--accent-dark); outline-offset: 2px; }
 .exp-btn.active { background: var(--accent-dark); border-color: var(--accent-dark); color: var(--accent-light); }
 
 .post-btn {
@@ -180,6 +183,7 @@ body {
   align-self: flex-end;
 }
 .post-btn:hover { background: #a06b43; }
+.post-btn:focus-visible { outline: 2px solid var(--accent-dark); outline-offset: 2px; }
 .post-btn:disabled { opacity: 0.6; cursor: not-allowed; }
 
 /* ── Filter bar ── */
@@ -212,6 +216,7 @@ body {
   transition: all .15s;
 }
 .ftab:hover  { border-color: var(--accent-dark); color: var(--accent-dark); }
+.ftab:focus-visible { outline: 2px solid var(--accent-dark); outline-offset: 2px; }
 .ftab.active { background: var(--accent-dark); border-color: var(--accent-dark); color: var(--accent-light); }
 
 /* ── Board ── */
