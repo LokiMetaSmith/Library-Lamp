@@ -187,3 +187,7 @@
 ## 2026-10-12 - [Disabled Interactive Elements aria-label Sync]
 **Learning:** Screen readers do not reliably announce 'title' attributes on disabled elements. Providing static 'aria-label' text on dynamically disabled buttons causes accessibility tools to ignore the temporary loading or disabled context.
 **Action:** Always dynamically sync the 'aria-label' attribute with the 'title' attribute for disabled interactive states so screen readers accurately announce the temporary state or disabled reason.
+
+## 2026-10-13 - [Focus-Visible on Custom Buttons]
+**Learning:** Custom UI buttons like filter tabs (`.ftab`), category buttons (`.cat-btn`), and generic icon buttons like `.menu-btn` often lack explicit focus indicators when built from scratch. Keyboard navigation relies on visual feedback (like the `outline` property).
+**Action:** Always add explicit `:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }` styles to custom buttons so that users navigating via keyboard can clearly see which element is currently focused.

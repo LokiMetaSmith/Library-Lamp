@@ -63,6 +63,11 @@ def test_ux():
     assert "loading-dots" in board_content, "Missing loading-dots animation class in board.html"
     assert "input:focus-visible" in board_content, "Missing focus-visible support in board.html"
     assert "textarea:focus-visible" in board_content, "Missing focus-visible support in board.html"
+    assert ".cat-btn:focus-visible" in board_content, "Missing focus-visible support for cat-btn in board.html"
+    assert ".exp-btn:focus-visible" in board_content, "Missing focus-visible support for exp-btn in board.html"
+    assert ".ftab:focus-visible" in board_content, "Missing focus-visible support for ftab in board.html"
+    assert ".post-btn:focus-visible" in board_content, "Missing focus-visible support for post-btn in board.html"
+    assert ".menu-btn:focus-visible" in board_content, "Missing focus-visible support for menu-btn in board.html"
 
     print("All assertions passed. Modifications are successfully present.")
 
