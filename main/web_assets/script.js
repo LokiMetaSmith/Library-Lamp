@@ -533,8 +533,30 @@ document.addEventListener('DOMContentLoaded', () => {
     // ⚡ Bolt: Reduced status polling from 1s to 2s to minimize CPU load on ESP32
     state.pollingInterval = setInterval(fetchData, 2000);
 
-    // 🎨 Palette: Auto-fill Title and Author based on selected filename
+    // 🎨 Palette: Drag and drop support for file upload
+    const uploadSection = document.getElementById('uploadSection');
     const uploadFileInput = document.getElementById('uploadFile');
+    if (uploadSection && uploadFileInput) {
+        uploadSection.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadSection.classList.add('drag-active');
+        });
+        uploadSection.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            uploadSection.classList.remove('drag-active');
+        });
+        uploadSection.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadSection.classList.remove('drag-active');
+            if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                uploadFileInput.files = e.dataTransfer.files;
+                // Dispatch change event to trigger auto-fill logic
+                uploadFileInput.dispatchEvent(new Event('change'));
+            }
+        });
+    }
+
+    // 🎨 Palette: Auto-fill Title and Author based on selected filename
     if (uploadFileInput) {
         uploadFileInput.addEventListener('change', function() {
             if (this.files && this.files.length > 0) {

@@ -206,6 +206,17 @@ button.cancel-btn:hover {
 .sleep-btn:hover {
     background-color: #8c524a;
 }
+#uploadSection {
+    transition: all 0.2s ease-in-out;
+}
+#uploadSection.drag-active {
+    background-color: rgba(255, 204, 128, 0.1) !important;
+    border: 2px dashed var(--accent) !important;
+}
+#uploadSection.drag-active * {
+    pointer-events: none;
+}
+
 /* System Banner */
 .system-banner {
     background-color: #8a6a24;

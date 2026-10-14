@@ -191,3 +191,7 @@
 ## 2026-10-13 - [Focus-Visible on Custom Buttons]
 **Learning:** Custom UI buttons like filter tabs (`.ftab`), category buttons (`.cat-btn`), and generic icon buttons like `.menu-btn` often lack explicit focus indicators when built from scratch. Keyboard navigation relies on visual feedback (like the `outline` property).
 **Action:** Always add explicit `:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }` styles to custom buttons so that users navigating via keyboard can clearly see which element is currently focused.
+
+## 2026-12-16 - [Drag and Drop Visual Feedback]
+**Learning:** Native file inputs lack drag-and-drop affordance, but providing a visual cue via an `.upload-section` container makes the functionality obvious. The `drop` event does not natively dispatch `change` events on `<input type="file">`.
+**Action:** Always intercept drag events on a container to toggle a visual state (e.g., `.drag-active`), and manually dispatch a `change` event on the file input after assigning `e.dataTransfer.files` to ensure downstream logic (like auto-filling metadata) still runs.
