@@ -556,6 +556,21 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // 🎨 Palette: Clear upload error message upon user correcting input
+    ['uploadFile', 'uploadTitle', 'uploadAuthor'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            const clearErr = () => {
+                const errEl = document.getElementById('uploadError');
+                if (errEl && errEl.style.display === 'block') {
+                    errEl.style.display = 'none';
+                }
+            };
+            el.addEventListener('input', clearErr);
+            el.addEventListener('change', clearErr);
+        }
+    });
+
     // 🎨 Palette: Auto-fill Title and Author based on selected filename
     if (uploadFileInput) {
         uploadFileInput.addEventListener('change', function() {

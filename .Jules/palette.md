@@ -195,3 +195,6 @@
 ## 2026-12-16 - [Drag and Drop Visual Feedback]
 **Learning:** Native file inputs lack drag-and-drop affordance, but providing a visual cue via an `.upload-section` container makes the functionality obvious. The `drop` event does not natively dispatch `change` events on `<input type="file">`.
 **Action:** Always intercept drag events on a container to toggle a visual state (e.g., `.drag-active`), and manually dispatch a `change` event on the file input after assigning `e.dataTransfer.files` to ensure downstream logic (like auto-filling metadata) still runs.
+## 2026-10-15 - Clear inline validation errors on correction
+**Learning:** Custom inline validation via JS often leaves stale error messages visible after the user begins correcting the input, causing confusion about the form's state.
+**Action:** Always bind `input` and `change` event listeners to form fields to clear associated error messages as soon as the user interacts, providing immediate positive feedback.
