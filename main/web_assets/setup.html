@@ -68,5 +68,21 @@
         </div>
         <button type="button" class="btn-secondary" onclick="window.location.href='/index.html'">Back to Library</button>
     </div>
+    <script>
+        // 🎨 Palette: Clear validation error when user interacts with input fields
+        ['ssid', 'password'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+                const clearErr = () => {
+                    const stat = document.getElementById('status');
+                    if (stat && stat.style.display === 'block') {
+                        stat.style.display = 'none';
+                    }
+                };
+                el.addEventListener('input', clearErr);
+                el.addEventListener('change', clearErr);
+            }
+        });
+    </script>
 </body>
 </html>
