@@ -33,6 +33,7 @@ idf_component_register(SRCS "${COMPONENT_SRCS}"
 
                          # Networking components
                          esp_http_server
+                         esp_http_client
 
                          # USB Host components
                          usb

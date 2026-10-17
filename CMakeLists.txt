@@ -11,3 +11,5 @@ include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 get_filename_component(ProjectId ${CMAKE_CURRENT_LIST_DIR} NAME)
 string(REPLACE " " "_" ProjectId ${ProjectId})
 project(${ProjectId})
+
+add_compile_definitions(RADIOLIB_RELAX_RTOS_TICK=1)

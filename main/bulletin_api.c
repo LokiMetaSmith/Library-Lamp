@@ -134,8 +134,8 @@ static esp_err_t board_post_handler(httpd_req_t *req) {
     buf[ret] = '\0';
 
     cJSON *json = cJSON_Parse(buf);
-    free(buf);
     if (!json) {
+        free(buf);
         httpd_resp_send_500(req);
         return ESP_FAIL;
     }
@@ -164,6 +164,7 @@ static esp_err_t board_post_handler(httpd_req_t *req) {
     cJSON_Delete(json);
 
     if (strlen(text) == 0) {
+        free(buf);
         httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "empty message");
         return ESP_FAIL;
     }
@@ -173,6 +174,7 @@ static esp_err_t board_post_handler(httpd_req_t *req) {
     // Sync the new post to playnet.earth asynchronously or fire-and-forget
     // It's acceptable for this to fail silently if the device is currently entirely offline
     playnet_push_post(buf);
+    free(buf);
 
     httpd_resp_send(req, "ok", 2);
     return ESP_OK;
