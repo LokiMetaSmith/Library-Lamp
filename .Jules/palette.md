@@ -198,3 +198,6 @@
 ## 2026-10-15 - Clear inline validation errors on correction
 **Learning:** Custom inline validation via JS often leaves stale error messages visible after the user begins correcting the input, causing confusion about the form's state.
 **Action:** Always bind `input` and `change` event listeners to form fields to clear associated error messages as soon as the user interacts, providing immediate positive feedback.
+## 2023-10-27 - Reliable Button State Restoration
+**Learning:** When adding loading states to buttons that trigger async operations (like fetches), failing to place the state-restoration logic inside a `finally` block can cause buttons to remain permanently disabled if the operation succeeds but exits early (e.g. empty data returns), or if an unhandled error occurs.
+**Action:** Always wrap the logic that resets a button's disabled state, textContent, and ARIA attributes in a `finally` block tied to the async request's `try/catch`.
