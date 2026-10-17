@@ -1,233 +1,598 @@
-const { createApp } = Vue
+// Vanilla JS replacement for Vue.js to optimize for ESP32 resources
 
-createApp({
-    data() {
-        return {
-            localFiles: [],
-            ereaderFiles: [],
-            isEReaderConnected: false,
-            systemErrors: [],
-            systemStatus: [],
-            status: 'idle', // idle, connected, transferring
-
-            transfer: {
-                active: false,
-                filename: '',
-                progress: 0,
-                error: ''
-            },
-            pollingInterval: null,
-            sdTotalMb: 0,
-            sdUsedMb: 0,
-            allowPublicUploads: false,
-            isAdmin: false,
-            uploadTitle: '',
-            uploadAuthor: '',
-            isUploading: false,
-            uploadError: '',
-            isDeleting: null
-        }
+const state = {
+    localFiles: [],
+    ereaderFiles: [],
+    isEReaderConnected: false,
+    systemErrors: [],
+    systemStatus: [],
+    transfer: {
+        active: false,
+        filename: '',
+        progress: 0,
+        error: ''
     },
-    computed: {
-        statusClass() {
-            if (this.transfer.active) return 'status-transferring';
-            if (this.isEReaderConnected) return 'status-connected';
-            return 'status-idle';
-        },
-        statusText() {
-            if (this.transfer.active) return 'Transferring';
-            if (this.isEReaderConnected) return 'E-Reader Connected';
-            return 'System Idle';
-        }
+    sdTotalMb: 0,
+    sdUsedMb: 0,
+    allowPublicUploads: false,
+    isAdmin: false,
+    lora: {
+        initialized: false,
+        scanning: false,
+        lastRssi: 0,
+        lastSnr: 0,
+        packetsRx: 0,
+        packetsTx: 0,
+        queueDepth: 0
     },
-    methods: {
-        async fetchData() {
-            try {
-                const response = await fetch('/status');
-                const data = await response.json();
-                this.isEReaderConnected = data.reader_connected;
-                const errors = [];
-                if (!data.sd_mounted) errors.push("Warning: SD Card not mounted.");
-                if (!data.usb_mounted) errors.push("Warning: USB initialization failed.");
-                if (!data.lora_initialized) errors.push("Warning: LoRaWAN initialization failed.");
-                this.systemErrors = errors;
+    isUploading: false,
+    uploadError: '',
+    uploadSuccess: false,
+    uploadSuccessTimeout: null,
+    isDeleting: null,
+    isSleeping: false,
+    pollingInterval: null
+};
 
-                const status = [];
-                if (data.catalog_updating) status.push("Updating Library Catalog...");
-                if (data.lora_scanning) status.push("Scanning for other Library-Lamps...");
-                this.systemStatus = status;
+// Helper: Escaping HTML strings to prevent XSS
+function esc(str) {
+    if (!str) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+}
 
-                if (data.sd_total_mb !== undefined) this.sdTotalMb = data.sd_total_mb;
-                if (data.sd_used_mb !== undefined) this.sdUsedMb = data.sd_used_mb;
-                if (data.allow_public_uploads !== undefined) this.allowPublicUploads = data.allow_public_uploads;
-                if (data.is_admin !== undefined) this.isAdmin = data.is_admin;
+async function fetchData() {
+    try {
+        const response = await fetch('/status');
+        const data = await response.json();
+        state.isEReaderConnected = data.reader_connected;
 
-                if (data.transfer_active) {
-                    this.transfer.active = true;
-                    this.transfer.filename = data.filename;
-                    this.transfer.progress = data.total_bytes > 0 ? (data.bytes_transferred / data.total_bytes) * 100 : 0;
-                } else {
-                    if (this.transfer.active) {
-                        // Transfer just finished, refresh file lists
-                        this.fetchFileLists();
-                    }
-                    this.transfer.active = false;
-                }
-            } catch (error) {
-                console.error('Error fetching status:', error);
+        const errors = [];
+        if (!data.sd_mounted) errors.push("Warning: SD Card not mounted.");
+        if (!data.usb_mounted) errors.push("Warning: USB initialization failed.");
+        if (!data.lora_initialized) errors.push("Warning: LoRaWAN initialization failed.");
+        state.systemErrors = errors;
+
+        state.lora.initialized = !!data.lora_initialized;
+        state.lora.scanning = !!data.lora_scanning;
+        if (data.lora_last_rssi !== undefined) state.lora.lastRssi = data.lora_last_rssi;
+        if (data.lora_last_snr !== undefined) state.lora.lastSnr = data.lora_last_snr;
+        if (data.lora_packets_rx !== undefined) state.lora.packetsRx = data.lora_packets_rx;
+        if (data.lora_packets_tx !== undefined) state.lora.packetsTx = data.lora_packets_tx;
+        if (data.lora_queue_depth !== undefined) state.lora.queueDepth = data.lora_queue_depth;
+
+        const status = [];
+        if (data.catalog_updating) status.push("Updating Library Catalog...");
+        if (data.lora_scanning) {
+            status.push("Scanning for other Library-Lamps...");
+        } else if (state.lora.initialized) {
+            status.push(`LoRa Radio: TX ${state.lora.packetsTx} | RX ${state.lora.packetsRx} | RSSI ${state.lora.lastRssi.toFixed(1)} dBm | SNR ${state.lora.lastSnr.toFixed(1)} dB`);
+        }
+        state.systemStatus = status;
+
+        if (data.sd_total_mb !== undefined) state.sdTotalMb = data.sd_total_mb;
+        if (data.sd_used_mb !== undefined) state.sdUsedMb = data.sd_used_mb;
+        if (data.allow_public_uploads !== undefined) state.allowPublicUploads = data.allow_public_uploads;
+        if (data.is_admin !== undefined) state.isAdmin = data.is_admin;
+
+        const prevActive = state.transfer.active;
+        if (data.transfer_active) {
+            state.transfer.active = true;
+            state.transfer.filename = data.filename;
+            state.transfer.progress = data.total_bytes > 0 ? (data.bytes_transferred / data.total_bytes) * 100 : 0;
+        } else {
+            if (prevActive) {
+                // Transfer just finished, refresh file lists
+                fetchFileLists();
             }
-        },
-        async fetchFileLists() {
-            try {
-                // ⚡ Bolt: Fetch consolidated endpoint to avoid exhausting ESP-IDF connection pool
-                // and to avoid sequential fetch waterfall latency
-                const res = await fetch('/list-files?type=all');
-                const data = await res.json();
-                this.localFiles = data.sd || [];
-                this.ereaderFiles = data.usb || [];
-            } catch (error) {
-                console.error('Error fetching file lists:', error);
-            }
-        },
-        async performTransfer(source, destination, filename) {
-            if (this.transfer.active) return;
+            state.transfer.active = false;
+        }
 
-            this.transfer.active = true;
-            this.transfer.filename = filename;
-            this.transfer.progress = 0;
-            this.transfer.error = '';
+        renderUI();
+    } catch (error) {
+        console.error('Error fetching status:', error);
+    }
+}
 
-            try {
-                if (source === 'sd') {
+async function fetchFileLists() {
+    try {
+        const res = await fetch('/list-files?type=all');
+        const data = await res.json();
+        state.localFiles = data.sd || [];
+        state.ereaderFiles = data.usb || [];
+        renderUI();
+    } catch (error) {
+        console.error('Error fetching file lists:', error);
+    }
+}
+
+function renderUI() {
+    // 1. Status Indicator
+    const statusInd = document.getElementById('statusIndicator');
+    if (statusInd) {
+        statusInd.className = 'status-indicator ' + (state.transfer.active ? 'status-transferring' : (state.isEReaderConnected ? 'status-connected' : 'status-idle'));
+        const statusText = state.transfer.active ? 'Transferring' : (state.isEReaderConnected ? 'E-Reader Connected' : 'System Idle');
+        statusInd.title = statusText;
+        statusInd.setAttribute('aria-label', statusText);
+    }
+
+    // 2. System Banners
+    const errBanner = document.getElementById('systemErrorsBanner');
+    if (errBanner) {
+        if (state.systemErrors.length > 0) {
+            errBanner.innerHTML = state.systemErrors.map(err => `<p>⚠️ ${esc(err)}</p>`).join('');
+            errBanner.style.display = 'block';
+        } else {
+            errBanner.style.display = 'none';
+        }
+    }
+
+    const statBanner = document.getElementById('systemStatusBanner');
+    if (statBanner) {
+        if (state.systemStatus.length > 0) {
+            statBanner.innerHTML = state.systemStatus.map(msg => `<p>🔄 ${esc(msg)}</p>`).join('');
+            statBanner.style.display = 'block';
+        } else {
+            statBanner.style.display = 'none';
+        }
+    }
+
+    // 3. Storage Info
+    const storageInfo = document.getElementById('storageInfo');
+    if (storageInfo) {
+        if (state.sdTotalMb > 0) {
+            storageInfo.textContent = `${state.sdUsedMb} MB used / ${state.sdTotalMb} MB total`;
+            storageInfo.style.display = 'block';
+        } else {
+            storageInfo.style.display = 'none';
+        }
+    }
+
+    // 4. Upload Section & CTA hint
+    const uploadSection = document.getElementById('uploadSection');
+    const canUpload = state.allowPublicUploads || state.isAdmin;
+    if (uploadSection) {
+        uploadSection.style.display = canUpload ? 'block' : 'none';
+    }
+
+    const uploadHint = document.getElementById('uploadHint');
+    if (uploadHint) {
+        uploadHint.style.display = canUpload ? 'inline-block' : 'none';
+    }
+
+    // 5. Render SD Card File List
+    const localList = document.getElementById('localFilesList');
+    if (localList) {
+        if (state.localFiles.length === 0) {
+            localList.innerHTML = `
+                <li class="empty-state">
+                    No books found in the library. <br>
+                    <span id="uploadHint" class="file-notes" style="display: ${canUpload ? 'inline-block' : 'none'};">Upload a book above to get started!</span>
+                </li>`;
+        } else {
+            localList.innerHTML = state.localFiles.map(file => {
+                const isTransferring = state.transfer.active && state.transfer.filename === file.name;
+                const isDeleting = state.isDeleting === file.name;
+                const progressPct = Math.round(state.transfer.progress);
+                const isEpub = file.name.toLowerCase().endsWith('.epub');
+
+                const transferTitle = state.transfer.active ? 'A transfer is currently in progress' : (!state.isEReaderConnected ? 'Connect an E-Reader to transfer books' : 'Transfer to E-Reader');
+                const transferAria = state.transfer.active ? 'A transfer is currently in progress' : (!state.isEReaderConnected ? 'Connect an E-Reader to transfer books' : `Transfer ${esc(file.title || file.name)} to E-Reader`);
+
+                const deleteTitle = isDeleting ? 'Deleting file...' : (state.transfer.active ? 'Action unavailable during transfer' : 'Delete file');
+                const deleteAria = isDeleting ? 'Deleting file...' : (state.transfer.active ? 'Action unavailable during transfer' : `Delete ${esc(file.title || file.name)}`);
+
+                return `
+                <li>
+                    <div class="file-info">
+                        <span class="file-title">${esc(file.title || file.name)}</span>
+                        <span class="file-author">${esc(file.author || '')}</span>
+                        ${file.notes ? `<span class="file-notes">${esc(file.notes)}</span>` : ''}
+                    </div>
+                    <div class="transfer-controls">
+                        ${isTransferring ? `
+                            <div class="progress-container" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${progressPct}" aria-label="Transfer progress for ${esc(file.title || file.name)}" title="${progressPct}%">
+                                <div class="progress-bar" style="width: ${progressPct}%"></div>
+                            </div>
+                        ` : ''}
+                        <button onclick="transferToEReader('${esc(file.name)}')" ${(!state.isEReaderConnected || state.transfer.active) ? 'disabled' : ''} title="${transferTitle}" aria-label="${transferAria}">Transfer to E-Reader</button>
+                        ${isEpub ? `<a class="sleep-btn" style="text-decoration: none;" href="/viewer.html?file=${encodeURIComponent(file.name)}&source=sd" aria-label="Read ${esc(file.title || file.name)}">Read</a>` : ''}
+                        ${state.isAdmin ? `<button onclick="deleteFile('${esc(file.name)}', 'sd')" class="btn danger" style="background-color: #c94b4b; color: white;" aria-label="${deleteAria}" ${(isDeleting || state.transfer.active) ? 'disabled' : ''} title="${deleteTitle}">${isDeleting ? 'Deleting...' : 'Delete'}</button>` : ''}
+                        ${isTransferring ? `<button onclick="cancelTransfer(this)" class="cancel-btn" aria-label="Cancel transfer for ${esc(file.title || file.name)}">Cancel</button>` : ''}
+                    </div>
+                </li>`;
+            }).join('');
+        }
+    }
+
+    // 6. Render E-Reader Section
+    const ereaderContainer = document.getElementById('ereaderContainer');
+    if (ereaderContainer) {
+        if (!state.isEReaderConnected) {
+            ereaderContainer.innerHTML = `
+                <div class="empty-state">
+                    No e-reader connected.<br><span class="file-notes" style="display: inline-block;">Connect your device via USB to view and transfer books.</span>
+                </div>`;
+        } else if (state.ereaderFiles.length === 0) {
+            ereaderContainer.innerHTML = `
+                <ul class="file-list">
+                    <li class="empty-state">
+                        No books found on the e-reader. <br>
+                        <span class="file-notes" style="display: inline-block;">Transfer a book from your local library to start reading!</span>
+                    </li>
+                </ul>`;
+        } else {
+            ereaderContainer.innerHTML = `
+                <ul class="file-list">
+                    ${state.ereaderFiles.map(file => {
+                        const isTransferring = state.transfer.active && state.transfer.filename === file.name;
+                        const isDeleting = state.isDeleting === file.name;
+                        const progressPct = Math.round(state.transfer.progress);
+
+                        const transferLibTitle = state.transfer.active ? 'A transfer is currently in progress' : 'Transfer to Library';
+                        const transferLibAria = state.transfer.active ? 'A transfer is currently in progress' : `Transfer ${esc(file.title || file.name)} to Library`;
+
+                        const deleteTitle = isDeleting ? 'Deleting file...' : (state.transfer.active ? 'Action unavailable during transfer' : 'Delete file');
+                        const deleteAria = isDeleting ? 'Deleting file...' : (state.transfer.active ? 'Action unavailable during transfer' : `Delete ${esc(file.title || file.name)}`);
+
+                        return `
+                        <li>
+                            <div class="file-info">
+                                <span class="file-title">${esc(file.title || file.name)}</span>
+                                <span class="file-author">${esc(file.author || '')}</span>
+                                ${file.notes ? `<span class="file-notes">${esc(file.notes)}</span>` : ''}
+                            </div>
+                            <div class="transfer-controls">
+                                ${isTransferring ? `
+                                    <div class="progress-container" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${progressPct}" aria-label="Transfer progress for ${esc(file.title || file.name)}" title="${progressPct}%">
+                                        <div class="progress-bar" style="width: ${progressPct}%"></div>
+                                    </div>
+                                ` : ''}
+                                <button onclick="transferToLibrary('${esc(file.name)}')" ${state.transfer.active ? 'disabled' : ''} title="${transferLibTitle}" aria-label="${transferLibAria}">Transfer to Library</button>
+                                ${state.isAdmin ? `<button onclick="deleteFile('${esc(file.name)}', 'usb')" class="btn danger" style="background-color: #c94b4b; color: white;" aria-label="${deleteAria}" ${(isDeleting || state.transfer.active) ? 'disabled' : ''} title="${deleteTitle}">${isDeleting ? 'Deleting...' : 'Delete'}</button>` : ''}
+                                ${isTransferring ? `<button onclick="cancelTransfer(this)" class="cancel-btn" aria-label="Cancel transfer for ${esc(file.title || file.name)}">Cancel</button>` : ''}
+                            </div>
+                        </li>`;
+                    }).join('')}
+                </ul>`;
+        }
+    }
+
+    // 7. Footer error message
+    const transferErr = document.getElementById('transferError');
+    if (transferErr) {
+        if (state.transfer.error) {
+            transferErr.textContent = state.transfer.error;
+            transferErr.style.display = 'block';
+        } else {
+            transferErr.style.display = 'none';
+        }
+    }
+}
+
+async function performTransfer(source, destination, filename) {
+    if (state.transfer.active) return;
+
+    state.transfer.active = true;
+    state.transfer.filename = filename;
+    state.transfer.progress = 0;
+    state.transfer.error = '';
+    renderUI();
+
+    try {
+        if (source === 'sd') {
             alert('A transfer has been initiated. Please press the physical Eject/Sleep button on the E-Book Librarian device to confirm the transfer.');
         }
 
         const response = await fetch('/transfer-file', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ source, destination, filename })
-                });
-                const result = await response.json();
-                if (!result.success) {
-                    this.transfer.error = result.message;
-                }
-            } catch (error) {
-                console.error('Transfer error:', error);
-                this.transfer.error = 'A network error occurred during the transfer.';
-            } finally {
-                this.transfer.active = false;
-                // The polling will handle the final state update and file list refresh
-            }
-        },
-
-        async deleteFile(filename, source) {
-            if (!confirm(`Are you sure you want to delete ${filename}?`)) return;
-
-            this.isDeleting = filename;
-            let url = '/delete-file';
-            const savedKey = localStorage.getItem('adminKey');
-            if (savedKey) {
-                url += `?key=${encodeURIComponent(savedKey)}`;
-            }
-
-            try {
-                const response = await fetch(url, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ filename, source })
-                });
-
-                if (response.ok) {
-                    this.fetchFileLists();
-                } else {
-                    const err = await response.text();
-                    alert(`Delete failed: ${err}`);
-                }
-            } catch (error) {
-                console.error('Delete error:', error);
-                alert('An error occurred while deleting the file.');
-            } finally {
-                this.isDeleting = null;
-            }
-        },
-        transferToEReader(filename) {
-            this.performTransfer('sd', 'usb', filename);
-        },
-        transferToLibrary(filename) {
-            this.performTransfer('usb', 'sd', filename);
-        },
-        async cancelTransfer() {
-            if (!this.transfer.active) return;
-            try {
-                await fetch('/transfer-cancel', { method: 'POST' });
-                // The backend will stop the transfer. The polling will update the state.
-            } catch (error) {
-                console.error('Error cancelling transfer:', error);
-                this.transfer.error = 'Failed to send cancel request.';
-            }
-        },
-        async uploadBook() {
-            const fileInput = this.$refs.fileInput;
-            if (!fileInput.files.length) return;
-
-            const file = fileInput.files[0];
-            const title = this.uploadTitle || 'Unknown Title';
-            const author = this.uploadAuthor || 'Unknown Author';
-            const filename = file.name;
-
-            this.isUploading = true;
-            this.uploadError = '';
-
-            try {
-                // Construct query URL
-                let url = `/upload?title=${encodeURIComponent(title)}&author=${encodeURIComponent(author)}&filename=${encodeURIComponent(filename)}`;
-                const savedKey = localStorage.getItem('adminKey');
-                if (savedKey) {
-                    url += `&key=${encodeURIComponent(savedKey)}`;
-                }
-
-                const response = await fetch(url, {
-                    method: 'POST',
-                    body: file // Send file directly as body
-                });
-
-                if (response.ok) {
-                    this.uploadTitle = '';
-                    this.uploadAuthor = '';
-                    fileInput.value = '';
-                    this.fetchFileLists();
-                    this.fetchData(); // to update SD size
-                } else {
-                    const txt = await response.text();
-                    this.uploadError = `Upload failed: ${txt || response.statusText}`;
-                }
-            } catch (err) {
-                console.error(err);
-                this.uploadError = 'Network error during upload.';
-            } finally {
-                this.isUploading = false;
-            }
-        },
-        async enterSleepMode() {
-            if (confirm('Are you sure you want to put the device to sleep? You will need to press the RESET button on the board to wake it up.')) {
-                try {
-                    await fetch('/enter-sleep', { method: 'POST' });
-                    // If the request succeeds, the device will go to sleep and will stop responding.
-                    this.transfer.error = 'Device is going to sleep. Press RESET to wake.';
-                    this.isEReaderConnected = false; // Assume disconnection
-                } catch (error) {
-                    console.error('Error entering sleep mode:', error);
-                    this.transfer.error = 'Failed to send sleep command.';
-                }
-            }
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ source, destination, filename })
+        });
+        const result = await response.json();
+        if (!result.success) {
+            state.transfer.error = result.message;
         }
-    },
-    mounted() {
-        this.fetchData();
-        this.fetchFileLists();
-        this.pollingInterval = setInterval(this.fetchData, 1000); // Poll for status updates
-    },
-    beforeUnmount() {
-        clearInterval(this.pollingInterval);
+    } catch (error) {
+        console.error('Transfer error:', error);
+        state.transfer.error = 'A network error occurred during the transfer.';
+    } finally {
+        state.transfer.active = false;
+        renderUI();
     }
-}).mount('#app')
+}
+
+function transferToEReader(filename) {
+    performTransfer('sd', 'usb', filename);
+}
+
+function transferToLibrary(filename) {
+    performTransfer('usb', 'sd', filename);
+}
+
+async function cancelTransfer(btn) {
+    if (!state.transfer.active) return;
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = 'Canceling<span class="loading-dots"></span>';
+        btn.title = 'Canceling transfer...';
+        btn.setAttribute('aria-label', btn.title);
+    }
+    try {
+        await fetch('/transfer-cancel', { method: 'POST' });
+    } catch (error) {
+        console.error('Error cancelling transfer:', error);
+        state.transfer.error = 'Failed to send cancel request.';
+        if (btn) {
+            btn.disabled = false;
+            btn.textContent = 'Cancel';
+            btn.removeAttribute('title');
+            btn.removeAttribute('aria-label');
+        }
+        renderUI();
+    }
+}
+
+async function deleteFile(filename, source) {
+    if (!confirm(`Are you sure you want to delete ${filename}?`)) return;
+
+    state.isDeleting = filename;
+    renderUI();
+
+    let url = '/delete-file';
+    const savedKey = localStorage.getItem('adminKey');
+    if (savedKey) {
+        url += `?key=${encodeURIComponent(savedKey)}`;
+    }
+
+    try {
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ filename, source })
+        });
+
+        if (response.ok) {
+            fetchFileLists();
+        } else {
+            const err = await response.text();
+            alert(`Delete failed: ${err}`);
+        }
+    } catch (error) {
+        console.error('Delete error:', error);
+        alert('An error occurred while deleting the file.');
+    } finally {
+        state.isDeleting = null;
+        renderUI();
+    }
+}
+
+async function uploadBook(event) {
+    if (event) event.preventDefault();
+    const fileInput = document.getElementById('uploadFile');
+    const titleInput = document.getElementById('uploadTitle');
+    const authorInput = document.getElementById('uploadAuthor');
+    const uploadBtn = document.getElementById('uploadBtn');
+
+    const errEl = document.getElementById('uploadError');
+
+    if (!fileInput || !fileInput.files.length) {
+        if (errEl) { errEl.style.display = 'block'; errEl.textContent = 'Please select a file to upload.'; }
+        if (fileInput) fileInput.focus();
+        return;
+    }
+    if (titleInput && !titleInput.value.trim()) {
+        if (errEl) { errEl.style.display = 'block'; errEl.textContent = 'Please enter a title.'; }
+        titleInput.focus();
+        return;
+    }
+    if (authorInput && !authorInput.value.trim()) {
+        if (errEl) { errEl.style.display = 'block'; errEl.textContent = 'Please enter an author.'; }
+        authorInput.focus();
+        return;
+    }
+
+    const file = fileInput.files[0];
+    const title = titleInput ? titleInput.value : 'Unknown Title';
+    const author = authorInput ? authorInput.value : 'Unknown Author';
+    const filename = file.name;
+
+    state.isUploading = true;
+    const succEl = document.getElementById('uploadSuccess');
+    const progContainer = document.getElementById('uploadProgressContainer');
+    const progBar = document.getElementById('uploadProgressBar');
+    const progText = document.getElementById('uploadProgressText');
+
+    if (errEl) { errEl.style.display = 'none'; errEl.textContent = ''; }
+    if (succEl) { succEl.style.display = 'none'; }
+    if (progContainer) {
+        progContainer.style.display = 'block';
+        progContainer.setAttribute('aria-valuenow', '0');
+        progContainer.setAttribute('title', '0%');
+        if (progBar) progBar.style.width = '0%';
+        if (progText) progText.textContent = '0%';
+    }
+
+    if (uploadBtn) {
+        uploadBtn.disabled = true;
+        uploadBtn.innerHTML = 'Uploading<span class="loading-dots"></span>';
+        uploadBtn.title = 'Upload in progress...';
+        uploadBtn.setAttribute('aria-label', uploadBtn.title);
+    }
+
+    let url = `/upload?title=${encodeURIComponent(title)}&author=${encodeURIComponent(author)}&filename=${encodeURIComponent(filename)}`;
+    const savedKey = localStorage.getItem('adminKey');
+    if (savedKey) {
+        url += `&key=${encodeURIComponent(savedKey)}`;
+    }
+
+    return new Promise((resolve) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', url, true);
+
+        if (xhr.upload && progContainer) {
+            xhr.upload.onprogress = (e) => {
+                if (e.lengthComputable) {
+                    const percent = Math.round((e.loaded / e.total) * 100);
+                    progContainer.setAttribute('aria-valuenow', percent);
+                    progContainer.setAttribute('title', `${percent}%`);
+                    if (progBar) progBar.style.width = `${percent}%`;
+                    if (progText) progText.textContent = `${percent}%`;
+                }
+            };
+        }
+
+        xhr.onload = () => {
+            state.isUploading = false;
+            if (progContainer) progContainer.style.display = 'none';
+            if (uploadBtn) {
+                uploadBtn.disabled = false;
+                uploadBtn.textContent = 'Upload';
+                uploadBtn.removeAttribute('title');
+                uploadBtn.removeAttribute('aria-label');
+            }
+
+            if (xhr.status >= 200 && xhr.status < 300) {
+                if (titleInput) titleInput.value = '';
+                if (authorInput) authorInput.value = '';
+                fileInput.value = '';
+                if (succEl) {
+                    succEl.style.display = 'block';
+                    if (state.uploadSuccessTimeout) clearTimeout(state.uploadSuccessTimeout);
+                    state.uploadSuccessTimeout = setTimeout(() => {
+                        succEl.style.display = 'none';
+                    }, 4000);
+                }
+                fetchFileLists();
+                fetchData();
+            } else {
+                if (errEl) {
+                    errEl.textContent = `Upload failed: ${xhr.responseText || xhr.statusText}`;
+                    errEl.style.display = 'block';
+                }
+            }
+            resolve();
+        };
+
+        xhr.onerror = () => {
+            state.isUploading = false;
+            if (progContainer) progContainer.style.display = 'none';
+            if (uploadBtn) {
+                uploadBtn.disabled = false;
+                uploadBtn.textContent = 'Upload';
+                uploadBtn.removeAttribute('title');
+                uploadBtn.removeAttribute('aria-label');
+            }
+            if (errEl) {
+                errEl.textContent = 'Network error during upload.';
+                errEl.style.display = 'block';
+            }
+            resolve();
+        };
+
+        xhr.send(file);
+    });
+}
+
+async function enterSleepMode(btn) {
+    if (confirm('Are you sure you want to put the device to sleep? You will need to press the RESET button on the board to wake it up.')) {
+        state.isSleeping = true;
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = 'Entering Sleep<span class="loading-dots"></span>';
+            btn.title = 'Entering sleep mode...';
+            btn.setAttribute('aria-label', btn.title);
+        }
+        try {
+            await fetch('/enter-sleep', { method: 'POST' });
+            state.transfer.error = 'Device is going to sleep. Press RESET to wake.';
+            state.isEReaderConnected = false;
+            renderUI();
+        } catch (error) {
+            console.error('Error entering sleep mode:', error);
+            state.transfer.error = 'Failed to send sleep command.';
+            state.isSleeping = false;
+            if (btn) {
+                btn.disabled = false;
+                btn.textContent = 'Enter Sleep Mode';
+                btn.removeAttribute('title');
+                btn.removeAttribute('aria-label');
+            }
+            renderUI();
+        }
+    }
+}
+
+// Initialize on DOM load
+document.addEventListener('DOMContentLoaded', () => {
+    fetchData();
+    fetchFileLists();
+    // ⚡ Bolt: Reduced status polling from 1s to 2s to minimize CPU load on ESP32
+    state.pollingInterval = setInterval(fetchData, 2000);
+
+    // 🎨 Palette: Drag and drop support for file upload
+    const uploadSection = document.getElementById('uploadSection');
+    const uploadFileInput = document.getElementById('uploadFile');
+    if (uploadSection && uploadFileInput) {
+        uploadSection.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadSection.classList.add('drag-active');
+        });
+        uploadSection.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            uploadSection.classList.remove('drag-active');
+        });
+        uploadSection.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadSection.classList.remove('drag-active');
+            if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                uploadFileInput.files = e.dataTransfer.files;
+                // Dispatch change event to trigger auto-fill logic
+                uploadFileInput.dispatchEvent(new Event('change'));
+            }
+        });
+    }
+
+    // 🎨 Palette: Clear upload error message upon user correcting input
+    ['uploadFile', 'uploadTitle', 'uploadAuthor'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            const clearErr = () => {
+                const errEl = document.getElementById('uploadError');
+                if (errEl && errEl.style.display === 'block') {
+                    errEl.style.display = 'none';
+                }
+            };
+            el.addEventListener('input', clearErr);
+            el.addEventListener('change', clearErr);
+        }
+    });
+
+    // 🎨 Palette: Auto-fill Title and Author based on selected filename
+    if (uploadFileInput) {
+        uploadFileInput.addEventListener('change', function() {
+            if (this.files && this.files.length > 0) {
+                const fileName = this.files[0].name;
+                const titleInput = document.getElementById('uploadTitle');
+                const authorInput = document.getElementById('uploadAuthor');
+
+                if (titleInput && !titleInput.value) {
+                    let nameWithoutExt = fileName.replace(/\.[^/.]+$/, ""); // Remove extension
+
+                    // Try to guess Author and Title from "Author - Title" format
+                    const parts = nameWithoutExt.split(" - ");
+                    if (parts.length === 2 && authorInput && !authorInput.value) {
+                        authorInput.value = parts[0].trim();
+                        nameWithoutExt = parts[1].trim();
+                    }
+
+                    // Replace underscores and format nicely
+                    titleInput.value = nameWithoutExt.replace(/[_-]/g, " ");
+                }
+            }
+        });
+    }
+});

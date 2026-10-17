@@ -24,16 +24,20 @@ def test_setup_page():
 
         # Verify unmasked state
         assert password_input.get_attribute("type") == "text"
-        assert show_btn.text_content() == "Hide"
-        assert show_btn.get_attribute("aria-pressed") == "true"
+
+        hide_btn = page.locator("button[aria-label='Hide password']")
+        assert hide_btn.text_content() == "Hide"
+        assert hide_btn.get_attribute("aria-pressed") == "true"
 
         # Click hide button
-        show_btn.click()
+        hide_btn.click()
 
         # Verify masked state
         assert password_input.get_attribute("type") == "password"
-        assert show_btn.text_content() == "Show"
-        assert show_btn.get_attribute("aria-pressed") == "false"
+
+        show_btn2 = page.locator("button[aria-label='Show password']")
+        assert show_btn2.text_content() == "Show"
+        assert show_btn2.get_attribute("aria-pressed") == "false"
 
         print("Setup page UX verified successfully.")
 

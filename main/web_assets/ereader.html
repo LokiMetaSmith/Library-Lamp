@@ -56,7 +56,7 @@
 
     <header class="app-header" style="max-width: 600px; border: none; box-shadow: none; background: transparent; padding: 0;">
         <div class="nav-menu">
-            <button class="menu-btn" onclick="toggleMenu()" aria-label="Toggle Menu" aria-expanded="false" aria-controls="menuContent">☰</button>
+            <button class="menu-btn" onclick="toggleMenu()" aria-label="Toggle Menu" title="Toggle Menu" aria-expanded="false" aria-controls="menuContent">☰</button>
             <div class="menu-content" id="menuContent">
                 <a href="/">Home (USB Transfer View)</a>
                 <a href="/ereader.html">Mobile Download View</a>
@@ -68,11 +68,17 @@
         <h1>Mobile Download View</h1>
     </header>
 
-<div id="systemBanner" style="display:none;background:#8a6a24;color:#f5eedc;padding:10px;margin: 0 auto 20px auto;border-radius:5px;border:1px solid #a88532;font-size:0.9em;max-width:600px;box-shadow: 0 0 10px rgba(255, 200, 50, 0.2);">
-    <ul id="systemErrorsList" style="margin:0;padding-left:20px;"></ul>
+<div aria-live="assertive">
+    <div id="systemBanner" class="system-banner error-banner" style="display:none;">
+        <ul id="systemErrorsList" style="margin:0;padding-left:20px;"></ul>
+    </div>
 </div>
+<div aria-live="polite">
     <div id="loading" class="loading">Loading books...</div>
+</div>
+<div aria-live="assertive">
     <div id="error" class="error" style="display: none;"></div>
+</div>
 
     <ul id="book-list" class="book-list">
         <!-- Books will be inserted here -->
@@ -97,6 +103,17 @@
                 }
             }
         }
+        window.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                var dropdowns = document.getElementsByClassName("menu-content");
+                for (var i = 0; i < dropdowns.length; i++) {
+                    if (dropdowns[i].classList.contains('show')) {
+                        dropdowns[i].classList.remove('show');
+                        document.querySelector('.menu-btn').setAttribute('aria-expanded', 'false');
+                    }
+                }
+            }
+        });
 
         document.addEventListener('DOMContentLoaded', () => {
             fetchBooks();
@@ -147,7 +164,7 @@
             loadingElement.style.display = 'none';
 
             if (books.length === 0) {
-                listElement.innerHTML = '<li class="empty-state">No books found in the library.<br><span style="font-size: 0.9em; margin-top: 5px; display: inline-block;">Go to the <a href="/" style="color: inherit; text-decoration: underline;">main library</a> to upload books.</span></li>';
+                listElement.innerHTML = '<li class="empty-state">No books found in the library.<br><span class="file-notes" style="display: inline-block;">Go to the <a href="/" style="color: inherit; text-decoration: underline;">main library</a> to upload books.</span></li>';
                 return;
             }
 
@@ -163,6 +180,7 @@
                 titleLink.textContent = book.title;
                 // Link directly to the download endpoint
                 titleLink.href = `/download?file=${encodeURIComponent(book.name)}&source=sd`;
+                titleLink.setAttribute('aria-label', `Download ${book.title}`);
                 titleLink.style.display = 'block';
                 titleLink.style.marginBottom = '5px';
                 titleLink.style.textDecoration = 'none';

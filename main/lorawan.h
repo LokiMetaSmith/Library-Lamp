@@ -1,6 +1,9 @@
 #ifndef LORAWAN_H
 #define LORAWAN_H
 
+#include <stdint.h>
+#include <stddef.h>
+
 // Wio-SX1262 LoRa module pins (XIAO ESP32S3)
 #define LORA_USE_SX1262
 
@@ -59,9 +62,16 @@ extern "C" {
 #endif
 
 extern bool lora_scanning;
+extern float lora_last_rssi;
+extern float lora_last_snr;
+extern uint32_t lora_packets_rx;
+extern uint32_t lora_packets_tx;
 
+uint32_t lora_get_queue_depth(void);
 void lora_wan_init(void);
 void lora_wan_broadcast(const char *message);
+
+void lora_wan_transmit_raw(const uint8_t *data, size_t len);
 
 #ifdef __cplusplus
 }

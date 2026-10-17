@@ -6,6 +6,7 @@
 <title>Community Hub</title>
 <link rel="stylesheet" href="style.css">
 <style>
+#loraStats .status-indicator { margin-top: 0; margin-right: 6px; vertical-align: middle; width: 10px; height: 10px; }
 :root {
   --c-notice-fg:  #6b5a3e; --c-notice-bg: #f0e8d8; --c-notice-bar: #a09070;
   --c-offer-fg:   #2d5c2a; --c-offer-bg:  #daeeda; --c-offer-bar:  #5a8a57;
@@ -24,6 +25,7 @@ body {
 }
 
 /* ── Header ── */
+.menu-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .site-header {
   background: var(--accent-dark);
   padding: 14px 20px;
@@ -89,8 +91,8 @@ body {
   outline: none;
   transition: border-color .2s;
 }
-.field input:focus,
-.field textarea:focus { border-color: var(--accent-dark); }
+.field input:focus-visible,
+.field textarea:focus-visible { border-color: var(--accent-dark); }
 .field-name  { flex: 0 0 160px; }
 .field-msg   { flex: 1 1 220px; }
 .field textarea { resize: vertical; height: 90px; min-height: 60px; }
@@ -124,6 +126,7 @@ body {
   white-space: nowrap;
 }
 .cat-btn:hover { border-color: var(--border); color: var(--ink); background: var(--surface2); }
+.cat-btn:focus-visible { outline: 2px solid var(--accent-dark); outline-offset: 2px; }
 .cat-btn.active-Notice { background: var(--c-notice-bg); border-color: var(--c-notice-bar); color: var(--c-notice-fg); font-weight: bold; }
 .cat-btn.active-Offer  { background: var(--c-offer-bg);  border-color: var(--c-offer-bar);  color: var(--c-offer-fg);  font-weight: bold; }
 .cat-btn.active-Need   { background: var(--c-need-bg);   border-color: var(--c-need-bar);   color: var(--c-need-fg);   font-weight: bold; }
@@ -160,6 +163,7 @@ body {
   transition: all .15s;
 }
 .exp-btn:hover  { border-color: var(--border); color: var(--ink); }
+.exp-btn:focus-visible { outline: 2px solid var(--accent-dark); outline-offset: 2px; }
 .exp-btn.active { background: var(--accent-dark); border-color: var(--accent-dark); color: var(--accent-light); }
 
 .post-btn {
@@ -179,6 +183,7 @@ body {
   align-self: flex-end;
 }
 .post-btn:hover { background: #a06b43; }
+.post-btn:focus-visible { outline: 2px solid var(--accent-dark); outline-offset: 2px; }
 .post-btn:disabled { opacity: 0.6; cursor: not-allowed; }
 
 /* ── Filter bar ── */
@@ -211,6 +216,7 @@ body {
   transition: all .15s;
 }
 .ftab:hover  { border-color: var(--accent-dark); color: var(--accent-dark); }
+.ftab:focus-visible { outline: 2px solid var(--accent-dark); outline-offset: 2px; }
 .ftab.active { background: var(--accent-dark); border-color: var(--accent-dark); color: var(--accent-light); }
 
 /* ── Board ── */
@@ -314,7 +320,7 @@ body {
 
 <header class="site-header">
   <div class="nav-menu" style="position: static; margin-right: 10px;">
-      <button class="menu-btn" onclick="toggleMenu()" aria-label="Toggle Menu" aria-expanded="false" aria-controls="menuContent" style="background: transparent; border: 1px solid var(--accent); color: var(--accent); padding: 4px 8px; font-size: 16px;">☰</button>
+      <button class="menu-btn" onclick="toggleMenu()" aria-label="Toggle Menu" title="Toggle Menu" aria-expanded="false" aria-controls="menuContent" style="background: transparent; border: 1px solid var(--accent); color: var(--accent); padding: 4px 8px; font-size: 16px;">☰</button>
       <div class="menu-content" id="menuContent" style="top: 60px;">
           <a href="/">Home (USB Transfer View)</a>
           <a href="/ereader.html">Mobile Download View</a>
@@ -323,8 +329,10 @@ body {
           <a href="/about.html">About</a>
       </div>
   </div>
-  <div id="systemBanner" aria-live="assertive" style="display:none;background:#ffcc00;color:#333;padding:10px;margin:0 24px 15px 24px;border-radius:5px;border:1px solid #e6b800;">
-    <ul id="systemErrorsList" style="margin:0;padding-left:20px;"></ul>
+  <div aria-live="assertive">
+    <div id="systemBanner" class="system-banner error-banner" style="display:none;">
+      <ul id="systemErrorsList" style="margin:0;padding-left:20px;"></ul>
+    </div>
   </div>
   <div class="header-title-block">
     <div class="site-title" id="boardTitle">COMMUNITY HUB</div>
@@ -333,18 +341,21 @@ body {
   <div class="header-meta">
     <div id="boardRules"></div>
     <div id="postCount">— posts</div>
+    <div id="loraStats"></div>
   </div>
 </header>
-<div id="fullBanner" aria-live="assertive" style="display:none;background:#a30000;color:#fff;
-     text-align:center;padding:10px 16px;font-weight:600">
-  📋 This board is currently full. Check back once some posts have expired. 📋
+<div aria-live="assertive">
+  <div id="fullBanner" class="system-banner error-banner" style="display:none;
+       text-align:center;font-weight:600">
+    📋 This board is currently full. Check back once some posts have expired. 📋
+  </div>
 </div>
-<div class="post-form">
+<form class="post-form" novalidate onsubmit="event.preventDefault(); doPost();">
   <div class="form-row">
 
     <div class="field field-name">
       <label for="nameIn">Your Name</label>
-      <input id="nameIn" maxlength="24" placeholder="neighbor"
+      <input id="nameIn" maxlength="24" placeholder="e.g., Jane (Neighbor)"
              autocomplete="off" spellcheck="false">
       <div class="char-hint" id="nameHint" aria-live="polite"></div>
     </div>
@@ -352,13 +363,13 @@ body {
     <div class="field field-cat">
       <label id="catLabel">Category</label>
       <div class="cat-btns" role="group" aria-labelledby="catLabel">
-        <button class="cat-btn active-Notice" aria-pressed="true" onclick="setType('Notice',this)">📌 Notice</button>
-        <button class="cat-btn" aria-pressed="false" onclick="setType('Offer', this)">🌱 Offer</button>
-        <button class="cat-btn" aria-pressed="false" onclick="setType('Need',  this)">🤝 Need</button>
-        <button class="cat-btn" aria-pressed="false" onclick="setType('Event', this)">📅 Event</button>
-        <button class="cat-btn" aria-pressed="false" onclick="setType('Review', this)">📖 Review</button>
-        <button class="cat-btn" aria-pressed="false" onclick="setType('Recomm',  this)">💡 Recomm.</button>
-        <button class="cat-btn" aria-pressed="false" onclick="setType('Request', this)">🔍 Request</button>
+        <button type="button" class="cat-btn active-Notice" aria-pressed="true" onclick="setType('Notice',this)">📌 Notice</button>
+        <button type="button" class="cat-btn" aria-pressed="false" onclick="setType('Offer', this)">🌱 Offer</button>
+        <button type="button" class="cat-btn" aria-pressed="false" onclick="setType('Need',  this)">🤝 Need</button>
+        <button type="button" class="cat-btn" aria-pressed="false" onclick="setType('Event', this)">📅 Event</button>
+        <button type="button" class="cat-btn" aria-pressed="false" onclick="setType('Review', this)">📖 Review</button>
+        <button type="button" class="cat-btn" aria-pressed="false" onclick="setType('Recomm',  this)">💡 Recomm.</button>
+        <button type="button" class="cat-btn" aria-pressed="false" onclick="setType('Request', this)">🔍 Request</button>
       </div>
       <div class="char-hint"></div>
     </div>
@@ -366,8 +377,8 @@ body {
     <div class="field field-msg">
       <label for="msgIn">Message <span style="color: var(--c-need-bar);" aria-hidden="true">*</span></label>
       <textarea id="msgIn" maxlength="300"
-                placeholder="What's on the board?"
-                spellcheck="false" aria-required="true"></textarea>
+                placeholder="e.g., Does anyone have a copy of Dune they'd be willing to share?"
+                spellcheck="false" aria-required="true" required></textarea>
       <div class="char-hint" id="msgHint" aria-live="polite"></div>
     </div>
 
@@ -376,13 +387,16 @@ body {
   <div class="expiry-row">
     <span class="expiry-label" id="expiryLabel">Expires:</span>
     <div role="group" aria-labelledby="expiryLabel" style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
-      <button class="exp-btn" aria-pressed="false" onclick="setExpiry(24,  this)">1 day</button>
-      <button class="exp-btn" aria-pressed="false" onclick="setExpiry(72,  this)">3 days</button>
-      <button class="exp-btn active" aria-pressed="true" onclick="setExpiry(168, this)">1 week</button>
+      <button type="button" class="exp-btn" aria-pressed="false" onclick="setExpiry(24,  this)">1 day</button>
+      <button type="button" class="exp-btn" aria-pressed="false" onclick="setExpiry(72,  this)">3 days</button>
+      <button type="button" class="exp-btn active" aria-pressed="true" onclick="setExpiry(168, this)">1 week</button>
     </div>
-    <button class="post-btn" id="postBtn" onclick="doPost()">POST</button>
+    <div aria-live="polite" style="flex: 1; text-align: right; align-self: center;">
+      <span id="postSuccessMsg" class="feedback" style="display: none; min-height: auto; margin-right: 10px;">✓ Posted</span>
+    </div>
+    <button type="submit" class="post-btn" id="postBtn">POST</button>
   </div>
-</div>
+</form>
 
 <div class="filter-bar">
   <span class="filter-label" id="filterLabel">Show:</span>
@@ -397,7 +411,8 @@ body {
     <button class="ftab" aria-pressed="false" onclick="setFilter('Request',  this)">🔍 Request</button>
   </div>
   <span class="sep"></span>
-  <div role="group" aria-label="Sort" style="display: flex; gap: 6px; flex-wrap: wrap; align-items: center;">
+  <span class="filter-label" id="sortLabel">Sort:</span>
+  <div role="group" aria-labelledby="sortLabel" style="display: flex; gap: 6px; flex-wrap: wrap; align-items: center;">
     <button class="ftab active" id="sNew" aria-pressed="true" onclick="setSort('new', this)">New</button>
     <button class="ftab"        id="sExp" aria-pressed="false" onclick="setSort('exp', this)">Expiring</button>
   </div>
@@ -420,12 +435,14 @@ function updateBoardStatus(d) {
     if (btn) {
       btn.disabled = true;
       btn.title = "The board is currently full. Check back later.";
+      btn.setAttribute('aria-label', btn.title);
     }
   } else {
     banner.style.display = 'none';
     if (btn) {
       btn.disabled = false;
       btn.removeAttribute('title');
+      btn.removeAttribute('aria-label');
     }
   }
 }
@@ -453,28 +470,38 @@ let currentType   = 'Notice';
 let currentExpiry = 168;
 let activeFilter  = '';
 let activeSort    = 'new';
+let postSuccessTimeout = null;
 
 // ── Restore name from localStorage ────────────
 const savedName = localStorage.getItem('cn_name');
-if (savedName) document.getElementById('nameIn').value = savedName;
+if (savedName) {
+  const nameInput = document.getElementById('nameIn');
+  nameInput.value = savedName;
+  const nameHint = document.getElementById('nameHint');
+  nameHint.textContent = savedName.length + '/24';
+  if (savedName.length > 20) nameHint.className = 'char-hint warn';
+} else {
+  document.getElementById('nameHint').textContent = '0/24';
+}
+document.getElementById('msgHint').textContent = '0/300';
 
 document.getElementById('nameIn').addEventListener('input', function () {
   localStorage.setItem('cn_name', this.value);
   const h = document.getElementById('nameHint');
   const n = this.value.length;
-  h.textContent = n > 18 ? n + '/24' : '';
+  h.textContent = n + '/24';
   h.className   = 'char-hint' + (n > 20 ? ' warn' : '');
 });
 
 document.getElementById('msgIn').addEventListener('input', function () {
   const h = document.getElementById('msgHint');
   const n = this.value.length;
-  h.textContent = n > 240 ? n + '/300' : '';
+  h.textContent = n + '/300';
   h.className   = 'char-hint' + (n > 270 ? ' warn' : '');
 });
 
 document.getElementById('msgIn').addEventListener('keydown', function (e) {
-  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); doPost(); }
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); document.getElementById('postBtn').click(); }
 });
 
 // ── Category selection ─────────────────────────
@@ -548,6 +575,14 @@ async function loadSystemStatus() {
         list.innerHTML = errors.map(e => `<li>${e}</li>`).join("");
         banner.style.display = "block";
       }
+      const loraEl = document.getElementById("loraStats");
+      if (loraEl && data.lora_initialized) {
+        const tx = data.lora_packets_tx || 0;
+        const rx = data.lora_packets_rx || 0;
+        const rssi = (data.lora_last_rssi !== undefined) ? data.lora_last_rssi.toFixed(1) : 0;
+        const snr = (data.lora_last_snr !== undefined) ? data.lora_last_snr.toFixed(1) : 0;
+        loraEl.innerHTML = `<span class="status-indicator status-connected" title="LoRa connected" aria-label="LoRa connected" role="status"></span> LoRa: TX ${tx} | RX ${rx} | RSSI ${rssi}dBm | SNR ${snr}dB`;
+      }
     }
   } catch (e) {
     console.error("Failed to load status", e);
@@ -568,7 +603,7 @@ function render(data) {
   const board = document.getElementById('board');
 
   if (filtered.length === 0) {
-    board.innerHTML = '<div class="empty">Nothing here yet.<br>Be the first to post.</div>';
+    board.innerHTML = '<div class="empty empty-state">Nothing here yet.<br><span class="file-notes">Be the first to share a book or request one!</span></div>';
     return;
   }
 
@@ -583,7 +618,7 @@ function render(data) {
   </div>
   <div class="card-footer">
     <span class="card-author">${esc(m.author)}</span>
-    <span class="card-expiry${tl.soon ? ' soon' : ''}">${tl.label}</span>
+    <span class="card-expiry${tl.soon ? ' soon' : ''}"${tl.soon ? ' title="Expires soon" aria-label="Expires soon: ' + tl.label + '"' : ''}>${tl.label}</span>
   </div>
 </div>`;
   }).join('');
@@ -605,8 +640,9 @@ async function doPost() {
   const btn = document.getElementById('postBtn');
   if (btn) {
     btn.disabled = true;
-    btn.textContent = 'POSTING...';
+    btn.innerHTML = 'POSTING<span class="loading-dots"></span>';
     btn.title = "Post is currently being submitted...";
+    btn.setAttribute('aria-label', btn.title);
   }
 
   localStorage.setItem('cn_name', n);
@@ -619,12 +655,23 @@ async function doPost() {
     });
 
     document.getElementById('msgIn').value      = '';
-    document.getElementById('msgHint').textContent = '';
+    document.getElementById('msgHint').textContent = '0/300';
+    document.getElementById('msgHint').className = 'char-hint';
+    document.getElementById('nameHint').textContent = n.length + '/24';
+    document.getElementById('nameHint').className = 'char-hint' + (n.length > 20 ? ' warn' : '');
+
+    const succEl = document.getElementById('postSuccessMsg');
+    if (succEl) {
+      succEl.style.display = 'inline-block';
+      if (postSuccessTimeout) clearTimeout(postSuccessTimeout);
+      postSuccessTimeout = setTimeout(() => { succEl.style.display = 'none'; }, 4000);
+    }
   } finally {
     if (btn) {
       btn.disabled = false;
       btn.textContent = 'POST';
       btn.removeAttribute('title');
+      btn.removeAttribute('aria-label');
     }
   }
 
@@ -681,6 +728,17 @@ setInterval(runPolling, 60000);
             }
         }
     }
+        window.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                var dropdowns = document.getElementsByClassName("menu-content");
+                for (var i = 0; i < dropdowns.length; i++) {
+                    if (dropdowns[i].classList.contains('show')) {
+                        dropdowns[i].classList.remove('show');
+                        document.querySelector('.menu-btn').setAttribute('aria-expanded', 'false');
+                    }
+                }
+            }
+        });
 </script>
 </body>
 </html>

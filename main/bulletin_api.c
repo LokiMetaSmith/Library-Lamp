@@ -1,3 +1,4 @@
+#include "playnet_client.h"
 #include "bulletin_api.h"
 #include "bulletin_board.h"
 #include "cJSON.h"
@@ -168,6 +169,11 @@ static esp_err_t board_post_handler(httpd_req_t *req) {
     }
 
     bb_add_message(author, type, text, expiry);
+
+    // Sync the new post to playnet.earth asynchronously or fire-and-forget
+    // It's acceptable for this to fail silently if the device is currently entirely offline
+    playnet_push_post(buf);
+
     httpd_resp_send(req, "ok", 2);
     return ESP_OK;
 }

@@ -8,6 +8,7 @@ def test_ux():
         content = f.read()
 
     assert "Upload a book above to get started!" in content, "Missing CTA in local empty state"
+    assert "accept=\".epub,.pdf,.mobi,.azw3,.txt,.cbz,.cbr\"" in content, "Missing accept attribute on uploadFile"
     assert "Transfer a book from your local library to start reading!" in content, "Missing CTA in ereader empty state"
     assert "Upload in progress..." in content, "Missing title tooltip"
     assert "Connect an E-Reader to transfer books" in content, "Missing title tooltip"
@@ -43,16 +44,30 @@ def test_ux():
 
     assert "onclick=\"confirmFormatSD(this)\"" in admin_content, "Missing 'this' parameter in confirmFormatSD call"
     assert "btn.disabled = true" in admin_content, "Missing disabled state in confirmFormatSD"
-    assert "Formatting..." in admin_content, "Missing loading text in confirmFormatSD"
+    assert "Formatting<span class=\"loading-dots\"></span>" in admin_content, "Missing loading text in confirmFormatSD"
     assert ".finally" in admin_content, "Missing finally block in confirmFormatSD"
 
     assert "onclick=\"doSetLampColor(this)\"" in admin_content, "Missing 'this' parameter in doSetLampColor call"
-    assert "Setting..." in admin_content, "Missing loading text in doSetLampColor"
+    assert "Setting<span class=\"loading-dots\"></span>" in admin_content, "Missing loading text in doSetLampColor"
 
     # Admin Key Show/Hide feature verification
     assert "Show new key" in admin_content, "Missing 'Show new key' aria-label/title"
     assert "Hide new key" in admin_content, "Missing 'Hide new key' logic"
     assert "Show confirmed key" in admin_content, "Missing 'Show confirmed key' aria-label/title"
+    assert "input:focus-visible" in admin_content, "Missing focus-visible support in admin.html"
+    assert "textarea.restore-area:focus-visible" in admin_content, "Missing focus-visible support in admin.html"
+
+    with open(os.path.join(base_dir, 'main/web_assets/board.html'), 'r') as f:
+        board_content = f.read()
+
+    assert "loading-dots" in board_content, "Missing loading-dots animation class in board.html"
+    assert "input:focus-visible" in board_content, "Missing focus-visible support in board.html"
+    assert "textarea:focus-visible" in board_content, "Missing focus-visible support in board.html"
+    assert ".cat-btn:focus-visible" in board_content, "Missing focus-visible support for cat-btn in board.html"
+    assert ".exp-btn:focus-visible" in board_content, "Missing focus-visible support for exp-btn in board.html"
+    assert ".ftab:focus-visible" in board_content, "Missing focus-visible support for ftab in board.html"
+    assert ".post-btn:focus-visible" in board_content, "Missing focus-visible support for post-btn in board.html"
+    assert ".menu-btn:focus-visible" in board_content, "Missing focus-visible support for menu-btn in board.html"
 
     print("All assertions passed. Modifications are successfully present.")
 

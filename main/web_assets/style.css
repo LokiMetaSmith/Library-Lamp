@@ -107,11 +107,11 @@ li:last-child {
 }
 .file-notes {
     font-size: 0.85em;
-    color: #a89f91;
+    color: var(--ink-muted);
     margin-top: 4px;
 }
 .empty-state {
-    color: #8a7b6c;
+    color: var(--ink-muted);
     font-style: italic;
     text-align: center;
     padding: 10px;
@@ -135,11 +135,22 @@ button:hover:not(:disabled), .btn:hover, .admin-link:hover {
 }
 button:disabled {
     background-color: var(--border);
-    color: #8a7b6c;
+    color: var(--ink-muted);
     cursor: not-allowed;
     border-color: var(--surface2);
     box-shadow: none;
 }
+
+@keyframes loadingDots {
+  0% { content: "."; }
+  33% { content: ".."; }
+  66% { content: "..."; }
+}
+.loading-dots::after {
+  content: "";
+  animation: loadingDots 1.5s infinite steps(1);
+}
+
 .transfer-controls {
     display: flex;
     align-items: center;
@@ -195,6 +206,17 @@ button.cancel-btn:hover {
 .sleep-btn:hover {
     background-color: #8c524a;
 }
+#uploadSection {
+    transition: all 0.2s ease-in-out;
+}
+#uploadSection.drag-active {
+    background-color: rgba(255, 204, 128, 0.1) !important;
+    border: 2px dashed var(--accent) !important;
+}
+#uploadSection.drag-active * {
+    pointer-events: none;
+}
+
 /* System Banner */
 .system-banner {
     background-color: #8a6a24;
@@ -325,4 +347,80 @@ a:hover {
 .menu-content a:hover {
     background-color: var(--surface);
     color: var(--accent);
+}
+.success-message {
+    color: #4caf50;
+    font-weight: bold;
+    margin-top: 10px;
+    margin-bottom: 0;
+}
+
+/* Responsive Layout */
+@media (max-width: 768px) {
+    .container, .app-header, .app-main, .app-footer {
+        margin: 10px auto;
+        padding: 10px;
+    }
+
+    .app-main {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .library-section, .ereader-section {
+        min-width: 100%;
+        padding: 15px;
+    }
+
+    /* Touch-friendly targets */
+    button, .btn, .admin-link, .menu-content a {
+        min-height: 48px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .menu-btn {
+        min-height: 48px;
+        min-width: 48px;
+    }
+
+    .app-header {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        padding: 15px;
+    }
+
+    .app-header > .nav-menu {
+        position: static !important;
+        order: 1;
+        margin: 0;
+    }
+
+    .app-header > h1 {
+        order: 2;
+        margin: 0;
+        font-size: 1.2em;
+        border-bottom: none;
+        padding-bottom: 0;
+        flex-grow: 1;
+        text-align: center;
+    }
+
+    .app-header > .status-indicator {
+        order: 3;
+        margin: 0;
+    }
+
+    .app-header > div[aria-live] {
+        order: 4;
+        width: 100%;
+        margin-top: 15px;
+    }
+
+    .app-header .system-banner {
+        margin-bottom: 0;
+    }
 }

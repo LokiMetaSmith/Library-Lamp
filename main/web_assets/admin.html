@@ -21,6 +21,15 @@ body {
   display: flex;
   flex-direction: column;
 }
+@keyframes loadingDots {
+  0% { content: "."; }
+  33% { content: ".."; }
+  66% { content: "..."; }
+}
+.loading-dots::after {
+  content: "";
+  animation: loadingDots 1.5s infinite steps(1);
+}
 .site-header {
   background: var(--accent-dark);
   padding: 14px 20px;
@@ -63,7 +72,7 @@ body {
   text-transform: uppercase; color: var(--ink-muted);
   display: block; margin-bottom: 5px;
 }
-#gate input:focus { border-color: var(--accent-dark); }
+#gate input:focus-visible { border-color: var(--accent-dark); }
 #gate button {
   width: 100%;
   background: var(--accent-dark);
@@ -123,7 +132,7 @@ body {
 .fld input[type="text"],
 .fld input[type="datetime-local"] { width: 200px; }
 .fld input[type="number"] { width: 80px; }
-.fld input:focus { border-color: var(--accent-dark); }
+.fld input:focus-visible { border-color: var(--accent-dark); }
 
 .btn {
   background: var(--accent-dark);
@@ -163,7 +172,7 @@ textarea.restore-area {
   height: 120px;
   outline: none;
 }
-textarea.restore-area:focus { border-color: var(--accent-dark); }
+textarea.restore-area:focus-visible { border-color: var(--accent-dark); }
 
 /* ── Post list ── */
 .post-list { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
@@ -205,16 +214,16 @@ textarea.restore-area:focus { border-color: var(--accent-dark); }
 </header>
 
 <!-- Password gate -->
-<div id="gate">
+<form id="gate" novalidate onsubmit="event.preventDefault(); tryLogin();">
   <h2>Admin Access</h2>
-  <label for="keyIn">Admin Access Key</label>
+  <label for="keyIn">Admin Access Key <span aria-hidden="true" style="color: var(--c-need-bar, #c4813a);">*</span></label>
   <div style="display: flex; gap: 8px; margin-bottom: 10px;">
-    <input type="password" id="keyIn" autocomplete="off" style="margin-bottom: 0;">
+    <input type="password" id="keyIn" placeholder="e.g., MySecretAdminKey" autocomplete="off" style="margin-bottom: 0;" required>
     <button type="button" onclick="const p = document.getElementById('keyIn'); const isPass = p.type === 'password'; p.type = isPass ? 'text' : 'password'; const label = isPass ? 'Hide key' : 'Show key'; this.textContent = isPass ? 'Hide' : 'Show'; this.setAttribute('aria-pressed', isPass); this.setAttribute('aria-label', label); this.title = label;" aria-label="Show key" title="Show key" aria-pressed="false" style="width: 70px; padding: 0; font-size: 0.9em; flex-shrink: 0; background-color: #6c757d; border-color: #5a6268;">Show</button>
   </div>
-  <button id="loginBtn" onclick="tryLogin()">Unlock 🔑</button>
+  <button type="submit" id="loginBtn">Unlock 🔑</button>
   <div class="error" id="gateErr" aria-live="assertive"></div>
-</div>
+</form>
 
 <!-- Admin controls (hidden until authenticated) -->
 <div id="panel">
@@ -222,59 +231,59 @@ textarea.restore-area:focus { border-color: var(--accent-dark); }
   <div class="section">
     <div class="section-head">Admin Key</div>
     <div class="section-body">
-      <div class="row">
+      <form class="row" novalidate onsubmit="event.preventDefault(); doSetKey(this.querySelector('button[type=submit]'));">
         <div class="fld">
-          <label for="newKey">New Key (min 4 characters)</label>
+          <label for="newKey">New Key (min 4 characters) <span aria-hidden="true" style="color: var(--c-need-bar, #c4813a);">*</span></label>
           <div style="display: flex; gap: 8px;">
-            <input type="password" id="newKey" maxlength="64" autocomplete="new-password"
-                   placeholder="Enter new key" style="width:200px; margin-bottom: 0;">
+            <input type="password" id="newKey" maxlength="64" minlength="4" autocomplete="new-password"
+                   placeholder="e.g., MySecretAdminKey" style="width:200px; margin-bottom: 0;" required>
             <button type="button" class="btn" onclick="const p = document.getElementById('newKey'); const isPass = p.type === 'password'; p.type = isPass ? 'text' : 'password'; const label = isPass ? 'Hide new key' : 'Show new key'; this.textContent = isPass ? 'Hide' : 'Show'; this.setAttribute('aria-pressed', isPass); this.setAttribute('aria-label', label); this.title = label;" aria-label="Show new key" title="Show new key" aria-pressed="false" style="padding: 0 10px;">Show</button>
           </div>
         </div>
         <div class="fld">
-          <label for="newKeyConfirm">Confirm</label>
+          <label for="newKeyConfirm">Confirm <span aria-hidden="true" style="color: var(--c-need-bar, #c4813a);">*</span></label>
           <div style="display: flex; gap: 8px;">
-            <input type="password" id="newKeyConfirm" maxlength="64"
-                   placeholder="Confirm new key" style="width:200px; margin-bottom: 0;">
+            <input type="password" id="newKeyConfirm" maxlength="64" minlength="4"
+                   placeholder="e.g., MySecretAdminKey" style="width:200px; margin-bottom: 0;" required>
             <button type="button" class="btn" onclick="const p = document.getElementById('newKeyConfirm'); const isPass = p.type === 'password'; p.type = isPass ? 'text' : 'password'; const label = isPass ? 'Hide confirmed key' : 'Show confirmed key'; this.textContent = isPass ? 'Hide' : 'Show'; this.setAttribute('aria-pressed', isPass); this.setAttribute('aria-label', label); this.title = label;" aria-label="Show confirmed key" title="Show confirmed key" aria-pressed="false" style="padding: 0 10px;">Show</button>
           </div>
         </div>
-        <button class="btn" onclick="doSetKey(this)">Change Key</button>
-      </div>
+        <button type="submit" class="btn">Change Key</button>
+      </form>
       <div class="feedback" id="keyFb" aria-live="polite"></div>
     </div>
   </div>
 
   <div class="section">
     <div class="section-head">Board Identity</div>
-    <div class="section-body">
+    <form class="section-body" onsubmit="event.preventDefault(); doIdentity(this.querySelector('button[type=submit]'));">
       <div class="row">
         <div class="fld" style="flex:0 0 60px">
           <label for="idIcon">Icon</label>
-          <input type="text" id="idIcon" maxlength="4" style="width:60px;font-size:20px;text-align:center;padding:4px 6px;">
+          <input type="text" id="idIcon" maxlength="4" placeholder="📚" style="width:60px;font-size:20px;text-align:center;padding:4px 6px;">
         </div>
         <div class="fld" style="flex:1 1 200px">
           <label for="idName">Board Name</label>
-          <input type="text" id="idName" maxlength="48" style="width:100%">
+          <input type="text" id="idName" maxlength="48" placeholder="e.g., Neighborhood Library" style="width:100%">
         </div>
       </div>
       <div class="fld" style="flex:1">
         <label for="idTagline">Tagline</label>
-        <input type="text" id="idTagline" maxlength="80" style="width:100%">
+        <input type="text" id="idTagline" maxlength="80" placeholder="e.g., A place to share and discover books" style="width:100%">
       </div>
       <div class="fld" style="flex:1">
         <label for="idRules">Rules</label>
-        <input type="text" id="idRules" maxlength="80" style="width:100%">
+        <input type="text" id="idRules" maxlength="80" placeholder="e.g., Be kind and keep it clean" style="width:100%">
       </div>
       <div class="fld" style="flex:1">
         <label for="idFooter">Footer</label>
-        <input type="text" id="idFooter" maxlength="80" style="width:100%">
+        <input type="text" id="idFooter" maxlength="80" placeholder="e.g., Maintained by neighborhood volunteers" style="width:100%">
       </div>
       <div class="row">
-        <button class="btn" onclick="doIdentity(this)">Save Identity</button>
+        <button type="submit" class="btn">Save Identity</button>
       </div>
       <div class="feedback" id="idFb" aria-live="polite"></div>
-    </div>
+    </form>
   </div>
 
   <div class="section">
@@ -379,7 +388,9 @@ function tryLogin() {
   const btn = document.getElementById('loginBtn');
   if (btn) {
     btn.disabled = true;
-    btn.textContent = 'Unlocking... 🔑';
+    btn.innerHTML = 'Unlocking<span class="loading-dots"></span> 🔑';
+    btn.title = 'Unlocking...';
+    btn.setAttribute('aria-label', btn.title);
   }
 
   fetch('/board/admin/auth', {
@@ -399,6 +410,8 @@ function tryLogin() {
     if (btn) {
       btn.disabled = false;
       btn.textContent = 'Unlock 🔑';
+      btn.removeAttribute('title');
+      btn.removeAttribute('aria-label');
     }
   })
   .catch(() => {
@@ -406,12 +419,11 @@ function tryLogin() {
     if (btn) {
       btn.disabled = false;
       btn.textContent = 'Unlock 🔑';
+      btn.removeAttribute('title');
+      btn.removeAttribute('aria-label');
     }
   });
 }
-document.getElementById('keyIn').addEventListener('keydown', e => {
-  if (e.key === 'Enter') tryLogin();
-});
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 function api(path) {
@@ -432,10 +444,13 @@ function apiFetch(url, options) {
   });
 }
 
+const fbTimeouts = {};
+
 function fb(id, msg) {
   const el = document.getElementById(id);
   el.textContent = msg;
-  setTimeout(() => { el.textContent = ''; }, 4000);
+  if (fbTimeouts[id]) clearTimeout(fbTimeouts[id]);
+  fbTimeouts[id] = setTimeout(() => { el.textContent = ''; }, 4000);
 }
 
 // ── Upload Settings ───────────────────────────────────────────────────────────
@@ -449,7 +464,9 @@ function doSetPublicUploads(btn) {
   const enabled = document.getElementById('publicUploadsCheck').checked;
   if (btn) {
     btn.disabled = true;
-    btn.textContent = 'Saving...';
+    btn.innerHTML = 'Saving<span class="loading-dots"></span>';
+    btn.title = 'Saving upload settings...';
+    btn.setAttribute('aria-label', btn.title);
   }
   apiFetch(api('/admin/set_public_uploads'), {
     method: 'POST',
@@ -469,6 +486,8 @@ function doSetPublicUploads(btn) {
     if (btn) {
       btn.disabled = false;
       btn.textContent = 'Save Upload Settings';
+      btn.removeAttribute('title');
+      btn.removeAttribute('aria-label');
     }
   });
 }
@@ -492,7 +511,9 @@ function doSetKey(btn) {
   }
   if (btn) {
     btn.disabled = true;
-    btn.textContent = 'Saving...';
+    btn.innerHTML = 'Saving<span class="loading-dots"></span>';
+    btn.title = 'Saving new key...';
+    btn.setAttribute('aria-label', btn.title);
   }
   apiFetch(api('/board/admin/setkey') + '&newkey=' + encodeURIComponent(n))
     .then(r => r.text())
@@ -505,6 +526,8 @@ function doSetKey(btn) {
       if (btn) {
         btn.disabled = false;
         btn.textContent = 'Change Key';
+        btn.removeAttribute('title');
+        btn.removeAttribute('aria-label');
       }
     });
 }
@@ -520,7 +543,9 @@ function doIdentity(btn) {
   });
   if (btn) {
     btn.disabled = true;
-    btn.textContent = 'Saving...';
+    btn.innerHTML = 'Saving<span class="loading-dots"></span>';
+    btn.title = 'Saving identity settings...';
+    btn.setAttribute('aria-label', btn.title);
   }
   apiFetch(api('/board/admin/identity/set') + '&' + params.toString())
     .then(r => r.text())
@@ -530,6 +555,8 @@ function doIdentity(btn) {
       if (btn) {
         btn.disabled = false;
         btn.textContent = 'Save Identity';
+        btn.removeAttribute('title');
+        btn.removeAttribute('aria-label');
       }
     });
 }
@@ -539,7 +566,9 @@ function confirmClear(btn) {
   if (!confirm('Delete ALL posts? This cannot be undone.')) return;
   if (btn) {
     btn.disabled = true;
-    btn.textContent = 'Clearing...';
+    btn.innerHTML = 'Clearing<span class="loading-dots"></span>';
+    btn.title = 'Clearing all posts...';
+    btn.setAttribute('aria-label', btn.title);
   }
   apiFetch(api('/board/admin/clear'), { method: 'POST' })
     .then(r => r.text())
@@ -549,6 +578,8 @@ function confirmClear(btn) {
       if (btn) {
         btn.disabled = false;
         btn.textContent = 'Clear All Posts';
+        btn.removeAttribute('title');
+        btn.removeAttribute('aria-label');
       }
     });
 }
@@ -569,7 +600,9 @@ function timeLeftShort(exp) {
 async function loadPostList(btn) {
   if (btn) {
     btn.disabled = true;
-    btn.textContent = 'Refreshing...';
+    btn.innerHTML = 'Refreshing<span class="loading-dots"></span>';
+    btn.title = 'Refreshing posts list...';
+    btn.setAttribute('aria-label', btn.title);
   }
   const container = document.getElementById('postList');
   container.innerHTML = '<div class="post-empty">Loading…</div>';
@@ -577,7 +610,7 @@ async function loadPostList(btn) {
     const r    = await fetch('/board/messages');
     const data = await r.json();
     if (data.length === 0) {
-      container.innerHTML = '<div class="post-empty">No active posts.</div>';
+      container.innerHTML = '<div class="post-empty empty-state">No active posts.<br><span class="file-notes">Community posts will appear here for moderation.</span></div>';
       return;
     }
     container.innerHTML = '<div class="post-list">' +
@@ -591,11 +624,13 @@ async function loadPostList(btn) {
 </div>`).join('') +
     '</div>';
   } catch (_) {
-    container.innerHTML = '<div class="post-empty">Failed to load posts.</div>';
+    container.innerHTML = '<div class="post-empty empty-state">Failed to load posts.<br><span class="file-notes">Please check your connection and try again.</span></div>';
   } finally {
     if (btn) {
       btn.disabled = false;
       btn.textContent = 'Refresh List';
+      btn.removeAttribute('title');
+      btn.removeAttribute('aria-label');
     }
   }
 }
@@ -604,7 +639,9 @@ async function deletePost(id, btn) {
   if (!confirm('Delete this post?')) return;
   if (btn) {
     btn.disabled = true;
-    btn.textContent = 'Deleting...';
+    btn.innerHTML = 'Deleting<span class="loading-dots"></span>';
+    btn.title = 'Deleting post...';
+    btn.setAttribute('aria-label', btn.title);
   }
   const r = await apiFetch(api('/board/admin/delete/post'), {
     method: 'POST',
@@ -620,6 +657,8 @@ async function deletePost(id, btn) {
     if (btn) {
       btn.disabled = false;
       btn.textContent = 'Delete';
+      btn.removeAttribute('title');
+      btn.removeAttribute('aria-label');
     }
   }
 }
@@ -630,7 +669,9 @@ function confirmFormatSD(btn) {
 
   if (btn) {
     btn.disabled = true;
-    btn.textContent = 'Formatting...';
+    btn.innerHTML = 'Formatting<span class="loading-dots"></span>';
+    btn.title = 'Formatting SD card...';
+    btn.setAttribute('aria-label', btn.title);
   }
 
   apiFetch(api('/board/admin/format-sd'), { method: 'POST' })
@@ -646,6 +687,8 @@ function confirmFormatSD(btn) {
       if (btn) {
         btn.disabled = false;
         btn.textContent = 'Format SD Card';
+        btn.removeAttribute('title');
+        btn.removeAttribute('aria-label');
       }
     });
 }
@@ -659,7 +702,9 @@ function doSetLampColor(btn) {
 
   if (btn) {
     btn.disabled = true;
-    btn.textContent = 'Setting...';
+    btn.innerHTML = 'Setting<span class="loading-dots"></span>';
+    btn.title = 'Setting lamp color...';
+    btn.setAttribute('aria-label', btn.title);
   }
 
   apiFetch(api('/set-led-color'), {
@@ -680,6 +725,8 @@ function doSetLampColor(btn) {
     if (btn) {
       btn.disabled = false;
       btn.textContent = 'Set Lamp Color';
+      btn.removeAttribute('title');
+      btn.removeAttribute('aria-label');
     }
   });
 }

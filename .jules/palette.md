@@ -1,4 +1,4 @@
-## 2024-06-19 - [Form Accessibility]
+## 2026-06-19 - [Form Accessibility]
 **Learning:** Found several input fields relying solely on placeholders or lacking 'for' attributes on labels, which hurts screen reader users and reduces click targets.
 **Action:** Always pair inputs with explicit <label for="..."> elements to improve both accessibility and usability.
 ## 2024-07-04 - [Board Category Accessibility]
@@ -19,54 +19,144 @@
 ## 2026-06-24 - Accessibility for Toggle Buttons
 **Learning:** Found an interaction improvement opportunity in `board.html` where filtering, sorting, and category buttons visually indicated their active state via CSS classes (e.g., `active` or `active-Notice`), but this state wasn't communicated to screen readers. This leaves visually impaired users unaware of which filter or category is currently selected.
 **Action:** When creating toggle buttons or selectable tabs, always pair visual state classes with `aria-pressed="true"` or `aria-pressed="false"` attributes, and ensure these attributes are dynamically updated alongside the CSS classes in JavaScript logic.
-## 2024-05-24 - Dynamic Disabled State Explanations with Keyboard Hints
-**Learning:** Adding static aria-labels and static titles to buttons isn't enough when their state changes (e.g. from disabled to enabled). Users need to know *why* a button is disabled, and screen readers need an aria-label. Furthermore, when the button is enabled, replacing the tooltip with keyboard shortcut hints greatly improves usability without cluttering the UI.
-**Action:** When creating interactive viewer-like experiences, provide a default `title` explaining the loading/disabled state along with a static `aria-label`. Then, dynamically update the `title` attribute via JavaScript to show keyboard shortcuts once the state becomes active.
-## 2024-11-21 - Passing element context in vanilla JS lists
-**Learning:** When rendering dynamic lists with string interpolation in vanilla JS (like in `admin.html`), it can be tricky to grab the exact button element later to apply loading states, especially if the button lacks a unique ID.
-**Action:** When adding inline onclick handlers in template literals (e.g., `onclick="deletePost(${id}, this)"`), pass `this` to give the function a direct reference to the clicked element, making it easy to toggle disabled states and text content immediately.
+## 2024-12-05 - [Item-Specific Loading States in Vue]
+**Learning:** When users click action buttons inside a dynamic Vue list (like adding or removing tracks in a queue), failing to provide item-specific loading states can result in double-clicks that spam the backend or cause confusion. Binding specific identifiers (like the filename or index) to a tracking variable provides immediate, targeted visual feedback (e.g., disabling only the clicked button).
+**Action:** Always implement and bind item-specific loading states (e.g., `this.addingToQueue = filename`) for asynchronous actions triggered within `v-for` lists.
+## 2024-07-28 - Keyboard Exit Shortcuts in Immersive Views
+**Learning:** When building full-screen or immersive interfaces (like the e-book viewer) that support keyboard navigation for primary actions (e.g., arrow keys for page turning), users intuitively expect a complementary keyboard shortcut (like `Escape`) to exit or go back. Without it, keyboard-only users must disrupt their reading flow to manually tab through the interface to find a back button.
+**Action:** Always pair primary keyboard navigation in immersive views with an intuitive "exit" or "back" shortcut (e.g., `Escape`), and explicitly document the shortcut in the UI (e.g., via tooltips or aria-labels).
+## 2026-06-25 - [Contextual Placeholders]
+**Learning:** Found that primary forms like the "Upload Book" form in `index.html` were using placeholders that simply duplicated the label text (e.g., `placeholder="Title"` for the Title field). This fails to provide any extra value and does not help the user understand the expected input format. Using contextual examples (e.g., `placeholder="e.g., The Great Gatsby"`) reduces cognitive load and clarifies expectations.
+**Action:** When designing or updating forms, ensure that `placeholder` attributes provide clear, concrete examples of the expected input rather than just repeating the field label.
+## 2026-06-25 - Contextual Placeholders in Bulletin Board
+**Learning:** Found that the Bulletin Board form used generic placeholders like 'neighbor' and 'What\'s on the board?' that didn't provide specific value or guidance. Updating these to explicit examples like 'e.g., Jane (Neighbor)' reduces cognitive load and gives better direction.
+**Action:** Always ensure that placeholder attributes provide clear, concrete examples of the expected input rather than just repeating the field label or asking a generic question.
+## 2026-06-25 - [Full-Screen Loader Accessibility]
+**Learning:** Found that the full-screen loading overlay in the e-reader viewer updated its text dynamically to display error messages (e.g., "Error loading book: ...") without an `aria-live` attribute. This causes screen readers to completely miss the error state change, leaving visually impaired users indefinitely waiting for a book that failed to load.
+**Action:** When implementing transient loading overlays or viewer error states, always wrap the status text in an `aria-live="polite"` or `aria-live="assertive"` container so screen readers are correctly notified of the state changes.
+## 2024-08-15 - [File Upload Auto-fill]
+**Learning:** Users uploading e-books often have files already named in an "Author - Title.epub" format. Forcing them to manually retype this information into the Author and Title fields is repetitive and increases friction during the upload process.
+**Action:** When providing file upload forms that require metadata, listen to the file input's `change` event and attempt to intelligently parse and auto-fill the metadata fields (e.g., removing extensions and splitting by delimiters) if they are currently empty.
+## 2026-06-25 - [Dropdown Menu Accessibility]
+**Learning:** Found that custom dropdown menus triggered by hamburger icons lacked keyboard accessibility for closing. Users navigating by keyboard expect the `Escape` key to close active menus, dialogs, and popups.
+**Action:** Always add a global `keydown` event listener for the `Escape` key when implementing custom dropdowns or popups, ensuring it hides the content and accurately updates the `aria-expanded` state of the trigger button.
 
-## 2024-11-21 - [Vanilla JS Silent Form Validations]
-**Learning:** In vanilla JavaScript frontends, simply returning early (`if (!value) return;`) on empty form submissions creates a silent failure where the user clicks the button but nothing happens, which is confusing and poor UX/a11y.
-**Action:** When catching empty required inputs in vanilla JS functions, always use the existing `aria-live` hint/error containers to display a clear error message, and immediately call `.focus()` on the empty input to guide the user to the required action.
+## 2026-06-25 - [Live Audio Status Accessibility]
+**Learning:** Found that dynamic changes in 'Now Playing' and playback status updates (playing/paused) in the Audio Radio UI (`audio.html`) were silently updated in the DOM, leaving screen reader users unaware of track progressions or control states when they weren't actively focused on the audio element.
+**Action:** Always wrap dynamic media status displays (like 'Now Playing' elements) in an `aria-live="polite"` container to ensure changes in track or playback status are automatically announced to screen readers.
+## 2026-06-25 - [Expiring Status Accessibility]
+**Learning:** Using only a color change (like adding a `soon` CSS class) to indicate an approaching expiration fails to provide context for colorblind users and screen readers.
+**Action:** Always pair semantic color changes with descriptive `title` and `aria-label` attributes to ensure the state change is universally perceivable.
+## 2026-09-24 - [File Upload Accept Attribute]
+**Learning:** Found that the file upload input lacked an `accept` attribute, meaning users could accidentally select and upload unsupported files (like videos or images), leading to backend errors or wasted storage space.
+**Action:** When implementing file upload inputs, always use the `accept` attribute with explicitly supported file extensions (e.g., `accept=".epub,.pdf,.mobi,.azw3,.txt,.cbz,.cbr"`) to natively filter the OS file picker, preventing invalid uploads and reducing user error.
+## 2024-10-25 - [Status Indicator Accessibility]
+**Learning:** When creating visual non-text status indicators (like colored dots), relying on color alone is not accessible for colorblind and screen reader users.
+**Action:** Always provide a human-readable text description via `title` (for hover) and `aria-label` (for screen readers), and apply `role="status"` to ensure universal accessibility.
+## 2026-09-29 - [Disabled Button Accessibility]
+**Learning:** Found an accessibility issue pattern where vanilla JavaScript explicitly toggles buttons into a disabled state and updates the 'title' attribute to provide a visual tooltip (e.g., 'Uploading...'), but fails to pair it with an 'aria-label'. Screen readers often struggle to announce 'title' attributes reliably when an element is disabled (or at all), meaning visually impaired users are left without context about why an interaction failed or what process is loading.
+**Action:** Always mirror dynamically updated 'title' attributes with identical 'aria-label' attributes, especially when handling loading or disabled states, to ensure screen reader compatibility.
+## 2026-10-27 - [Vanilla JS Async Feedback for Hardware State Changes]
+**Learning:** Adding loading states to vanilla JS buttons that trigger an action which eventually halts the backend (like a sleep command) requires special care. If you reset the loading state to false in a `finally` block, the button may briefly flash back to its active state before the hardware actually goes to sleep and stops responding.
+**Action:** When handling async operations that trigger a page reload, navigation, or hardware halt, only reset the loading state in the `catch` block so the UI remains in the disabled/loading state until the system physically stops responding.## 2026-10-27 - [Vanilla JS Async Feedback for Hardware State Changes]
+**Learning:** Adding loading states to vanilla JS buttons that trigger an action which eventually halts the backend (like a sleep command) requires special care. If you reset the loading state to false in a `finally` block, the button may briefly flash back to its active state before the hardware actually goes to sleep and stops responding.
+**Action:** When handling async operations that trigger a page reload, navigation, or hardware halt, only reset the loading state in the `catch` block so the UI remains in the disabled/loading state until the system physically stops responding.
+## 2026-10-28 - [Color Contrast for Empty/Disabled States]
+**Learning:** The hardcoded color `#8a7b6c` was being used across the app for disabled buttons and empty states, which fails WCAG AA contrast ratio (3.44:1) against the dark theme backgrounds.
+**Action:** Always use the existing `--ink-muted` CSS variable (or `#d1bfae`) for muted text to ensure sufficient contrast (5.02:1) while maintaining the visual hierarchy.
 
-## 2024-07-09 - Grouping Custom Toggle Buttons for Screen Readers
-**Learning:** When custom styling or scripting is used to make standard buttons behave like radio button selections (e.g., in a filter bar or an "Expires in" toggle), screen readers announce them as isolated buttons without context. Wrapping these related buttons in an element with `role="group"` and `aria-labelledby` (pointing to the visible label) or `aria-label` provides essential structural context for non-visual users to understand they are mutually exclusive choices within a set. Avoid using `style="display: contents;"` on semantic wrappers, as it can inadvertently remove the element from the accessibility tree in some browsers. Instead, use flexbox styling on the wrapper to maintain layout flow.
-**Action:** Always wrap groups of visually-related custom toggle buttons in a semantic grouping element (`role="group"`) and apply `aria-labelledby` or `aria-label` to ensure screen reader users receive proper contextual cues, taking care to use appropriate CSS layout techniques (like Flexbox) instead of `display: contents;`.
-## 2024-07-10 - Improve inline form validation feedback
-**Learning:** Returning silently when required inputs are empty creates a confusing user experience, as the user clicks a button and nothing appears to happen. Even though standard HTML forms have native validation (which we don't always use or rely on via JS), custom JavaScript logic should also provide explicit feedback.
-**Action:** Always provide actionable inline feedback by updating an existing `aria-live` container with an error message and immediately calling `.focus()` on the invalid input, so screen readers announce the issue and keyboard users can immediately fix it.
-## 2026-07-11 - Provide loading states for destructive async actions
-**Learning:** Destructive or potentially slow operations (like formatting an SD card) without immediate visual feedback can lead to duplicate clicks, user confusion, and perceived slowness.
-**Action:** Always provide immediate visual feedback for async operations by temporarily disabling the trigger button and updating its text (e.g., to a loading state), especially for destructive actions.
-## 2026-07-12 - Provide loading states for standard HTML form submissions
-**Learning:** Even when not using async JS (like `fetch`), standard HTML forms submitting to slow backends (like an ESP32 saving credentials and restarting Wi-Fi) leave the user hanging without feedback, which can lead to multiple clicks and confusion.
-**Action:** When using standard HTML `<form>` submissions, add a simple `onsubmit` handler to disable the submit button and update its text (e.g., to "Connecting...") to provide immediate visual feedback during the page navigation delay.
-## 2024-11-25 - Item-specific async state tracking in Vue lists
-**Learning:** When dealing with async operations (like file deletion) inside a `v-for` list, using a simple boolean `isDeleting` state affects all items in the list, disabling all buttons simultaneously or requiring complex index tracking. Without feedback, the user isn't sure which item is being deleted.
-**Action:** When tracking async states for items in dynamic lists, assign the item's unique identifier (e.g., `this.isDeleting = file.name`) to the state variable instead of a boolean. Then, in the template, bind states specific to that item (`:disabled="isDeleting === file.name"` and change text to "Deleting..."), providing clear, isolated feedback for destructive actions without complex state management.
-## 2026-07-14 - [Vanilla JS Async Feedback]
-**Learning:** When interacting with hardware components in a vanilla JS frontend (like setting the lamp color), missing immediate visual feedback can lead to duplicate submissions or confusion because backend processing adds noticeable delay.
-**Action:** Always provide explicit disabled/loading states wrapping async calls in vanilla JS applications to avoid user confusion and duplicate actions.
+## 2026-12-10 - Implicit Form Submission
+**Learning:** Found a custom form implementation in `board.html` that used a `div` container and a `<button onclick="...">` for submission, but missed out on native browser features like implicit submission (submitting via the Enter key in an input) and native HTML5 validation UI.
+**Action:** When creating forms, always wrap the inputs in a `<form>` element and use a `type="submit"` button. For custom button groups inside a form, ensure they have `type="button"` so they don't accidentally trigger submission. Use `onsubmit="event.preventDefault(); ..."` to handle the submission via JS while keeping the accessible native features.
 
-## 2024-07-15 - Admin Panel Form Accessibility & Loading States
-**Learning:** Found multiple form inputs in the admin panel lacking `aria-label` attributes and relying solely on `placeholder` texts for context (which isn't always accessible or visible). Also discovered several action buttons (e.g. Save Settings, Save Identity) that lacked loading feedback during async operations, which could lead to duplicate submissions or confusion.
-**Action:** When adding inputs in vanilla HTML frontends, always pair them with an explicit `aria-label` (or `<label>`). Additionally, for async operations, use inline `onclick` modifications (passing `this` as an argument) to quickly add disabled loading states to action buttons.
-## 2024-11-25 - [Form Required Indicators]
-**Learning:** Found an accessibility and UX issue in `index.html` where form inputs like `uploadFile`, `uploadTitle`, and `uploadAuthor` used the native `required` attribute for validation but had no visible indicator (like an asterisk) on their labels. Users could not distinguish mandatory fields from optional ones visually until they failed validation. Providing explicit visual cues makes forms much more predictable and prevents frustration.
-**Action:** Always pair programmatic `required` attributes with a visible indicator on the corresponding `<label>`, such as `<span aria-hidden="true" style="color: #ff8a80;">*</span>`, so users can see which fields are mandatory before attempting to submit.
-## 2024-07-20 - [Hardware Setup Password Visibility]
-**Learning:** In IoT device setup portals (like `setup.html`), mistyping a Wi-Fi password is a common point of failure that often requires hard-resetting the device. Providing a "Show/Hide" password toggle significantly reduces this friction and improves the overall UX of the onboarding process.
-**Action:** When creating or modifying hardware network setup forms, always include a toggle to unmask the password input to prevent user error.
-## 2024-07-21 - [Dynamic ARIA labels for Toggle Buttons]
-**Learning:** Found an accessibility issue where an inline password "Show/Hide" toggle button updated its visual text and `aria-pressed` state, but its `aria-label` and `title` attributes remained static (e.g., permanently reading "Show password"). This causes screen readers to announce incorrect information and limits usability for keyboard users relying on tooltips.
-**Action:** When implementing toggle buttons that change functionality (like showing/hiding a password), ensure you dynamically update both the `aria-label` and `title` attributes alongside the visual text to provide accurate context for all users.
-## 2024-11-25 - [Hardware Admin Password Visibility]
-**Learning:** In authentication forms on hardware portals (like the admin gate in `admin.html`), users typing complex or long access keys often mistype them. Providing a "Show/Hide" password toggle alongside the input prevents this frustration.
-**Action:** Always wrap password inputs in a flex container with a "Show/Hide" button that toggles the input type and dynamically updates its `aria-label` and `title` for screen readers and keyboard users.
-## 2024-11-25 - Non-Text Status Indicators
-**Learning:** Using only colored visual indicators (like the `.status-indicator` dot) to represent system state fails colorblind users and screen readers, violating WCAG guidelines which state color should not be the only visual means of conveying information.
-**Action:** When creating visual status indicators, always bind a human-readable text description to `title` (for hover) and `aria-label` (for screen readers), and use `role="status"` to announce dynamic changes to the system state.
-## 2025-01-20 - [Vanilla JS Missing Loading State for Action Buttons]
-**Learning:** In `admin.html`, the "Refresh List" button lacked a loading state during a fetch operation. In vanilla JS, a button click that triggers a backend process must explicitly disable itself and change its label to prevent rapid double-clicks and confusion about whether the request registered.
-**Action:** For action buttons like "Refresh List" relying on an async backend call, modify the inline `onclick` handler to pass `this` and update the button's `disabled` and `textContent` properties at the start, and ensure a `finally` block is used to restore the button when the call completes.
+## 2026-12-10 - Implicit Form Submission
+**Learning:** In custom admin panel layouts (e.g., `admin.html`), using `<div>` wrappers instead of `<form>` elements prevents users from submitting forms using the Enter key natively and bypasses built-in HTML5 validation like `minlength`.
+**Action:** When creating form inputs, always wrap them in a `<form>` tag and include a `<button type="submit">`. Use `onsubmit="event.preventDefault(); ..."` to intercept the action while maintaining standard accessibility and browser behaviors.
+
+## 2026-12-11 - [Input Placeholder Examples in Forms]
+**Learning:** Adding `placeholder` attributes with clear examples (e.g., "e.g., Neighborhood Library") to form inputs significantly improves the UX of configuration pages by reducing cognitive load and demonstrating the expected data format.
+**Action:** When adding or updating configuration or management forms, always provide contextual `placeholder` text on empty input fields to guide the user.
+
+## 2026-12-11 - [Input Placeholder Examples in Setup Form]
+**Learning:** Adding `placeholder` attributes with clear examples (e.g., "e.g., MyHomeNetwork" and "e.g., MySecretPassword") to configuration inputs in `setup.html` significantly improves the UX by reducing cognitive load and demonstrating the expected data format for the hardware portal.
+**Action:** When creating or maintaining configuration and setup forms, always ensure text and password inputs have descriptive `placeholder` attributes.
+## 2026-12-11 - [Implicit Form Submission in Admin Portal]
+**Learning:** The "Board Identity" configuration section in the Admin portal used a generic `<div>` wrapper with a standard button calling a JavaScript function on click. This setup prevented users from pressing the "Enter" key to submit the form, which is a common expectation for multi-input forms. By replacing the `<div>` with a `<form>` tag, adding an `onsubmit` handler with `event.preventDefault()`, and changing the button to `type="submit"`, native implicit form submission is enabled while retaining the existing JavaScript logic and CSS styling.
+**Action:** When building or updating multi-input configuration sections that require submission, always use semantic `<form>` tags and `type="submit"` buttons, handling the event via `onsubmit` rather than `onclick` to ensure native keyboard accessibility.
+
+## 2026-12-11 - [Visible Character Limits in Text Inputs]
+**Learning:** Character count hints on input fields that only appear when the user is close to the limit (e.g., `n > 18` for a 24-character max) can leave the user guessing their remaining characters for most of the typing experience.
+**Action:** When creating forms with character limits on inputs, always display the character count explicitly (e.g., "0/24") right from the beginning and update it continuously as the user types, rather than hiding it conditionally.
+
+## 2026-12-11 - [ARIA Labels for Download Links]
+**Learning:** When using standard text links (like book titles) as download triggers, screen readers may announce just the title without clarifying the action. Adding an explicit `aria-label` (e.g., "Download The Great Gatsby") provides necessary context for visually impaired users.
+**Action:** Always append an explicit `aria-label` describing the action to text links that initiate downloads, especially in dynamic lists.
+
+## 2026-12-11 - [ARIA Titles for Icon-Only Buttons]
+**Learning:** Icon-only buttons (like the hamburger menu) that rely on `aria-label` for screen reader accessibility often lack clear explanations for sighted users on hover, especially keyboard users. This reduces discoverability and can cause confusion about the button's function.
+**Action:** Always complement `aria-label` on icon-only buttons with a matching `title` attribute to provide a helpful tooltip for sighted mouse and keyboard users.
+
+## 2026-12-11 - [Empty State Calls to Action]
+**Learning:** Found an empty state for a disconnected E-Reader that just said "No e-reader connected." This lacked helpful guidance for users, similar to a previous finding where an empty library lacked a call-to-action.
+**Action:** When creating empty states, always reuse the `.empty-state` CSS class for consistency, and provide a helpful call-to-action or instructions (e.g., "Connect your device via USB to view and transfer books.") rather than just stating the lack of data.
+
+## 2026-08-25 - [Inline Form Validation vs Native Tooltips]
+**Learning:** When using custom `aria-live` inline validation messages, retaining standard browser validation (via the `required` attribute) can cause native tooltips to trigger, silently blocking form submission and preventing custom JS logic from firing. The form submission logic previously used a confusing loop between `onsubmit` and `onclick` just to call `checkValidity()`, resulting in a poor experience and broken feedback.
+**Action:** When implementing custom inline form validation, always add the `novalidate` attribute to the `<form>` tag to disable native tooltips, while keeping the semantic `required` attributes on inputs for screen readers. Use a clean `onsubmit="event.preventDefault(); doCustomLogic();"` approach.
+
+## 2026-12-11 - [Custom Form Validation Conflicts]
+**Learning:** Implementing custom JavaScript validation () on forms with  inputs can cause browsers to block submission silently due to native HTML5 validation tooltips failing to appear or interfering with the custom logic.
+**Action:** When overriding form submission to use custom inline validation feedback, always add the `novalidate` attribute to the `<form>` element. This disables the native browser tooltips while keeping the semantic `required` attributes for screen readers.
+
+## 2026-12-11 - [Custom Form Validation Conflicts]
+**Learning:** Implementing custom JavaScript validation on forms with required inputs can cause browsers to block submission silently due to native HTML5 validation tooltips failing to appear or interfering with the custom logic.
+**Action:** When overriding form submission to use custom inline validation feedback, always add the `novalidate` attribute to the form element. This disables the native browser tooltips while keeping the semantic required attributes for screen readers.
+
+## 2026-12-11 - [Visible Character Limits Reset in Forms]
+**Learning:** When resetting forms that include visible character limit hints (e.g., '0/300'), ensure the hint text is explicitly reset to its initial count rather than being cleared entirely, which would incorrectly hide the indicator from the user for their next entry.
+**Action:** Always reset character hint containers explicitly back to their default state (e.g., `'0/300'`) upon form submission, preventing the count from silently disappearing.
+
+## 2026-12-12 - [Improved Empty State Guidance in Admin Portal]
+**Learning:** Found that the post empty states in `admin.html` lacked helpful contextual guidance and failed to reuse the consistent `.empty-state` CSS class, contrary to previous learnings on other components.
+**Action:** When managing empty states across all pages, always append `.empty-state` for layout consistency and provide actionable or explanatory subtext (e.g., 'Community posts will appear here for moderation.') rather than merely stating that no data is present.
+
+## 2026-12-12 - [Bulletin Board Empty State Enhancement]
+**Learning:** Found an empty state in `board.html` that lacked the global `.empty-state` CSS class and used plain text rather than the standardized `.file-notes` subtext class, leading to an inconsistent empty state appearance compared to the rest of the app.
+**Action:** When defining empty states, always append `.empty-state` for layout consistency, retaining any necessary specific layout classes (like `.empty` for grid column spanning). Additionally, wrap subtext instructions in `.file-notes` to match the application's design system.
+
+## 2026-12-13 - [Empty State Subtext Consistency]
+**Learning:** We discovered multiple instances across the frontend where secondary subtext or helpful instructions inside `.empty-state` containers were using hardcoded inline styles (like `font-size: 0.9em; margin-top: 5px;`) instead of adhering to the design system's consistent `.file-notes` class.
+**Action:** When providing secondary subtext or helpful instructions within UI components (such as `.empty-state` containers), always use the existing `.file-notes` CSS class instead of inline styles to maintain design system consistency.
+
+## 2026-12-14 - [ARIA Live Regions for Transient States]
+**Learning:** When implementing transient full-screen loading overlays or viewer error states, applying `aria-live` directly to an element that toggles its `display` property can cause screen readers to fail to announce the state change reliably.
+**Action:** Always wrap dynamically updating status text (like loading indicators or error banners) in a permanent `aria-live="polite"` or `aria-live="assertive"` container so screen readers correctly detect and announce the visibility or text changes.
+## 2026-12-14 - [ARIA Live Regions for Transient States]
+**Learning:** When implementing transient full-screen loading overlays or viewer error states, applying `aria-live` directly to an element that toggles its `display` property can cause screen readers to fail to announce the state change reliably because the element wasn't originally part of the accessibility tree when hidden.
+**Action:** Always wrap dynamically updating status text (like loading indicators or error banners) in a permanent `aria-live="polite"` or `aria-live="assertive"` container so screen readers correctly detect and announce the visibility or text changes of child elements.
+
+## $(date +%Y-%m-%d) - Responsive Layout for Mobile Devices
+**Learning:** Always remove temporary verification scripts (e.g., ad-hoc Playwright scripts) and delete `__pycache__` directories before committing or requesting code reviews to prevent accidentally polluting the repository with binary or throwaway files.
+**Action:** When implementing responsive design (flex-wrap and ordering), strictly contain all changes within standard `@media` queries and test both mobile and desktop screen sizes to ensure changes haven't leaked out of the block. I added vertical stacking and 48px touch targets for mobile under an `@media (max-width: 768px)` media query in `style.css`.
+
+## 2026-12-14 - [Character Count Hint Updates on Persisted Inputs]
+**Learning:** When a form submission preserves certain input values (like an author's name) for convenience via `localStorage`, blindly resetting all character count hints to zero (e.g., `0/24`) causes the UI to become immediately out-of-sync with the preserved input string.
+**Action:** When resetting forms, check if any input values are intentionally preserved. If they are, recalculate and update their specific character count hints dynamically (e.g., `nameInput.value.length + '/24'`) rather than setting them to zero.
+
+## 2026-12-15 - [Form Submission Success Feedback]
+**Learning:** When submitting forms that reset their state (like the new post form in the Bulletin Board), silently clearing the inputs without explicit success feedback leaves users unsure if their action succeeded, even if the new item appears in a list below.
+**Action:** Always provide immediate inline success feedback (e.g., '? Posted') within an `aria-live='polite'` container after a successful form submission, ensuring it clears after a consistent delay (e.g., 4000ms).
+
+## 2026-12-16 - [Timeout Overlaps in Success Messaging]
+**Learning:** Using generic `setTimeout` calls for transient UI messages (like "? Posted" or "Upload successful") without tracking the timeout IDs can lead to overlaps. When a user submits forms in quick succession, the timeout from the first submission will unexpectedly clear the message from the second submission before the intended delay.
+**Action:** When using `setTimeout` to manage transient UI states, always store the timeout ID (e.g., in an object dictionary or state object) and call `clearTimeout()` before setting a new one, ensuring the state remains visible for the full duration of the latest action.
+## 2026-12-16 - [Vanilla JS Loading States with Animated Ellipsis]
+**Learning:** Adding loading states to vanilla HTML buttons (like 'POSTING...') can be done efficiently without heavy JavaScript or external dependencies.
+**Action:** Utilize CSS keyframe animations to create an animated ellipsis (via `content` property on a pseudo-element like `.loading-dots::after`). This clarifies the active state visually while maintaining a lightweight UI.
+
+## 2026-12-16 - [Standardized Async Button Loading States]
+**Learning:** Hardcoded text dots (e.g., 'Uploading...') on async buttons provide poor visual feedback and create inconsistencies when some buttons use CSS animations (like '.loading-dots' in 'admin.html' and 'board.html').
+**Action:** Reused the existing lightweight '.loading-dots' CSS keyframe animation across all async actions ('script.js', 'setup.html') by injecting it via 'innerHTML', creating a unified, delightful, and dependency-free visual rhythm for the UI. Ensure that the CSS animation itself is included on all pages that use it (e.g. by injecting it inline in admin.html and setup.html, which do not load the global style.css).
+## 2026-12-16 - [Keyboard Focus States Alignment]
+**Learning:** Found several inputs and textareas in `admin.html` and `board.html` using the generic `:focus` pseudo-class for custom border highlights instead of the more accessible `:focus-visible`. This overrides the global `:focus-visible` styles, resulting in unwanted focus rings for mouse users and inconsistent keyboard navigation styling.
+**Action:** Always prefer `:focus-visible` over `:focus` when applying focus highlights to form inputs and interactive elements to ensure a clean experience for mouse users while preserving accessibility for keyboard users.

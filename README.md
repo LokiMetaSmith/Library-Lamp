@@ -19,6 +19,21 @@ The device hosts its own Wi-Fi network and provides a simple web interface, allo
 - **Visual Status Indicator:** An onboard RGB LED strip shows the system's current state (idle, connected, waiting for confirmation, transferring).
 - **Manual Sleep Mode:** A "shipping mode" can be activated from the web interface to put the device into deep sleep, conserving battery for long periods. A manual reset is required to wake the device.
 - **Physical Eject/Sleep Button:** A single button provides three functions: confirming a pending USB transfer, safely ejecting the connected USB device (short press), and putting the device into deep sleep (long press).
+- **LoRa Mesh Networking:** Hardware support for SX1262 LoRa modules enables decentralized, off-grid communication and book sharing.
+- **LXMF Messaging:** Send and receive messages off-grid using the Reticulum and LXMF protocols.
+- **Audio/Media Player:** Enjoy in-browser audio playback and streaming directly from the library.
+- **Community Bulletin Board:** A local, SQLite-backed guestbook and bulletin board for users to interact, share statuses, and leave messages.
+
+## 🌐 Decentralized Mesh & Playnet Community Sync
+
+The E-Book Librarian now supports decentralized networking via **Reticulum** and the **Nomad Network (NomadNet) NodePage protocol**, as well as global community synchronization via the **Playnet API**.
+
+This enables:
+- **Playnet Community Sync:** When connected to a local Wi-Fi network (Station mode), the lamp automatically polls `playnet.earth` to fetch global community updates and caches them to the local SQLite bulletin board for offline viewing. Any local posts made on the lamp are also pushed up to the global Playnet commitments layer using secure RFC 9421 HTTP Message Signatures derived from the lamp's Reticulum Ed25519 node identity.
+- **LoRa Mesh Fallback:** If Wi-Fi is unavailable, the lamp dynamically falls back to routing Playnet API requests over the SX1262 LoRa mesh, forwarding packets to an internet-connected Reticulum gateway node.
+- **Concurrent Wi-Fi (AP+STA):** The ESP32 utilizes concurrent Access Point (AP) and Station (STA) mode. This means it connects to your home router to sync with Playnet, while continuously hosting its own "E-Book-Library" offline network for local devices to browse and download books.
+- **Inter-Library Loan:** Discover and share books with other E-Book Librarian nodes over long-distance LoRa or local Wi-Fi multicast without needing an internet connection.
+- **Resilient Infrastructure:** The dual-interface implementation seamlessly handles traffic over both Wi-Fi (UDP multicast) and LoRa, ensuring reliable connectivity.
 
 All the necessary components to build this project are listed in the [Bill of Materials (BOM.md)](BOM.md).
 

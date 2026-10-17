@@ -1065,9 +1065,25 @@ static esp_err_t status_handler(httpd_req_t *req) {
     cJSON_AddBoolToObject(root, "catalog_updating", catalog_updating);
     #ifdef LORA_USE_SX1262
     extern bool lora_scanning;
+    extern float lora_last_rssi;
+    extern float lora_last_snr;
+    extern uint32_t lora_packets_rx;
+    extern uint32_t lora_packets_tx;
+    extern uint32_t lora_get_queue_depth(void);
+
     cJSON_AddBoolToObject(root, "lora_scanning", lora_scanning);
+    cJSON_AddNumberToObject(root, "lora_last_rssi", lora_last_rssi);
+    cJSON_AddNumberToObject(root, "lora_last_snr", lora_last_snr);
+    cJSON_AddNumberToObject(root, "lora_packets_rx", lora_packets_rx);
+    cJSON_AddNumberToObject(root, "lora_packets_tx", lora_packets_tx);
+    cJSON_AddNumberToObject(root, "lora_queue_depth", lora_get_queue_depth());
     #else
     cJSON_AddBoolToObject(root, "lora_scanning", false);
+    cJSON_AddNumberToObject(root, "lora_last_rssi", 0);
+    cJSON_AddNumberToObject(root, "lora_last_snr", 0);
+    cJSON_AddNumberToObject(root, "lora_packets_rx", 0);
+    cJSON_AddNumberToObject(root, "lora_packets_tx", 0);
+    cJSON_AddNumberToObject(root, "lora_queue_depth", 0);
     #endif
 
 
@@ -2093,55 +2109,60 @@ void init_wifi(void) {
 
     char ssid[32];
     char password[64];
+
+    esp_netif_create_default_wifi_sta();
+    esp_netif_create_default_wifi_ap();
+
+    wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
+    ESP_ERROR_CHECK(esp_wifi_init(&cfg));
+
+    ESP_ERROR_CHECK(esp_event_handler_instance_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &wifi_event_handler, NULL, NULL));
+    ESP_ERROR_CHECK(esp_event_handler_instance_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &wifi_event_handler, NULL, NULL));
+
+    wifi_config_t wifi_ap_config = {
+        .ap = {
+            .ssid = WIFI_AP_SSID,
+            .password = WIFI_AP_PASS,
+            .ssid_len = strlen(WIFI_AP_SSID),
+            .channel = 1,
+            .authmode = WIFI_AUTH_OPEN,
+            .max_connection = WIFI_AP_MAX_STA_CONN,
+            .pmf_cfg = {
+                    .required = false,
+            },
+        },
+    };
+    if (strlen(WIFI_AP_PASS) == 0) {
+        wifi_ap_config.ap.authmode = WIFI_AUTH_OPEN;
+    } else {
+        wifi_ap_config.ap.authmode = WIFI_AUTH_WPA_WPA2_PSK;
+    }
+
     if (load_wifi_credentials(ssid, sizeof(ssid), password, sizeof(password)) == ESP_OK) {
         ESP_LOGI(TAG, "Credentials found. Connecting to '%s'", ssid);
-        esp_netif_create_default_wifi_sta();
-        wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
-        ESP_ERROR_CHECK(esp_wifi_init(&cfg));
 
-        ESP_ERROR_CHECK(esp_event_handler_instance_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &wifi_event_handler, NULL, NULL));
-        ESP_ERROR_CHECK(esp_event_handler_instance_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &wifi_event_handler, NULL, NULL));
+        wifi_config_t wifi_sta_config = { .sta = { .threshold.authmode = WIFI_AUTH_WPA_PSK } };
+        strlcpy((char*)wifi_sta_config.sta.ssid, ssid, sizeof(wifi_sta_config.sta.ssid));
+        strlcpy((char*)wifi_sta_config.sta.password, password, sizeof(wifi_sta_config.sta.password));
 
-        wifi_config_t wifi_config = { .sta = { .threshold.authmode = WIFI_AUTH_WPA_PSK } };
-        strlcpy((char*)wifi_config.sta.ssid, ssid, sizeof(wifi_config.sta.ssid));
-        strlcpy((char*)wifi_config.sta.password, password, sizeof(wifi_config.sta.password));
-
-        ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
-        ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_config));
+        ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_APSTA));
+        ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_sta_config));
+        ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_AP, &wifi_ap_config));
         ESP_ERROR_CHECK(esp_wifi_start());
 
         EventBits_t bits = xEventGroupWaitBits(wifi_event_group, WIFI_CONNECTED_BIT | WIFI_FAIL_BIT, pdFALSE, pdFALSE, portMAX_DELAY);
 
         if (bits & WIFI_CONNECTED_BIT) {
-            ESP_LOGI(TAG, "Connected to AP successfully!");
+            ESP_LOGI(TAG, "Connected to STA successfully!");
             g_wifi_configured = true;
         } else {
-            ESP_LOGW(TAG, "Failed to connect. Will start AP for configuration.");
+            ESP_LOGW(TAG, "Failed to connect to STA. AP is still running.");
             g_wifi_configured = false;
-            ESP_ERROR_CHECK(esp_wifi_stop());
-            ESP_ERROR_CHECK(esp_wifi_deinit());
         }
-    }
-
-    if (!g_wifi_configured) {
-        ESP_LOGI(TAG, "Starting in AP mode for configuration.");
-        esp_netif_create_default_wifi_ap();
-        wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
-        ESP_ERROR_CHECK(esp_wifi_init(&cfg));
-        ESP_ERROR_CHECK(esp_event_handler_instance_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &wifi_event_handler, NULL, NULL));
-
-        wifi_config_t wifi_config = {
-            .ap = {
-                .ssid = WIFI_AP_SSID,
-                .password = WIFI_AP_PASS,
-                .ssid_len = strlen(WIFI_AP_SSID),
-                .channel = 1,
-                .authmode = WIFI_AUTH_OPEN,
-                .max_connection = WIFI_AP_MAX_STA_CONN,
-            },
-        };
+    } else {
+        ESP_LOGI(TAG, "No valid credentials found. Starting AP mode only.");
         ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_AP));
-        ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_AP, &wifi_config));
+        ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_AP, &wifi_ap_config));
         ESP_ERROR_CHECK(esp_wifi_start());
         ESP_LOGI(TAG, "WiFi AP initialized for setup. SSID:%s", WIFI_AP_SSID);
     }
@@ -2716,16 +2737,34 @@ void app_main(void) {
     ESP_ERROR_CHECK(gpio_install_isr_service(ESP_INTR_FLAG_LOWMED));
     ESP_ERROR_CHECK(gpio_isr_handler_add(APP_QUIT_PIN, gpio_cb, NULL));
  
-    // Initialize LoRaWAN
-    lora_wan_init();
-
-    // Initialize NVS
+    // Initialize NVS first because Reticulum needs it for persistent identity
     esp_err_t ret = nvs_flash_init();
     if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
       ESP_ERROR_CHECK(nvs_flash_erase());
       ret = nvs_flash_init();
     }
     ESP_ERROR_CHECK(ret);
+
+    // Initialize Reticulum and LoRaWAN
+    extern void rns_init(void);
+    extern void rns_identity_init(void);
+    extern void lxmf_init(void);
+    extern void rns_link_init(void);
+    extern void rns_udp_ifac_init(void);
+
+    rns_init();
+    rns_identity_init();
+    lxmf_init();
+    rns_link_init();
+    rns_udp_ifac_init();
+
+    lora_wan_init();
+
+    // Initialize Playnet API Client and Sync Tasks
+    extern void playnet_client_init(void);
+    extern void playnet_start_sync_task(void);
+    playnet_client_init();
+    playnet_start_sync_task();
 
     load_led_color_from_nvs();
 
