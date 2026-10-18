@@ -100,6 +100,5 @@ direct_dependencies:
 - idf
 - jgromes/radiolib
 manifest_hash: 70e0e2e91fdc51053b96d4a5b1d0e7bbc3b59f193ffa6de311a26c68f0bcdfba
-
 target: esp32s3
 version: 2.0.0
