@@ -14,7 +14,7 @@ set(COMPONENT_ADD_INCLUDEDIRS ".")
 idf_component_register(SRCS "${COMPONENT_SRCS}"
                     INCLUDE_DIRS "${COMPONENT_ADD_INCLUDEDIRS}"
                     # EMBED_TXTFILES "web_assets/setup.html"
-                    REQUIRES
+                    PRIV_REQUIRES
                          # Core IDF components
                          nvs_flash
                          esp_wifi
@@ -33,6 +33,7 @@ idf_component_register(SRCS "${COMPONENT_SRCS}"
 
                          # Networking components
                          esp_http_server
+                         esp_http_client
 
                          # USB Host components
                          usb

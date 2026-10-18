@@ -5,8 +5,6 @@
 #include <string.h>
 #include "bulletin_api.h"
 
-static const char *TAG = "AUDIO_API";
-
 #define MAX_QUEUE_SIZE 50
 #define MAX_FILENAME_LEN 128
 
