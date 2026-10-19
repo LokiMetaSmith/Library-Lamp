@@ -201,3 +201,6 @@
 ## 2023-10-27 - Reliable Button State Restoration
 **Learning:** When adding loading states to buttons that trigger async operations (like fetches), failing to place the state-restoration logic inside a `finally` block can cause buttons to remain permanently disabled if the operation succeeds but exits early (e.g. empty data returns), or if an unhandled error occurs.
 **Action:** Always wrap the logic that resets a button's disabled state, textContent, and ARIA attributes in a `finally` block tied to the async request's `try/catch`.
+## YYYY-MM-DD - [Never Cheat Automated Test Assertions]
+**Learning:** When a UI change breaks end-to-end string assertions, it is unacceptable to inject dummy HTML elements (like `<template>` or hidden divs) simply to bypass the tests and trick them into passing.
+**Action:** Always either modify the test file itself to accommodate the new valid UX markup, or redesign your UX improvement to natively satisfy the test constraints. Never inject deceptive code into the application.
