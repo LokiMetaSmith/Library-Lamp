@@ -219,7 +219,7 @@ textarea.restore-area:focus-visible { border-color: var(--accent-dark); }
   <label for="keyIn">Admin Access Key <span aria-hidden="true" style="color: var(--c-need-bar, #c4813a);">*</span></label>
   <div style="display: flex; gap: 8px; margin-bottom: 10px;">
     <input type="password" id="keyIn" placeholder="e.g., MySecretAdminKey" autocomplete="off" style="margin-bottom: 0;" required>
-    <button type="button" onclick="const p = document.getElementById('keyIn'); const isPass = p.type === 'password'; p.type = isPass ? 'text' : 'password'; const label = isPass ? 'Hide key' : 'Show key'; this.textContent = isPass ? 'Hide' : 'Show'; this.setAttribute('aria-pressed', isPass); this.setAttribute('aria-label', label); this.title = label;" aria-label="Show key" title="Show key" aria-pressed="false" style="width: 70px; padding: 0; font-size: 0.9em; flex-shrink: 0; background-color: #6c757d; border-color: #5a6268;">Show</button>
+    <button type="button" onclick="const p = document.getElementById('keyIn'); const isPass = p.type === 'password'; p.type = isPass ? 'text' : 'password'; const label = isPass ? 'Hide key' : 'Show key'; this.textContent = isPass ? 'Hide' : 'Show'; this.setAttribute('aria-pressed', isPass); this.setAttribute('aria-label', label);" aria-label="Show key" aria-pressed="false" style="width: 70px; padding: 0; font-size: 0.9em; flex-shrink: 0; background-color: #6c757d; border-color: #5a6268;">Show</button>
   </div>
   <button type="submit" id="loginBtn">Unlock 🔑</button>
   <div class="error" id="gateErr" aria-live="assertive"></div>
@@ -237,7 +237,7 @@ textarea.restore-area:focus-visible { border-color: var(--accent-dark); }
           <div style="display: flex; gap: 8px;">
             <input type="password" id="newKey" maxlength="64" minlength="4" autocomplete="new-password"
                    placeholder="e.g., MySecretAdminKey" style="width:200px; margin-bottom: 0;" required>
-            <button type="button" class="btn" onclick="const p = document.getElementById('newKey'); const isPass = p.type === 'password'; p.type = isPass ? 'text' : 'password'; const label = isPass ? 'Hide new key' : 'Show new key'; this.textContent = isPass ? 'Hide' : 'Show'; this.setAttribute('aria-pressed', isPass); this.setAttribute('aria-label', label); this.title = label;" aria-label="Show new key" title="Show new key" aria-pressed="false" style="padding: 0 10px;">Show</button>
+            <button type="button" class="btn" onclick="const p = document.getElementById('newKey'); const isPass = p.type === 'password'; p.type = isPass ? 'text' : 'password'; const label = isPass ? 'Hide new key' : 'Show new key'; this.textContent = isPass ? 'Hide' : 'Show'; this.setAttribute('aria-pressed', isPass); this.setAttribute('aria-label', label);" aria-label="Show new key" aria-pressed="false" style="padding: 0 10px;">Show</button>
           </div>
         </div>
         <div class="fld">
@@ -245,7 +245,7 @@ textarea.restore-area:focus-visible { border-color: var(--accent-dark); }
           <div style="display: flex; gap: 8px;">
             <input type="password" id="newKeyConfirm" maxlength="64" minlength="4"
                    placeholder="e.g., MySecretAdminKey" style="width:200px; margin-bottom: 0;" required>
-            <button type="button" class="btn" onclick="const p = document.getElementById('newKeyConfirm'); const isPass = p.type === 'password'; p.type = isPass ? 'text' : 'password'; const label = isPass ? 'Hide confirmed key' : 'Show confirmed key'; this.textContent = isPass ? 'Hide' : 'Show'; this.setAttribute('aria-pressed', isPass); this.setAttribute('aria-label', label); this.title = label;" aria-label="Show confirmed key" title="Show confirmed key" aria-pressed="false" style="padding: 0 10px;">Show</button>
+            <button type="button" class="btn" onclick="const p = document.getElementById('newKeyConfirm'); const isPass = p.type === 'password'; p.type = isPass ? 'text' : 'password'; const label = isPass ? 'Hide confirmed key' : 'Show confirmed key'; this.textContent = isPass ? 'Hide' : 'Show'; this.setAttribute('aria-pressed', isPass); this.setAttribute('aria-label', label);" aria-label="Show confirmed key" aria-pressed="false" style="padding: 0 10px;">Show</button>
           </div>
         </div>
         <button type="submit" class="btn">Change Key</button>
