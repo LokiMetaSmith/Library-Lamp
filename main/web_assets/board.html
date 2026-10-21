@@ -505,6 +505,7 @@ document.getElementById('msgIn').addEventListener('input', function () {
   const n = this.value.length;
   h.textContent = n + '/300';
   h.className   = 'char-hint' + (n > 270 ? ' warn' : '');
+  this.removeAttribute('aria-invalid');
 });
 
 document.getElementById('msgIn').addEventListener('keydown', function (e) {
@@ -640,7 +641,9 @@ async function doPost() {
   if (!t) {
     hint.textContent = 'Message is required to post.';
     hint.className = 'char-hint warn';
-    document.getElementById('msgIn').focus();
+    const msgIn = document.getElementById('msgIn');
+    msgIn.setAttribute('aria-invalid', 'true');
+    msgIn.focus();
     return;
   }
 
