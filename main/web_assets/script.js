@@ -381,16 +381,21 @@ async function uploadBook(event) {
 
     if (!fileInput || !fileInput.files.length) {
         if (errEl) { errEl.style.display = 'block'; errEl.textContent = 'Please select a file to upload.'; }
-        if (fileInput) fileInput.focus();
+        if (fileInput) {
+            fileInput.setAttribute('aria-invalid', 'true');
+            fileInput.focus();
+        }
         return;
     }
     if (titleInput && !titleInput.value.trim()) {
         if (errEl) { errEl.style.display = 'block'; errEl.textContent = 'Please enter a title.'; }
+        titleInput.setAttribute('aria-invalid', 'true');
         titleInput.focus();
         return;
     }
     if (authorInput && !authorInput.value.trim()) {
         if (errEl) { errEl.style.display = 'block'; errEl.textContent = 'Please enter an author.'; }
+        authorInput.setAttribute('aria-invalid', 'true');
         authorInput.focus();
         return;
     }
@@ -565,6 +570,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (errEl && errEl.style.display === 'block') {
                     errEl.style.display = 'none';
                 }
+                el.removeAttribute('aria-invalid');
             };
             el.addEventListener('input', clearErr);
             el.addEventListener('change', clearErr);

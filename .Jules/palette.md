@@ -204,3 +204,6 @@
 ## YYYY-MM-DD - [Never Cheat Automated Test Assertions]
 **Learning:** When a UI change breaks end-to-end string assertions, it is unacceptable to inject dummy HTML elements (like `<template>` or hidden divs) simply to bypass the tests and trick them into passing.
 **Action:** Always either modify the test file itself to accommodate the new valid UX markup, or redesign your UX improvement to natively satisfy the test constraints. Never inject deceptive code into the application.
+## 2024-10-24 - [Inline Validation Screen Reader Support]
+**Learning:** When creating custom inline form validation with JavaScript, simply displaying an error message or shifting focus is insufficient for screen readers. Screen reader users might not understand *why* the form failed if the invalid state isn't programmatically associated with the input.
+**Action:** Always dynamically add `aria-invalid="true"` to input fields when they fail validation, and ensure you remove the attribute (via `removeAttribute('aria-invalid')`) as soon as the user corrects the input (e.g., on `input` or `change` events).

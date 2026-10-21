@@ -218,7 +218,7 @@ textarea.restore-area:focus-visible { border-color: var(--accent-dark); }
   <h2>Admin Access</h2>
   <label for="keyIn">Admin Access Key <span aria-hidden="true" style="color: var(--c-need-bar, #c4813a);">*</span></label>
   <div style="display: flex; gap: 8px; margin-bottom: 10px;">
-    <input type="password" id="keyIn" placeholder="e.g., MySecretAdminKey" autocomplete="off" style="margin-bottom: 0;" required>
+    <input type="password" id="keyIn" placeholder="e.g., MySecretAdminKey" autocomplete="off" style="margin-bottom: 0;" required oninput="this.removeAttribute('aria-invalid'); const err = document.getElementById('gateErr'); if(err) err.textContent='';">
     <button type="button" onclick="const p = document.getElementById('keyIn'); const isPass = p.type === 'password'; p.type = isPass ? 'text' : 'password'; const label = isPass ? 'Hide key' : 'Show key'; this.textContent = isPass ? 'Hide' : 'Show'; this.setAttribute('aria-pressed', isPass); this.setAttribute('aria-label', label);" aria-label="Show key" aria-pressed="false" style="width: 70px; padding: 0; font-size: 0.9em; flex-shrink: 0; background-color: #6c757d; border-color: #5a6268;">Show</button>
   </div>
   <button type="submit" id="loginBtn">Unlock 🔑</button>
@@ -236,7 +236,7 @@ textarea.restore-area:focus-visible { border-color: var(--accent-dark); }
           <label for="newKey">New Key (min 4 characters) <span aria-hidden="true" style="color: var(--c-need-bar, #c4813a);">*</span></label>
           <div style="display: flex; gap: 8px;">
             <input type="password" id="newKey" maxlength="64" minlength="4" autocomplete="new-password"
-                   placeholder="e.g., MySecretAdminKey" style="width:200px; margin-bottom: 0;" required>
+                   placeholder="e.g., MySecretAdminKey" style="width:200px; margin-bottom: 0;" required oninput="this.removeAttribute('aria-invalid');">
             <button type="button" class="btn" onclick="const p = document.getElementById('newKey'); const isPass = p.type === 'password'; p.type = isPass ? 'text' : 'password'; const label = isPass ? 'Hide new key' : 'Show new key'; this.textContent = isPass ? 'Hide' : 'Show'; this.setAttribute('aria-pressed', isPass); this.setAttribute('aria-label', label);" aria-label="Show new key" aria-pressed="false" style="padding: 0 10px;">Show</button>
           </div>
         </div>
@@ -244,7 +244,7 @@ textarea.restore-area:focus-visible { border-color: var(--accent-dark); }
           <label for="newKeyConfirm">Confirm <span aria-hidden="true" style="color: var(--c-need-bar, #c4813a);">*</span></label>
           <div style="display: flex; gap: 8px;">
             <input type="password" id="newKeyConfirm" maxlength="64" minlength="4"
-                   placeholder="e.g., MySecretAdminKey" style="width:200px; margin-bottom: 0;" required>
+                   placeholder="e.g., MySecretAdminKey" style="width:200px; margin-bottom: 0;" required oninput="this.removeAttribute('aria-invalid');">
             <button type="button" class="btn" onclick="const p = document.getElementById('newKeyConfirm'); const isPass = p.type === 'password'; p.type = isPass ? 'text' : 'password'; const label = isPass ? 'Hide confirmed key' : 'Show confirmed key'; this.textContent = isPass ? 'Hide' : 'Show'; this.setAttribute('aria-pressed', isPass); this.setAttribute('aria-label', label);" aria-label="Show confirmed key" aria-pressed="false" style="padding: 0 10px;">Show</button>
           </div>
         </div>
@@ -381,6 +381,7 @@ function tryLogin() {
   if (!val) {
     const errEl = document.getElementById('gateErr');
     if (errEl) errEl.textContent = 'Please enter an access key.';
+    keyInput.setAttribute('aria-invalid', 'true');
     keyInput.focus();
     return;
   }
@@ -501,11 +502,13 @@ function doSetKey(btn) {
 
   if (n.length < 4) {
     fb('keyFb', '✗ Key must be at least 4 characters');
+    newKeyEl.setAttribute('aria-invalid', 'true');
     newKeyEl.focus();
     return;
   }
   if (n !== c) {
     fb('keyFb', '✗ Keys do not match');
+    confirmKeyEl.setAttribute('aria-invalid', 'true');
     confirmKeyEl.focus();
     return;
   }
