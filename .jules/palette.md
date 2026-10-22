@@ -160,3 +160,7 @@
 ## 2026-12-16 - [Keyboard Focus States Alignment]
 **Learning:** Found several inputs and textareas in `admin.html` and `board.html` using the generic `:focus` pseudo-class for custom border highlights instead of the more accessible `:focus-visible`. This overrides the global `:focus-visible` styles, resulting in unwanted focus rings for mouse users and inconsistent keyboard navigation styling.
 **Action:** Always prefer `:focus-visible` over `:focus` when applying focus highlights to form inputs and interactive elements to ensure a clean experience for mouse users while preserving accessibility for keyboard users.
+
+## 2026-12-16 - [Navigation Active State Clarity]
+**Learning:** Found that the main navigation menu (`.menu-content`) across the application lacked visual and semantic indicators for the currently active page. This makes it difficult for users, especially those using screen readers, to understand their current location within the app.
+**Action:** When creating navigation menus, always add `aria-current="page"` to the link representing the current page. Combine this with specific CSS styling (e.g., bold text, accent color) to provide clear visual and semantic feedback of the active state.
