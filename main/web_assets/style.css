@@ -348,6 +348,11 @@ a:hover {
     background-color: var(--surface);
     color: var(--accent);
 }
+
+.menu-content a[aria-current="page"] {
+    color: var(--accent);
+    font-weight: bold;
+}
 .success-message {
     color: #4caf50;
     font-weight: bold;
