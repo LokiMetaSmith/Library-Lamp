@@ -493,6 +493,7 @@ if (savedName) {
 document.getElementById('msgHint').textContent = '0/300';
 
 document.getElementById('nameIn').addEventListener('input', function () {
+  this.removeAttribute('aria-invalid');
   localStorage.setItem('cn_name', this.value);
   const h = document.getElementById('nameHint');
   const n = this.value.length;
