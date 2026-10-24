@@ -147,7 +147,8 @@ function renderUI() {
             storageInfo.textContent = `${state.sdUsedMb} MB used / ${state.sdTotalMb} MB total`;
             storageInfo.style.display = 'block';
         } else {
-            storageInfo.style.display = 'none';
+            storageInfo.innerHTML = '<span class="file-notes">No SD Card Mounted</span>';
+            storageInfo.style.display = 'block';
         }
     }
 

@@ -207,3 +207,6 @@
 ## 2024-10-24 - [Inline Validation Screen Reader Support]
 **Learning:** When creating custom inline form validation with JavaScript, simply displaying an error message or shifting focus is insufficient for screen readers. Screen reader users might not understand *why* the form failed if the invalid state isn't programmatically associated with the input.
 **Action:** Always dynamically add `aria-invalid="true"` to input fields when they fail validation, and ensure you remove the attribute (via `removeAttribute('aria-invalid')`) as soon as the user corrects the input (e.g., on `input` or `change` events).
+## 2026-10-24 - [Empty States for Critical Fallbacks]
+**Learning:** Hiding UI sections when dependent hardware (like an SD card) is missing creates a jarring experience, as the layout shifts or critical information silently disappears, leaving users wondering if the feature is broken.
+**Action:** Instead of dynamically toggling `display: none` on major UI containers when data is absent, inject a descriptive empty state (e.g. 'No SD Card Mounted') to clearly communicate the missing dependency while preserving the interface layout.
