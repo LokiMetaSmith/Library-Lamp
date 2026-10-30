@@ -327,6 +327,7 @@ async function cancelTransfer(btn) {
     } catch (error) {
         console.error('Error cancelling transfer:', error);
         state.transfer.error = 'Failed to send cancel request.';
+    } finally {
         if (btn) {
             btn.disabled = false;
             btn.textContent = 'Cancel';
@@ -435,9 +436,10 @@ async function uploadBook(event) {
         url += `&key=${encodeURIComponent(savedKey)}`;
     }
 
-    return new Promise((resolve) => {
-        const xhr = new XMLHttpRequest();
-        xhr.open('POST', url, true);
+    try {
+        await new Promise((resolve, reject) => {
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', url, true);
 
         if (xhr.upload && progContainer) {
             xhr.upload.onprogress = (e) => {
@@ -452,14 +454,7 @@ async function uploadBook(event) {
         }
 
         xhr.onload = () => {
-            state.isUploading = false;
             if (progContainer) progContainer.style.display = 'none';
-            if (uploadBtn) {
-                uploadBtn.disabled = false;
-                uploadBtn.textContent = 'Upload';
-                uploadBtn.removeAttribute('title');
-                uploadBtn.removeAttribute('aria-label');
-            }
 
             if (xhr.status >= 200 && xhr.status < 300) {
                 if (titleInput) titleInput.value = '';
@@ -484,23 +479,27 @@ async function uploadBook(event) {
         };
 
         xhr.onerror = () => {
-            state.isUploading = false;
             if (progContainer) progContainer.style.display = 'none';
-            if (uploadBtn) {
-                uploadBtn.disabled = false;
-                uploadBtn.textContent = 'Upload';
-                uploadBtn.removeAttribute('title');
-                uploadBtn.removeAttribute('aria-label');
-            }
             if (errEl) {
                 errEl.textContent = 'Network error during upload.';
                 errEl.style.display = 'block';
             }
-            resolve();
+            reject(new Error('Network error'));
         };
 
         xhr.send(file);
-    });
+        });
+    } catch (e) {
+        console.error(e);
+    } finally {
+        state.isUploading = false;
+        if (uploadBtn) {
+            uploadBtn.disabled = false;
+            uploadBtn.textContent = 'Upload';
+            uploadBtn.removeAttribute('title');
+            uploadBtn.removeAttribute('aria-label');
+        }
+    }
 }
 
 async function enterSleepMode(btn) {
@@ -516,11 +515,11 @@ async function enterSleepMode(btn) {
             await fetch('/enter-sleep', { method: 'POST' });
             state.transfer.error = 'Device is going to sleep. Press RESET to wake.';
             state.isEReaderConnected = false;
-            renderUI();
         } catch (error) {
             console.error('Error entering sleep mode:', error);
             state.transfer.error = 'Failed to send sleep command.';
             state.isSleeping = false;
+        } finally {
             if (btn) {
                 btn.disabled = false;
                 btn.textContent = 'Enter Sleep Mode';
