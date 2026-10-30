@@ -408,15 +408,11 @@ function tryLogin() {
     document.getElementById('gate').style.display  = 'none';
     document.getElementById('panel').style.display = 'block';
     loadAdminData();
-    if (btn) {
-      btn.disabled = false;
-      btn.textContent = 'Unlock 🔑';
-      btn.removeAttribute('title');
-      btn.removeAttribute('aria-label');
-    }
   })
   .catch(() => {
     document.getElementById('gateErr').textContent = 'Incorrect key.';
+  })
+  .finally(() => {
     if (btn) {
       btn.disabled = false;
       btn.textContent = 'Unlock 🔑';
@@ -526,6 +522,8 @@ function doSetKey(btn) {
     })
     .catch(() => {
       fb('keyFb', '✗ Request failed');
+    })
+    .finally(() => {
       if (btn) {
         btn.disabled = false;
         btn.textContent = 'Change Key';
