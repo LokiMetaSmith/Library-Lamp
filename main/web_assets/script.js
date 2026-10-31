@@ -557,6 +557,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 uploadFileInput.files = e.dataTransfer.files;
                 // Dispatch change event to trigger auto-fill logic
                 uploadFileInput.dispatchEvent(new Event('change'));
+
+                const announcer = document.getElementById('dropAnnouncer');
+                if (announcer) {
+                    announcer.textContent = `File selected: ${e.dataTransfer.files[0].name}`;
+                }
             }
         });
     }
