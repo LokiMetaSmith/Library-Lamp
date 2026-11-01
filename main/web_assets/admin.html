@@ -198,6 +198,15 @@ textarea.restore-area:focus-visible { border-color: var(--accent-dark); }
   text-overflow: ellipsis;
   color: var(--ink);
 }
+.char-hint {
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  font-size: 10px;
+  color: var(--ink-muted);
+  text-align: right;
+  height: 14px;
+}
+.char-hint.warn { color: #c4813a; }
+
 .post-empty {
   font-size: 12px;
   color: var(--ink-muted);
@@ -264,20 +273,24 @@ textarea.restore-area:focus-visible { border-color: var(--accent-dark); }
         </div>
         <div class="fld" style="flex:1 1 200px">
           <label for="idName">Board Name</label>
-          <input type="text" id="idName" maxlength="48" placeholder="e.g., Neighborhood Library" style="width:100%">
+          <input type="text" id="idName" maxlength="48" placeholder="e.g., Neighborhood Library" style="width:100%" aria-describedby="idNameHint">
+          <div class="char-hint" id="idNameHint" aria-live="polite"></div>
         </div>
       </div>
       <div class="fld" style="flex:1">
         <label for="idTagline">Tagline</label>
-        <input type="text" id="idTagline" maxlength="80" placeholder="e.g., A place to share and discover books" style="width:100%">
+        <input type="text" id="idTagline" maxlength="80" placeholder="e.g., A place to share and discover books" style="width:100%" aria-describedby="idTaglineHint">
+        <div class="char-hint" id="idTaglineHint" aria-live="polite"></div>
       </div>
       <div class="fld" style="flex:1">
         <label for="idRules">Rules</label>
-        <input type="text" id="idRules" maxlength="80" placeholder="e.g., Be kind and keep it clean" style="width:100%">
+        <input type="text" id="idRules" maxlength="80" placeholder="e.g., Be kind and keep it clean" style="width:100%" aria-describedby="idRulesHint">
+        <div class="char-hint" id="idRulesHint" aria-live="polite"></div>
       </div>
       <div class="fld" style="flex:1">
         <label for="idFooter">Footer</label>
-        <input type="text" id="idFooter" maxlength="80" placeholder="e.g., Maintained by neighborhood volunteers" style="width:100%">
+        <input type="text" id="idFooter" maxlength="80" placeholder="e.g., Maintained by neighborhood volunteers" style="width:100%" aria-describedby="idFooterHint">
+        <div class="char-hint" id="idFooterHint" aria-live="polite"></div>
       </div>
       <div class="row">
         <button type="submit" class="btn">Save Identity</button>
@@ -367,6 +380,11 @@ async function loadAdminData() {
   document.getElementById('idTagline').value = d.tagline || '';
   document.getElementById('idRules').value = d.rules || '';
   document.getElementById('idFooter').value = d.footer || '';
+
+  ['idName', 'idTagline', 'idRules', 'idFooter'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.dispatchEvent(new Event('input'));
+  });
 
   // ⚡ Bolt: Await these to execute sequentially rather than concurrently
   // to avoid exhausting the ESP-IDF connection pool.
@@ -731,6 +749,29 @@ function doSetLampColor(btn) {
     }
   });
 }
+
+function setupCharHints() {
+  ['idName', 'idTagline', 'idRules', 'idFooter'].forEach(id => {
+    const el = document.getElementById(id);
+    const hint = document.getElementById(id + 'Hint');
+    if (el && hint) {
+      const max = el.maxLength || 80;
+      el.addEventListener('input', () => {
+        const len = el.value.length;
+        hint.textContent = `${len}/${max}`;
+        if (len > max * 0.9) {
+          hint.classList.add('warn');
+        } else {
+          hint.classList.remove('warn');
+        }
+      });
+      // trigger once on load if default text exists
+      el.dispatchEvent(new Event('input'));
+    }
+  });
+}
+window.addEventListener('DOMContentLoaded', setupCharHints);
+
 </script>
 </body>
 </html>
