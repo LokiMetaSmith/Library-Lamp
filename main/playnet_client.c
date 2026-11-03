@@ -61,11 +61,11 @@ static esp_err_t generate_rfc9421_signature(const char *method, const char *targ
     // 2. Create the signature base string
     char sig_base[512];
     snprintf(sig_base, sizeof(sig_base),
-             "\"@method\": %s\n"
+             "\"@method\": post\n"
              "\"@target-uri\": %s\n"
              "\"content-digest\": %s\n"
              "\"@signature-params\": (\"@method\" \"@target-uri\" \"content-digest\");created=%s;keyid=\"%s\"",
-             method, target_uri, content_digest, created_str, pubkey_hex);
+             target_uri, content_digest, created_str, pubkey_hex);
 
     // 3. Sign the base string
     unsigned char signature[crypto_sign_BYTES];
