@@ -59,15 +59,27 @@ static void send_link_packet(rns_link_t* link, const uint8_t* payload, size_t le
     }
 }
 
+static bool rns_link_reject_request(const rns_packet_t* pkt, rns_link_t* existing_link) {
+    if (existing_link->state != LINK_STATE_CLOSED) {
+        // The interface is busy. Check if it's timed out already to free it up.
+        if ((xTaskGetTickCount() * portTICK_PERIOD_MS) - existing_link->last_activity_ms > 45000) {
+            ESP_LOGW(TAG, "Cleaning up stale link on interface %d to accept new request.", pkt->recv_interface);
+            existing_link->state = LINK_STATE_CLOSED;
+        } else {
+            ESP_LOGW(TAG, "Interface %d is busy. Rejecting concurrent LinkRequest.", pkt->recv_interface);
+            return true;
+        }
+    }
+    return false;
+}
+
 bool rns_link_process_packet(const rns_packet_t* pkt) {
     if (!pkt) return false;
 
     rns_link_t* link = get_link_for_ifac(pkt->recv_interface);
 
     if (pkt->type == RNS_PKT_TYPE_LINKREQUEST) {
-        // Prevent interrupting an active link on this interface
-        if (link->state != LINK_STATE_CLOSED) {
-            ESP_LOGW(TAG, "LinkRequest rejected: Interface %d is already busy with an active link", pkt->recv_interface);
+        if (rns_link_reject_request(pkt, link)) {
             return false;
         }
 
