@@ -109,7 +109,7 @@ bool lxmf_handle_packet(const rns_packet_t* pkt) {
                         msg_text[p++] = payload_str[i];
                     }
                 }
-                bb_add_message("LoRa/LXMF User", "Message", msg_text, 24);
+                bb_add_message_local("LoRa/LXMF User", "Message", msg_text, 24);
                 return true;
             }
         }
