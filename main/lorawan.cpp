@@ -10,6 +10,7 @@
 #include "lxmf.h"
 #include "rns_link.h"
 #include "rns_udp_ifac.h"
+#include "bulletin_board.h"
 
 // Queue for async transmissions
 QueueHandle_t loraTransmitQueue = NULL;
@@ -92,9 +93,8 @@ void loraReceiveTask(void *pvParameters) {
                     } else {
                         // Not a Reticulum packet, fall back to string printing
                         ESP_LOGI(TAG, "Non-Reticulum Data: %s", (char*)str);
+                        bb_parse_lora_msg((char*)str);
                     }
-
-                    // TODO: Parse MSG packets and inject them into bulletin_board
                 } else if (state == RADIOLIB_ERR_CRC_MISMATCH) {
                     ESP_LOGW(TAG, "CRC error!");
                 } else {

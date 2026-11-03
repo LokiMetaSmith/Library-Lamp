@@ -49,7 +49,7 @@ static void playnet_sync_task(void *pvParameters) {
                         }
 
                         if (strlen(text) > 0) {
-                            bb_add_message(author, type, text, 72);
+                            bb_add_message_local(author, type, text, 72);
                         }
                     }
                 }

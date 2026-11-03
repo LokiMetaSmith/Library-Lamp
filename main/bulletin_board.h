@@ -44,6 +44,8 @@ bool bb_is_token_valid(const char* token);
 void bb_load_messages(void);
 void bb_save_messages(void);
 void bb_add_message(const char* author, const char* type, const char* text, int expiry_hours);
+void bb_add_message_local(const char* author, const char* type, const char* text, int expiry_hours);
+void bb_parse_lora_msg(const char* payload);
 void bb_delete_message(uint16_t targetId);
 void bb_clear_messages(void);
 

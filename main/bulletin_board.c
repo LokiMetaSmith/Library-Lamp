@@ -209,7 +209,7 @@ void bb_save_messages(void) {
     msgsDirty = false;
 }
 
-void bb_add_message(const char* author, const char* type, const char* text, int expiry_hours) {
+void bb_add_message_local(const char* author, const char* type, const char* text, int expiry_hours) {
     if (msgCount >= MAX_MSGS) {
         unsigned long now = nowSecs();
         int evict = -1;
@@ -234,11 +234,39 @@ void bb_add_message(const char* author, const char* type, const char* text, int 
     msgsDirty = true;
     bb_save_messages();
     
+}
+
+
+void bb_add_message(const char* author, const char* type, const char* text, int expiry_hours) {
+    bb_add_message_local(author, type, text, expiry_hours);
+
     char *lora_msg = (char *)malloc(512);
     if (lora_msg) {
         snprintf(lora_msg, 512, "MSG|%s|%s|%s", author, type, text);
         lora_wan_broadcast(lora_msg);
         free(lora_msg);
+    }
+}
+
+void bb_parse_lora_msg(const char* payload) {
+    if (!payload || strncmp(payload, "MSG|", 4) != 0) return;
+
+    char buffer[512];
+    strncpy(buffer, payload, sizeof(buffer) - 1);
+    buffer[sizeof(buffer) - 1] = '\0';
+
+    char *saveptr;
+    char* token = strtok_r(buffer, "|", &saveptr);
+    if (!token) return; // MSG
+
+    char* author = strtok_r(NULL, "|", &saveptr);
+    char* type = strtok_r(NULL, "|", &saveptr);
+    char* text = strtok_r(NULL, "", &saveptr); // Rest of string is the text
+
+    if (author && type && text) {
+        ESP_LOGI(TAG, "Parsed LoRa MSG: author='%s', type='%s', text='%s'", author, type, text);
+        // Add locally, don't broadcast to prevent loop
+        bb_add_message_local(author, type, text, 24);
     }
 }
 
