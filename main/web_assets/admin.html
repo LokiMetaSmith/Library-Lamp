@@ -623,16 +623,28 @@ async function loadPostList(btn) {
     btn.title = 'Refreshing posts list...';
     btn.setAttribute('aria-label', btn.title);
   }
+  isLoadingAdminPosts = true;
   const container = document.getElementById('postList');
-  container.innerHTML = '<div class="post-empty">Loading…</div>';
+  const loadingState = document.getElementById('postLoadingState');
+  if (loadingState) loadingState.style.display = 'block';
+
+  Array.from(container.children).forEach(c => {
+      if (c.id !== 'postLoadingState') c.remove();
+  });
+
   try {
     const r    = await fetch('/board/messages');
     const data = await r.json();
+
+    isLoadingAdminPosts = false;
+    if (loadingState) loadingState.style.display = 'none';
+    let loadingHtml = loadingState ? loadingState.outerHTML : '';
+
     if (data.length === 0) {
-      container.innerHTML = '<div class="post-empty empty-state">No active posts.<br><span class="file-notes">Community posts will appear here for moderation.</span></div>';
+      container.innerHTML = loadingHtml + '<div class="post-empty empty-state">No active posts.<br><span class="file-notes">Community posts will appear here for moderation.</span></div>';
       return;
     }
-    container.innerHTML = '<div class="post-list">' +
+    container.innerHTML = loadingHtml + '<div class="post-list">' +
       data.map(m => `
 <div class="post-row" id="pr-${m.id}">
   <div class="post-row-info">
