@@ -210,6 +210,8 @@ void bb_save_messages(void) {
 }
 
 void bb_add_message_local(const char* author, const char* type, const char* text, int expiry_hours) {
+    if (!author || strlen(author) == 0 || !text || strlen(text) == 0) return;
+
     if (msgCount >= MAX_MSGS) {
         unsigned long now = nowSecs();
         int evict = -1;
@@ -220,20 +222,36 @@ void bb_add_message_local(const char* author, const char* type, const char* text
                 evict = i;
             }
         }
-        if (evict < 0) return;
+        // Fallback eviction if none expired
+        if (evict < 0) {
+            oldest = 0xFFFFFFFF;
+            for (int i = 0; i < msgCount; i++) {
+                if (msgs[i].expires < oldest) {
+                    oldest = msgs[i].expires;
+                    evict = i;
+                }
+            }
+        }
+        if (evict < 0) evict = 0;
+
         memmove(&msgs[evict], &msgs[evict + 1], (msgCount - 1 - evict) * sizeof(BulletinMessage));
         msgCount--;
     }
     
+    memset(&msgs[msgCount], 0, sizeof(BulletinMessage));
     msgs[msgCount].id = nextMsgId++;
     strncpy(msgs[msgCount].author, author, sizeof(msgs[0].author)-1);
-    strncpy(msgs[msgCount].type, type, sizeof(msgs[0].type)-1);
+    msgs[msgCount].author[sizeof(msgs[0].author)-1] = '\0';
+    if (type) {
+        strncpy(msgs[msgCount].type, type, sizeof(msgs[0].type)-1);
+        msgs[msgCount].type[sizeof(msgs[0].type)-1] = '\0';
+    }
     strncpy(msgs[msgCount].text, text, sizeof(msgs[0].text)-1);
+    msgs[msgCount].text[sizeof(msgs[0].text)-1] = '\0';
     msgs[msgCount].expires = nowSecs() + (expiry_hours * 3600);
     msgCount++;
     msgsDirty = true;
     bb_save_messages();
-    
 }
 
 
@@ -275,6 +293,7 @@ void bb_delete_message(uint16_t targetId) {
         if (msgs[i].id == targetId) {
             memmove(&msgs[i], &msgs[i + 1], (msgCount - 1 - i) * sizeof(BulletinMessage));
             msgCount--;
+            memset(&msgs[msgCount], 0, sizeof(BulletinMessage));
             msgsDirty = true;
             bb_save_messages();
             return;
@@ -283,6 +302,7 @@ void bb_delete_message(uint16_t targetId) {
 }
 
 void bb_clear_messages(void) {
+    memset(msgs, 0, sizeof(msgs));
     msgCount = 0;
     msgsDirty = true;
     bb_save_messages();
