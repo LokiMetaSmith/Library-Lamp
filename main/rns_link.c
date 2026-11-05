@@ -50,12 +50,14 @@ static void send_link_packet(rns_link_t* link, const uint8_t* payload, size_t le
 
     uint8_t out_buf[255];
     size_t out_len = 0;
-    if (rns_encode_packet(&reply, out_buf, &out_len)) {
+    if (rns_encode_packet(&reply, out_buf, sizeof(out_buf), &out_len)) {
         if (link->ifac == IF_WIFI) {
             rns_udp_transmit_raw(out_buf, out_len);
         } else {
             lora_wan_transmit_raw(out_buf, out_len);
         }
+    } else {
+        ESP_LOGE(TAG, "Failed to encode link packet (likely exceeds MTU).");
     }
 }
 
@@ -119,12 +121,15 @@ bool rns_link_process_packet(const rns_packet_t* pkt) {
 
             uint8_t out_buf[255];
             size_t out_len = 0;
-            if (rns_encode_packet(&proof_pkt, out_buf, &out_len)) {
+            if (rns_encode_packet(&proof_pkt, out_buf, sizeof(out_buf), &out_len)) {
                 if (link->ifac == IF_WIFI) {
                     rns_udp_transmit_raw(out_buf, out_len);
                 } else {
                     lora_wan_transmit_raw(out_buf, out_len);
                 }
+            } else {
+                ESP_LOGE(TAG, "Failed to encode proof packet (likely exceeds MTU).");
+                return false;
             }
 
             link->state = LINK_STATE_ACTIVE;

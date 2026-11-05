@@ -10,7 +10,7 @@ void rns_init(void) {
     ESP_LOGI(TAG, "Initializing Minimal Reticulum Framing Layer");
 }
 
-bool rns_encode_packet(rns_packet_t* pkt, uint8_t* out_buffer, size_t* out_len) {
+bool rns_encode_packet(rns_packet_t* pkt, uint8_t* out_buffer, size_t max_len, size_t* out_len) {
     if (!pkt || !out_buffer || !out_len) return false;
 
     // Header flags: [ IFAC (1) | HEADER (1) | MAC (1) | PROPAGATE (1) | TYPE (2) | HOPS (2) ]
@@ -18,6 +18,12 @@ bool rns_encode_packet(rns_packet_t* pkt, uint8_t* out_buffer, size_t* out_len) 
     header_byte |= (pkt->flags & (RNS_PKT_FLAG_IFAC | RNS_PKT_FLAG_HEADER | RNS_PKT_FLAG_MAC | RNS_PKT_FLAG_PROPAGATE));
     header_byte |= (pkt->type & 0x03) << 2;
     header_byte |= (pkt->hops & 0x03);
+
+    size_t required_len = 1 + 16 + (pkt->payload ? pkt->payload_len : 0);
+    if (required_len > max_len) {
+        ESP_LOGE(TAG, "Failed to encode RNS packet: Required length %zu exceeds max_len %zu", required_len, max_len);
+        return false;
+    }
 
     size_t offset = 0;
     out_buffer[offset++] = header_byte;

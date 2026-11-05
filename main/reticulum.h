@@ -55,7 +55,7 @@ typedef struct {
 extern rns_identity_t g_rns_local_identity;
 
 void rns_init(void);
-bool rns_encode_packet(rns_packet_t* pkt, uint8_t* out_buffer, size_t* out_len);
+bool rns_encode_packet(rns_packet_t* pkt, uint8_t* out_buffer, size_t max_len, size_t* out_len);
 bool rns_decode_packet(const uint8_t* buffer, size_t len, rns_packet_t* out_pkt);
 
 void rns_identity_init(void);
