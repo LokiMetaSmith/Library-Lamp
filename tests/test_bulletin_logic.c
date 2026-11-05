@@ -41,6 +41,8 @@ void lora_wan_broadcast(const char* msg) {
 
 // Function under test (copied implementation or linked in a real scenario, here we copy to easily test isolated logic)
 void bb_add_message_local(const char* author, const char* type, const char* text, int expiry_hours) {
+    if (!author || strlen(author) == 0 || !text || strlen(text) == 0) return;
+
     if (msgCount >= MAX_MSGS) {
         unsigned long now = nowSecs();
         int evict = -1;
@@ -51,7 +53,7 @@ void bb_add_message_local(const char* author, const char* type, const char* text
                 evict = i;
             }
         }
-        // Fallback eviction if none expired: evict oldest by time anyway
+        // Fallback eviction if none expired
         if (evict < 0) {
             oldest = 0xFFFFFFFF;
             for (int i = 0; i < msgCount; i++) {
@@ -61,19 +63,44 @@ void bb_add_message_local(const char* author, const char* type, const char* text
                 }
             }
         }
-
-        if (evict < 0) evict = 0; // Absolute fallback
+        if (evict < 0) evict = 0;
 
         memmove(&msgs[evict], &msgs[evict + 1], (msgCount - 1 - evict) * sizeof(BulletinMessage));
         msgCount--;
     }
 
+    memset(&msgs[msgCount], 0, sizeof(BulletinMessage));
     msgs[msgCount].id = nextMsgId++;
     strncpy(msgs[msgCount].author, author, sizeof(msgs[0].author)-1);
-    strncpy(msgs[msgCount].type, type, sizeof(msgs[0].type)-1);
+    msgs[msgCount].author[sizeof(msgs[0].author)-1] = '\0';
+    if (type) {
+        strncpy(msgs[msgCount].type, type, sizeof(msgs[0].type)-1);
+        msgs[msgCount].type[sizeof(msgs[0].type)-1] = '\0';
+    }
     strncpy(msgs[msgCount].text, text, sizeof(msgs[0].text)-1);
+    msgs[msgCount].text[sizeof(msgs[0].text)-1] = '\0';
     msgs[msgCount].expires = nowSecs() + (expiry_hours * 3600);
     msgCount++;
+    msgsDirty = true;
+    bb_save_messages();
+}
+
+void bb_delete_message(uint16_t targetId) {
+    for (int i = 0; i < msgCount; i++) {
+        if (msgs[i].id == targetId) {
+            memmove(&msgs[i], &msgs[i + 1], (msgCount - 1 - i) * sizeof(BulletinMessage));
+            msgCount--;
+            memset(&msgs[msgCount], 0, sizeof(BulletinMessage));
+            msgsDirty = true;
+            bb_save_messages();
+            return;
+        }
+    }
+}
+
+void bb_clear_messages(void) {
+    memset(msgs, 0, sizeof(msgs));
+    msgCount = 0;
     msgsDirty = true;
     bb_save_messages();
 }
@@ -164,10 +191,65 @@ void test_eviction_logic() {
 }
 
 
+void test_delete_message() {
+    msgCount = 0;
+    nextMsgId = 1;
+
+    bb_add_message_local("Author1", "Notice", "Msg 1", 1); // id 1
+    bb_add_message_local("Author2", "Notice", "Msg 2", 1); // id 2
+    bb_add_message_local("Author3", "Notice", "Msg 3", 1); // id 3
+
+    assert(msgCount == 3);
+
+    // Delete non-existent
+    bb_delete_message(99);
+    assert(msgCount == 3);
+
+    // Delete middle
+    bb_delete_message(2);
+    assert(msgCount == 2);
+    assert(strcmp(msgs[0].text, "Msg 1") == 0);
+    assert(strcmp(msgs[1].text, "Msg 3") == 0);
+    assert(msgs[2].id == 0); // verify memset worked
+
+    // Delete first
+    bb_delete_message(1);
+    assert(msgCount == 1);
+    assert(strcmp(msgs[0].text, "Msg 3") == 0);
+    assert(msgs[1].id == 0);
+
+    // Delete last
+    bb_delete_message(3);
+    assert(msgCount == 0);
+    assert(msgs[0].id == 0);
+
+    printf("test_delete_message passed.\n");
+}
+
+void test_clear_messages() {
+    msgCount = 0;
+    nextMsgId = 1;
+
+    bb_add_message_local("Author1", "Notice", "Msg 1", 1);
+    bb_add_message_local("Author2", "Notice", "Msg 2", 1);
+
+    assert(msgCount == 2);
+
+    bb_clear_messages();
+
+    assert(msgCount == 0);
+    assert(msgs[0].id == 0);
+    assert(msgs[1].id == 0);
+
+    printf("test_clear_messages passed.\n");
+}
+
 int main() {
     test_parse_lora_msg();
     test_parse_lora_msg_invalid();
     test_eviction_logic();
+    test_delete_message();
+    test_clear_messages();
     printf("All bulletin board unit tests passed!\n");
     return 0;
 }
