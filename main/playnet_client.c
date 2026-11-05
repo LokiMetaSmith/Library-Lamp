@@ -181,12 +181,7 @@ static esp_err_t send_lora_rpc(const char *payload) {
     uint8_t encoded_buf[255]; // SX1262 MTU size
     size_t encoded_len = 0;
 
-    if (rns_encode_packet(&pkt, encoded_buf, &encoded_len)) {
-        if (encoded_len > 255) {
-            ESP_LOGE(TAG, "Payload too large for LoRa MTU (255 bytes).");
-            return ESP_FAIL;
-        }
-
+    if (rns_encode_packet(&pkt, encoded_buf, sizeof(encoded_buf), &encoded_len)) {
         ESP_LOGI(TAG, "Transmitting Playnet request via LoRa...");
         lora_wan_transmit_raw(encoded_buf, encoded_len);
         return ESP_OK;
