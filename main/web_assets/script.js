@@ -320,7 +320,6 @@ async function cancelTransfer(btn) {
         btn.disabled = true;
         btn.innerHTML = 'Canceling<span class="loading-dots"></span>';
         btn.title = 'Canceling transfer...';
-        btn.setAttribute('aria-label', btn.title);
     }
     try {
         await fetch('/transfer-cancel', { method: 'POST' });
@@ -332,7 +331,6 @@ async function cancelTransfer(btn) {
             btn.disabled = false;
             btn.textContent = 'Cancel';
             btn.removeAttribute('title');
-            btn.removeAttribute('aria-label');
         }
         renderUI();
     }
@@ -427,7 +425,6 @@ async function uploadBook(event) {
         uploadBtn.disabled = true;
         uploadBtn.innerHTML = 'Uploading<span class="loading-dots"></span>';
         uploadBtn.title = 'Upload in progress...';
-        uploadBtn.setAttribute('aria-label', uploadBtn.title);
     }
 
     let url = `/upload?title=${encodeURIComponent(title)}&author=${encodeURIComponent(author)}&filename=${encodeURIComponent(filename)}`;
@@ -497,7 +494,6 @@ async function uploadBook(event) {
             uploadBtn.disabled = false;
             uploadBtn.textContent = 'Upload';
             uploadBtn.removeAttribute('title');
-            uploadBtn.removeAttribute('aria-label');
         }
     }
 }
@@ -509,7 +505,6 @@ async function enterSleepMode(btn) {
             btn.disabled = true;
             btn.innerHTML = 'Entering Sleep<span class="loading-dots"></span>';
             btn.title = 'Entering sleep mode...';
-            btn.setAttribute('aria-label', btn.title);
         }
         try {
             await fetch('/enter-sleep', { method: 'POST' });
@@ -524,7 +519,6 @@ async function enterSleepMode(btn) {
                 btn.disabled = false;
                 btn.textContent = 'Enter Sleep Mode';
                 btn.removeAttribute('title');
-                btn.removeAttribute('aria-label');
             }
             renderUI();
         }
