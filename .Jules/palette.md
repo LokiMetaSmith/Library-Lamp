@@ -7,3 +7,6 @@
 ## 2024-03-24 - Preserving Empty State Tests
 **Learning:** The testing suite enforces the presence of static 'empty state' strings directly in the HTML via regex or simple substring checking, even when a 'loading state' must appear first.
 **Action:** When adding initial loading states to containers (like file lists or admin posts) using `innerHTML`, ensure the static empty state (or the element containing the string being tested) is either explicitly preserved in the overwritten HTML or hidden via `display: none` rather than completely removed from the DOM, so that CI end-to-end tests relying on strict string presence still pass natively.
+## YYYY-MM-DD - Disabled State Context Loss
+**Learning:** Found that when buttons were disabled to indicate loading state, their descriptive aria-label was being overwritten with temporary text (like "Loading..."). This causes context loss for screen reader users.
+**Action:** When a button is disabled, do not overwrite its descriptive aria-label with temporary text. Keep the original descriptive label and allow the native disabled attribute to communicate the inactive state.
