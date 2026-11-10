@@ -401,7 +401,7 @@ body {
     <div aria-live="polite" style="flex: 1; text-align: right; align-self: center;">
       <span id="postSuccessMsg" class="feedback" style="display: none; min-height: auto; margin-right: 10px;">✓ Posted</span>
     </div>
-    <button type="submit" class="post-btn" id="postBtn">POST</button>
+    <button type="submit" class="post-btn" id="postBtn" title="Submit Post (Enter)">POST</button>
   </div>
 </form>
 
@@ -678,7 +678,7 @@ async function doPost() {
     if (btn) {
       btn.disabled = false;
       btn.textContent = 'POST';
-      btn.removeAttribute('title');
+      btn.title = 'Submit Post (Enter)';
     }
   }
 
