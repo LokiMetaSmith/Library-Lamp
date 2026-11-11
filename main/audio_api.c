@@ -95,6 +95,25 @@ static esp_err_t audio_queue_post_handler(httpd_req_t *req) {
 
     const char* filename = filename_item->valuestring;
 
+    // Validate filename against path traversal and sensitive files
+    if (strstr(filename, "..") || strchr(filename, '/') || strchr(filename, '\\') ||
+        strcasestr(filename, "adminkey.json") || strcasestr(filename, ".key")) {
+        cJSON_Delete(json);
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid filename");
+        return ESP_FAIL;
+    }
+
+    // Validate supported audio extensions in O(1) time
+    const char *ext = strrchr(filename, '.');
+    if (!ext || (strcasecmp(ext, ".mp3") != 0 &&
+                 strcasecmp(ext, ".m4a") != 0 &&
+                 strcasecmp(ext, ".wav") != 0 &&
+                 strcasecmp(ext, ".ogg") != 0)) {
+        cJSON_Delete(json);
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Unsupported audio format");
+        return ESP_FAIL;
+    }
+
     if (queue_count < MAX_QUEUE_SIZE) {
         strncpy(audio_queue[queue_count].filename, filename, MAX_FILENAME_LEN - 1);
         audio_queue[queue_count].filename[MAX_FILENAME_LEN - 1] = '\0';
@@ -224,7 +243,9 @@ static esp_err_t audio_state_post_handler(httpd_req_t *req) {
     } else if (strcmp(action, "seek") == 0) {
         cJSON *pos_item = cJSON_GetObjectItem(json, "position");
         if (pos_item && cJSON_IsNumber(pos_item)) {
-            track_position_sec = pos_item->valuedouble;
+            double pos = pos_item->valuedouble;
+            if (pos < 0.0) pos = 0.0;
+            track_position_sec = (float)pos;
             if (is_playing) {
                 track_start_time_us = esp_timer_get_time();
             }

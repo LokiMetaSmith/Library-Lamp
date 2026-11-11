@@ -19,9 +19,11 @@ bool rns_encode_packet(rns_packet_t* pkt, uint8_t* out_buffer, size_t max_len, s
     header_byte |= (pkt->type & 0x03) << 2;
     header_byte |= (pkt->hops & 0x03);
 
-    size_t required_len = 1 + 16 + (pkt->payload ? pkt->payload_len : 0);
-    if (required_len > max_len) {
-        ESP_LOGE(TAG, "Failed to encode RNS packet: Required length %zu exceeds max_len %zu", required_len, max_len);
+    // Enforce SX1262 LoRa MTU limit (255 bytes max frame size) and max_len constraint
+    size_t payload_len = (pkt->payload != NULL) ? pkt->payload_len : 0;
+    size_t required_len = 1 + 16 + payload_len;
+    if (required_len > max_len || required_len > 255) {
+        ESP_LOGE(TAG, "Failed to encode RNS packet: Required length %zu exceeds limit (max_len=%zu, MTU=255)", required_len, max_len);
         return false;
     }
 
@@ -42,7 +44,9 @@ bool rns_encode_packet(rns_packet_t* pkt, uint8_t* out_buffer, size_t max_len, s
 }
 
 bool rns_decode_packet(const uint8_t* buffer, size_t len, rns_packet_t* out_pkt) {
-    if (!buffer || len < 17 || !out_pkt) return false;
+    if (!buffer || len < 17 || len > 255 || !out_pkt) return false;
+
+    memset(out_pkt, 0, sizeof(rns_packet_t));
 
     uint8_t header_byte = buffer[0];
     out_pkt->flags = header_byte & 0xF0;

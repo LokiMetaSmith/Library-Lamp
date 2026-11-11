@@ -76,7 +76,7 @@ bool lxmf_handle_packet(const rns_packet_t* pkt) {
 
                     uint8_t out_buf[255];
                     size_t out_len = 0;
-                    if (rns_encode_packet(&reply_pkt, out_buf, &out_len)) {
+                    if (rns_encode_packet(&reply_pkt, out_buf, sizeof(out_buf), &out_len)) {
                         if (pkt->recv_interface == IF_WIFI) {
                             extern void rns_udp_transmit_raw(const uint8_t *data, size_t len);
                             rns_udp_transmit_raw(out_buf, out_len);
