@@ -71,8 +71,9 @@ size_t lxmf_nomadnet_generate_response(const char* path, char* out_buf, size_t m
         // Trigger the Link streaming process for the requested file
         const char* filename = path + 10;
 
-        // Prevent path traversal
-        if (strstr(filename, "..") || strchr(filename, '/')) {
+        // Prevent path traversal and unauthorized access to sensitive files
+        if (strstr(filename, "..") || strchr(filename, '/') || strchr(filename, '\\') ||
+            strcasestr(filename, "adminkey.json") || strcasestr(filename, ".key")) {
             int written = snprintf(out_buf + offset, max_len - offset,
                 "# 403 Forbidden\n\n"
                 "Invalid file path.\n\n"
